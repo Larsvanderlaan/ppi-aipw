@@ -6,7 +6,7 @@
     <title>ppi_aipw</title>
     <meta
       name="description"
-      content="Practitioner-friendly semisupervised mean estimation with AIPW, calibration, and Wald/bootstrap intervals."
+      content="Practitioner-friendly semisupervised mean estimation with AIPW, calibration, and practical uncertainty quantification."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -32,13 +32,15 @@
         <div class="hero-grid">
           <section class="hero-copy">
             <p class="eyebrow">Semisupervised Mean Inference For Applied ML</p>
-            <h1>Calibrated AIPW that feels like a package, not a research prototype.</h1>
+            <h1>Semisupervised mean inference with AIPW, calibration, and practical uncertainty quantification.</h1>
             <p class="lede">
-              <code>ppi_aipw</code> gives you a practical workflow for semisupervised
-              mean estimation when you have labeled outcomes, a larger unlabeled
-              pool, and predictions from a fixed model. It pairs AIPW with
-              post-hoc calibration and lets you choose between fast Wald intervals
-              and refit-everything bootstrap intervals.
+              <code>ppi_aipw</code> is a practitioner-friendly package for
+              semisupervised mean estimation with labeled outcomes, a larger
+              unlabeled pool, and predictions from a fixed model. It combines
+              AIPW with post-hoc calibration and practical uncertainty
+              quantification, while reflecting the perspective that recent
+              prediction-powered inference methods fit naturally within a broader
+              semiparametric and debiased machine learning toolkit.
             </p>
             <div class="hero-actions">
               <a class="button button-primary" href="#quickstart">Start In 30 Seconds</a>
@@ -66,9 +68,9 @@
                 </div>
               </div>
               <p class="panel-note">
-                Best first choice for most practitioner workflows: easy to explain,
-                stable with modest labeled data, and strong in the package’s quick
-                empirical checks.
+                Recommended starting point for many applied workflows: interpretable,
+                stable with modest labeled data, and supported by the package’s
+                quick empirical checks.
               </p>
             </div>
             <div class="panel-card code-card">
@@ -224,12 +226,13 @@ lower, upper = mean_ci(
         <section class="section" id="history">
           <div class="section-heading">
             <p class="eyebrow">Historical Review</p>
-            <h2>The PPI story is bigger than the recent branding</h2>
+            <h2>Historical context for PPI within semisupervised inference</h2>
             <p>
               This section is based on the historical framing in your paper. The
-              key message is that PPI sits inside a longer semiparametric and
-              missing-data tradition, and that calibration gives a clean way to
-              connect prediction-powered practice back to AIPW and debiased ML.
+              goal is to place recent prediction-powered inference methods within
+              the broader semiparametric, missing-data, debiased machine learning,
+              and flexible covariate-adjustment literatures, while highlighting
+              how calibration connects these perspectives in a useful way.
             </p>
           </div>
 
@@ -252,9 +255,9 @@ lower, upper = mean_ci(
               <p>
                 Debiased machine learning, TMLE, and related orthogonal methods
                 showed how to combine flexible prediction models with valid
-                inference. That matters here because semisupervised mean
-                estimation does not require inventing a new inferential logic: the
-                AIPW logic already exists.
+                inference. In the semisupervised mean setting, these ideas provide
+                a natural interpretive framework for AIPW-style estimators built
+                from black-box prediction models.
               </p>
             </article>
 
@@ -263,37 +266,47 @@ lower, upper = mean_ci(
               <h3>PPI popularized the setup for modern black-box predictors</h3>
               <p>
                 Recent ML papers recast the same broad problem as prediction-powered
-                inference: small labeled sample, large unlabeled sample, and a
-                useful but imperfect predictor. Your paper argues that this
-                reframing is useful operationally, but the estimators themselves
-                should still be understood through the older AIPW and efficiency
-                lens.
+                inference: a small labeled sample, a large unlabeled sample, and a
+                useful but imperfect predictor. Your paper emphasizes that this
+                modern framing is valuable for applications, while also being
+                closely connected to established AIPW and efficiency-based
+                perspectives.
               </p>
             </article>
 
             <article class="timeline-card">
               <div class="timeline-year">This paper’s synthesis</div>
-              <h3>Calibration clarifies what PPI is doing and what can improve it</h3>
+              <h3>Calibration helps position PPI within familiar semiparametric methods</h3>
               <p>
-                Your paper’s central historical claim is that PPI and PPI++ are
-                special cases of AIPW, with PPI++ coinciding algebraically with
-                linear calibration in the one-score setting. That opens the door
-                to richer calibrators like isotonic regression, which keep the
-                simple “predict, calibrate, average” workflow while improving
-                efficiency when miscalibration is genuinely nonlinear.
+                Your paper’s central synthesis is that recent prediction-powered
+                inference methods belong squarely to the standard semiparametric
+                and debiased machine learning toolkit for randomized trials and
+                missing-at-random settings. In particular, PPI++ can be viewed as
+                AIPW with empirical efficiency maximization and, in the one-score
+                setting, also as linear calibration and classical
+                prognostic-score regression adjustment.
               </p>
             </article>
           </div>
 
           <div class="history-callout">
-            <h3>Why this matters for practitioners</h3>
+            <h3>Positioning within existing semiparametric methods</h3>
             <p>
-              You do not need to choose between a modern ML workflow and classical
-              inferential guarantees. The website’s core design follows the paper’s
-              perspective: start from the familiar AIPW baseline, use calibration
-              to improve the score when it is mis-scaled, and interpret PPI-style
-              estimators as part of that broader family rather than as an isolated
-              new paradigm.
+              The paper’s positioning argument is not that prediction-powered
+              inference is unimportant, but that it is most informative when read
+              as a concrete instance of familiar semiparametric ideas. In this
+              view, semisupervised mean estimation connects directly to older
+              missing-data, randomized-trial, and debiased machine learning
+              methods, including work that learns prognostic scores from larger
+              auxiliary data sets and then uses them for regression adjustment in
+              smaller target samples.
+            </p>
+            <p>
+              This perspective also suggests a practical research direction:
+              semisupervised inference may benefit from closer translation of
+              tools developed for missing-at-random problems, randomized trials,
+              and debiased machine learning, rather than being treated as a
+              completely separate inferential paradigm.
             </p>
           </div>
         </section>
@@ -318,7 +331,7 @@ lower, upper = mean_ci(
             </article>
             <article class="takeaway-card">
               <h3>Where PPI fits</h3>
-              <p>Use AIPW as the baseline score-based estimator; vanilla PPI is not the natural default comparator once pooled-score information is available.</p>
+              <p>PPI and PPI++ fit naturally within the broader semiparametric and debiased machine learning toolkit for semisupervised mean estimation.</p>
             </article>
           </div>
         </section>
@@ -338,7 +351,8 @@ lower, upper = mean_ci(
               Main paper themes reflected here:
             </p>
             <ul>
-              <li>PPI and PPI++ can be understood within the older AIPW and semiparametric-efficiency framework.</li>
+              <li>PPI and PPI++ can be understood within the AIPW, semiparametric-efficiency, and debiased machine learning framework.</li>
+              <li>In the one-score setting, PPI++ aligns algebraically with linear calibration and prognostic-score regression adjustment.</li>
               <li>Calibration is stronger than mean-bias correction alone and can improve semisupervised inference when the score is miscalibrated.</li>
               <li>Linear calibration is a strong practical default, while isotonic calibration is a useful nonlinear upgrade when labeled data support it.</li>
               <li>Bootstrap intervals are a practical complement to Wald intervals.</li>

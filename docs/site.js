@@ -24,7 +24,7 @@ const methodContent = {
       "Uses the original prediction scores directly and applies the standard AIPW augmentation step with no calibration layer.",
     good: [
       "You trust the original score scale.",
-      "You want the cleanest baseline comparator.",
+      "You want a direct uncalibrated baseline.",
       "You want to separate calibration effects from AIPW itself."
     ],
     tradeoffs: [

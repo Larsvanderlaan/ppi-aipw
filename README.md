@@ -1,6 +1,6 @@
 # Prediction-Powered Inference via Calibration
 
-This repository contains the code and manuscript assets for the paper on calibration-based semisupervised mean inference. The repo is organized around two experiment pipelines: the synthetic simulation study and the real-data reproduction of the original PPI mean benchmarks.
+This repository contains the code and manuscript assets for the paper on calibration-based semisupervised mean inference. The repo is organized around two experiment pipelines: the synthetic simulation study and the real-data reproduction of the original PPI mean benchmarks, together with a user-facing Python package for semisupervised mean estimation with AIPW, calibration, and practical uncertainty quantification.
 
 ## Repo layout
 
@@ -16,8 +16,11 @@ This repository contains the code and manuscript assets for the paper on calibra
 
 ## `ppi_aipw` package
 
-This repo now includes a small Python package, `ppi_aipw`, for semisupervised
-mean estimation with AIPW-style augmentation and optional calibration.
+This repo now includes `ppi_aipw`, a practitioner-friendly Python package for
+semisupervised mean estimation with AIPW, calibration, and practical
+uncertainty quantification. The package is motivated by the perspective that
+recent prediction-powered inference methods fit naturally within the broader
+semiparametric, missing-data, and debiased machine learning toolkit.
 
 Most users should start with:
 

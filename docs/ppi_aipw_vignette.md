@@ -1,13 +1,16 @@
 # `ppi_aipw` Vignette
 
-`ppi_aipw` is a small package for estimating a population mean when you have:
+`ppi_aipw` is a practitioner-friendly package for estimating a population mean
+when you have:
 
 - a labeled sample with observed outcomes `Y`
 - model predictions on those same labeled rows, `Yhat`
 - a larger unlabeled sample where you only have predictions, `Yhat_unlabeled`
 
 The package uses AIPW-style augmentation: it starts from a prediction-based mean
-and then debiases it using the labeled sample.
+and then debiases it using the labeled sample. The overall perspective is that
+recent prediction-powered inference methods fit naturally within a broader
+semiparametric, missing-data, and debiased machine learning toolkit.
 
 This vignette is written for applied ML and practitioner workflows. It focuses on
 what to call, what the arguments mean, and how to choose among the available
