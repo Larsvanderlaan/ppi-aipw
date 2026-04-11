@@ -1,0 +1,9 @@
+gdown==5.2.0
+lightgbm==4.6.0
+matplotlib==3.9.4
+numpy==2.0.2
+pandas==2.3.3
+ppi-python==0.2.3
+pytest==8.3.5
+scikit-learn==1.6.1
+statsmodels==0.14.4

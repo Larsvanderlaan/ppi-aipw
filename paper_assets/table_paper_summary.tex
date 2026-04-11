@@ -1,0 +1,72 @@
+\begin{tabular}{lllrccccc}
+\toprule
+Dataset & $n$ & $N$ & Estimator & Bias & Variance & MSE & Coverage & RelEff \\
+\midrule
+census\_income\_semisupervised\_mean & 50 & 380041 & AIPW & 64.1415 & 74530505.1597 & 74534619.2853 & 0.802 & 1.000 \\
+census\_income\_semisupervised\_mean & 50 & 380041 & Classical & 174.3296 & 112879690.3397 & 112910081.1357 & 0.841 & 0.660 \\
+census\_income\_semisupervised\_mean & 50 & 380041 & IsoCal (min bin 10) & -479.6340 & 75379435.8991 & 75609484.6737 & 0.777 & 0.989 \\
+census\_income\_semisupervised\_mean & 50 & 380041 & LinearCal & -22.9713 & 72975497.5814 & 72976025.2610 & 0.784 & 1.021 \\
+census\_income\_semisupervised\_mean & 50 & 380041 & PPI & 64.1270 & 74528348.5082 & 74532460.7743 & 0.802 & 1.000 \\
+census\_income\_semisupervised\_mean & 50 & 380041 & Semisup. linear & 49.6769 & 106851003.3081 & 106853471.1059 & 0.844 & 0.697 \\
+census\_income\_semisupervised\_mean & 577 & 379514 & AIPW & 1.6631 & 6451762.8714 & 6451765.6373 & 0.890 & 1.000 \\
+census\_income\_semisupervised\_mean & 577 & 379514 & Classical & -44.6870 & 9708740.7725 & 9710737.7047 & 0.894 & 0.664 \\
+census\_income\_semisupervised\_mean & 577 & 379514 & IsoCal (min bin 10) & -23.7251 & 6409823.1141 & 6410385.9947 & 0.880 & 1.006 \\
+census\_income\_semisupervised\_mean & 577 & 379514 & LinearCal & 13.6244 & 6307041.6066 & 6307227.2310 & 0.883 & 1.023 \\
+census\_income\_semisupervised\_mean & 577 & 379514 & PPI & 1.7336 & 6449769.3295 & 6449772.3348 & 0.890 & 1.000 \\
+census\_income\_semisupervised\_mean & 577 & 379514 & Semisup. linear & -19.0374 & 8948168.5056 & 8948530.9279 & 0.894 & 0.721 \\
+census\_income\_semisupervised\_mean & 1000 & 379091 & AIPW & -20.5346 & 3817516.0488 & 3817937.7195 & 0.891 & 0.999 \\
+census\_income\_semisupervised\_mean & 1000 & 379091 & Classical & -11.5142 & 5706667.9025 & 5706800.4785 & 0.898 & 0.669 \\
+census\_income\_semisupervised\_mean & 1000 & 379091 & IsoCal (min bin 10) & -40.5935 & 3746139.4177 & 3747787.2512 & 0.879 & 1.018 \\
+census\_income\_semisupervised\_mean & 1000 & 379091 & LinearCal & -27.7615 & 3679849.2001 & 3680619.8996 & 0.890 & 1.037 \\
+census\_income\_semisupervised\_mean & 1000 & 379091 & PPI & -20.5584 & 3815435.7633 & 3815858.4117 & 0.891 & 1.000 \\
+census\_income\_semisupervised\_mean & 1000 & 379091 & Semisup. linear & -17.5832 & 5259398.9756 & 5259708.1447 & 0.898 & 0.725 \\
+forest\_mean & 50 & 1546 & AIPW & -0.0007 & 0.0018 & 0.0018 & 0.934 & 1.003 \\
+forest\_mean & 50 & 1546 & Classical & 0.0002 & 0.0025 & 0.0025 & 0.948 & 0.709 \\
+forest\_mean & 50 & 1546 & Imputation & -0.0733 & 0.0000 & 0.0054 & 0.000 & inf \\
+forest\_mean & 50 & 1546 & IsoCal (min bin 10) & -0.0035 & 0.0020 & 0.0020 & 0.919 & 0.895 \\
+forest\_mean & 50 & 1546 & LinearCal & -0.0012 & 0.0018 & 0.0018 & 0.922 & 0.957 \\
+forest\_mean & 50 & 1546 & Platt & -0.0002 & 0.0019 & 0.0019 & 0.915 & 0.946 \\
+forest\_mean & 50 & 1546 & PPI & -0.0007 & 0.0018 & 0.0018 & 0.935 & 1.000 \\
+forest\_mean & 50 & 1546 & Venn-Abers & -0.0026 & 0.0019 & 0.0019 & 0.899 & 0.909 \\
+forest\_mean & 300 & 1296 & AIPW & -0.0001 & 0.0002 & 0.0002 & 0.974 & 1.042 \\
+forest\_mean & 300 & 1296 & Classical & -0.0003 & 0.0004 & 0.0004 & 0.967 & 0.723 \\
+forest\_mean & 300 & 1296 & Imputation & -0.0733 & 0.0000 & 0.0054 & 0.000 & inf \\
+forest\_mean & 300 & 1296 & IsoCal (min bin 10) & -0.0002 & 0.0003 & 0.0003 & 0.966 & 1.024 \\
+forest\_mean & 300 & 1296 & LinearCal & -0.0002 & 0.0002 & 0.0002 & 0.971 & 1.030 \\
+forest\_mean & 300 & 1296 & Platt & -0.0001 & 0.0002 & 0.0002 & 0.971 & 1.033 \\
+forest\_mean & 300 & 1296 & PPI & -0.0001 & 0.0003 & 0.0003 & 0.973 & 1.000 \\
+forest\_mean & 300 & 1296 & Venn-Abers & -0.0002 & 0.0003 & 0.0003 & 0.966 & 1.024 \\
+forest\_mean & 500 & 1096 & AIPW & 0.0000 & 0.0001 & 0.0001 & 0.988 & 1.169 \\
+forest\_mean & 500 & 1096 & Classical & 0.0003 & 0.0002 & 0.0002 & 0.984 & 0.849 \\
+forest\_mean & 500 & 1096 & Imputation & -0.0733 & 0.0000 & 0.0054 & 0.000 & inf \\
+forest\_mean & 500 & 1096 & IsoCal (min bin 10) & 0.0001 & 0.0001 & 0.0001 & 0.987 & 1.171 \\
+forest\_mean & 500 & 1096 & LinearCal & 0.0000 & 0.0001 & 0.0001 & 0.988 & 1.173 \\
+forest\_mean & 500 & 1096 & Platt & 0.0000 & 0.0001 & 0.0001 & 0.988 & 1.177 \\
+forest\_mean & 500 & 1096 & PPI & -0.0001 & 0.0001 & 0.0001 & 0.985 & 1.000 \\
+forest\_mean & 500 & 1096 & Venn-Abers & 0.0001 & 0.0001 & 0.0001 & 0.986 & 1.177 \\
+galaxies\_mean & 50 & 16693 & AIPW & 0.0003 & 0.0018 & 0.0018 & 0.888 & 1.000 \\
+galaxies\_mean & 50 & 16693 & Classical & 0.0004 & 0.0040 & 0.0040 & 0.883 & 0.449 \\
+galaxies\_mean & 50 & 16693 & Imputation & -0.0433 & 0.0000 & 0.0019 & 0.000 & inf \\
+galaxies\_mean & 50 & 16693 & IsoCal (min bin 10) & -0.0040 & 0.0020 & 0.0020 & 0.847 & 0.897 \\
+galaxies\_mean & 50 & 16693 & LinearCal & -0.0001 & 0.0019 & 0.0019 & 0.872 & 0.970 \\
+galaxies\_mean & 50 & 16693 & Platt & 0.0002 & 0.0019 & 0.0019 & 0.858 & 0.965 \\
+galaxies\_mean & 50 & 16693 & PPI & 0.0003 & 0.0018 & 0.0018 & 0.888 & 1.000 \\
+galaxies\_mean & 50 & 16693 & Venn-Abers & -0.0001 & 0.0019 & 0.0019 & 0.832 & 0.933 \\
+galaxies\_mean & 577 & 16166 & AIPW & -0.0002 & 0.0001 & 0.0001 & 0.908 & 1.003 \\
+galaxies\_mean & 577 & 16166 & Classical & -0.0000 & 0.0003 & 0.0003 & 0.910 & 0.456 \\
+galaxies\_mean & 577 & 16166 & Imputation & -0.0433 & 0.0000 & 0.0019 & 0.000 & inf \\
+galaxies\_mean & 577 & 16166 & IsoCal (min bin 10) & -0.0002 & 0.0001 & 0.0001 & 0.900 & 0.989 \\
+galaxies\_mean & 577 & 16166 & LinearCal & -0.0002 & 0.0001 & 0.0001 & 0.906 & 1.001 \\
+galaxies\_mean & 577 & 16166 & Platt & -0.0003 & 0.0001 & 0.0001 & 0.905 & 0.999 \\
+galaxies\_mean & 577 & 16166 & PPI & -0.0003 & 0.0001 & 0.0001 & 0.908 & 1.000 \\
+galaxies\_mean & 577 & 16166 & Venn-Abers & -0.0002 & 0.0001 & 0.0001 & 0.899 & 0.991 \\
+galaxies\_mean & 1000 & 15743 & AIPW & -0.0002 & 0.0001 & 0.0001 & 0.913 & 1.004 \\
+galaxies\_mean & 1000 & 15743 & Classical & -0.0001 & 0.0002 & 0.0002 & 0.899 & 0.444 \\
+galaxies\_mean & 1000 & 15743 & Imputation & -0.0433 & 0.0000 & 0.0019 & 0.000 & inf \\
+galaxies\_mean & 1000 & 15743 & IsoCal (min bin 10) & -0.0002 & 0.0001 & 0.0001 & 0.907 & 0.987 \\
+galaxies\_mean & 1000 & 15743 & LinearCal & -0.0002 & 0.0001 & 0.0001 & 0.913 & 1.000 \\
+galaxies\_mean & 1000 & 15743 & Platt & -0.0002 & 0.0001 & 0.0001 & 0.910 & 0.996 \\
+galaxies\_mean & 1000 & 15743 & PPI & -0.0002 & 0.0001 & 0.0001 & 0.912 & 1.000 \\
+galaxies\_mean & 1000 & 15743 & Venn-Abers & -0.0002 & 0.0001 & 0.0001 & 0.905 & 0.984 \\
+\bottomrule
+\end{tabular}
