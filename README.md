@@ -8,11 +8,10 @@ This repository contains the code and manuscript assets for the paper on calibra
 - `src/ppi_aipw/`: user-facing Python package for AIPW with calibration
 - `docs/ppi_aipw_vignette.md`: practitioner-friendly package vignette
 - `docs/index.html`: interactive package website and historical review of PPI
+- `paper/`: manuscript source files and tracked manuscript-ready assets
 - `scripts/`: public entrypoints for reproduction
-- `paper_assets/`: lightweight tracked figures and tables loaded by the manuscript
 - `tests/`: smoke and unit tests
 - `outputs/`: local-only regenerated runs, caches, and intermediate artifacts
-- `main.tex`, `references.bib`, `neurips_2026.sty`: paper source files
 
 ## `ppi_aipw` package
 
@@ -91,12 +90,12 @@ This runs the finalized paper settings end-to-end:
 - the synthetic simulation pipeline
 - synthetic plotting/export
 - the real-data PPI mean reproduction pipeline
-- export of manuscript-facing assets into `paper_assets/`
+- export of manuscript-facing assets into `paper/assets/`
 
 ## What gets generated
 
 - Heavy local outputs are written under `outputs/`
-- Tracked manuscript-ready assets are written to `paper_assets/`
+- Tracked manuscript-ready assets are written to `paper/assets/`
 
 The repository intentionally tracks only lightweight paper assets, not the full raw outputs. Heavy outputs are excluded from git and are meant to be regenerated locally.
 

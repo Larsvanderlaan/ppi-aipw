@@ -1,7 +1,7 @@
 \documentclass{article}
 
 \PassOptionsToPackage{authoryear,round}{natbib}
-\usepackage{neurips_2026}
+\usepackage{paper_style}
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -70,7 +70,7 @@
 
 \maketitle
 \begin{abstract}
-We study semisupervised mean estimation with one labeled sample and one unlabeled sample, where a black-box prediction model is available but may be biased. A standard approach in this setting is augmented inverse probability weighted (AIPW) estimation \citep{robins1995analysis}, which leverages the prediction model to improve inference while remaining valid even when that model is inaccurate. We propose a class of two-step regression-based estimators that first recalibrate the prediction model on the labeled sample and then average the recalibrated predictions over the pooled covariate sample. The resulting estimator retains a simple imputation-based plug-in form, but also admits an AIPW representation in which calibration removes the augmentation term. We implement calibration using isotonic regression, a lightweight, tuning-free method that learns the best monotone transformation of the prediction score. We show that the resulting estimator is root-\(n\) consistent and asymptotically normal under weak conditions. It is statistically efficient among estimators based on the calibrated score, and fully efficient when the calibrated limit equals the true regression function. We also clarify the relationship with recent prediction-powered inference (PPI) methods: PPI and PPI++ are special cases of AIPW, while PPI++ is also algebraically equivalent to linear calibration and classical linear regression adjustment based on prognostic scores. These linear methods are often less efficient than the isotonic-calibrated plug-in estimator we propose.
+We study semisupervised mean estimation with one labeled sample and one unlabeled sample, where a black-box prediction model is available but may be biased. A standard approach in this setting is augmented inverse probability weighted (AIPW) estimation \citep{robins1995analysis}, which leverages the prediction model to improve inference while remaining valid even when that model is inaccurate. We propose a class of two-step regression-based estimators that first recalibrate the prediction model on the labeled sample and then average the recalibrated predictions over the pooled covariate sample. The resulting estimator retains a simple imputation-based plug-in form, but also admits an AIPW representation in which calibration removes the augmentation term. We implement calibration using isotonic regression, a lightweight, tuning-free method that learns the best monotone transformation of the prediction score. We show that the resulting estimator is root-\(n\) consistent and asymptotically normal under weak conditions. It is statistically efficient among estimators based on the calibrated score, and fully efficient when the calibrated limit equals the true regression function. We also clarify the relationship with recent prediction-powered inference (PPI) methods: PPI and PPI++ are special cases of AIPW, while PPI++ is also algebraically equivalent to linear calibration and classical linear regression adjustment based on prognostic scores.
 \end{abstract}
 
 \section{Introduction}
@@ -948,7 +948,7 @@ where \(z(S):=\mathrm{logit}\{\mu_0(S)\}\). This preserves ranking information b
 
 \begin{figure}[htb]
 \centering
-\includegraphics[width=\textwidth]{exp_plots_tables/sim_fig_main.pdf}
+\includegraphics[width=\textwidth]{assets/sim_fig_main.pdf}
 \caption{Poorly calibrated synthetic simulation study in two unlabeled-sample regimes. The top row shows the balanced case \(N/n=1\), and the bottom row shows the large-unlabeled case \(N/n=16\). The four columns show absolute bias, empirical Monte Carlo standard deviation, coverage, and relative efficiency versus PPI, computed from empirical Monte Carlo variance. AIPW and PPI are most clearly separated in the balanced regime, while the two become much closer once unlabeled data are abundant.}
 \label{fig:simulation-rmse}
 \end{figure}
@@ -968,19 +968,13 @@ We study the \texttt{forest}, \texttt{galaxies}, and \texttt{census\_income} sem
 
 We additionally consider three recalibration-based comparators that fall directly within our framework: linear recalibration (\texttt{LinearCal}), Platt scaling (\texttt{Platt}) on the binary-outcome datasets, and isotonic recalibration with a fixed minimum of 10 observations per bin (\texttt{IsoCal}). For the binary-outcome datasets, we also report the Venn--Abers shrinkage variant described in Section~\ref{sec:iso}. Platt scaling and Venn--Abers are omitted on \texttt{census\_income} because the outcome is not binary. We do not include PPI++ as separate baselines, since they are algebraically equivalent to linear recalibration/prognostic-score adjustment. To keep the displayed figures and appendix tables readable, we omit the semisupervised linear baseline from those summaries and focus there on labeled-only, imputation, PPI, AIPW, and the calibration-based estimators.
 
-\paragraph{Metrics and main findings.}
-For each estimator, we report Monte Carlo bias, empirical variance, MSE, Wald-interval coverage, and relative efficiency versus PPI, where relative efficiency is computed from empirical Monte Carlo variances. Estimated standard errors are used only to construct Wald intervals; all reported variability summaries are empirical Monte Carlo quantities. 
-
-The results suggest a simple practical picture. AIPW is the natural estimator based on the original score, and it typically matches or outperforms PPI. In \texttt{forest}, where the original score is already strong, PPI becomes less efficient as the labeled sample grows, whereas in \texttt{galaxies} the two methods remain nearly tied. When the unlabeled sample is much larger than the labeled sample, however, AIPW and PPI become nearly indistinguishable because the labeled contribution to the pooled plug-in term is negligible; this is what we observe in \texttt{census\_income}, where the unlabeled sample is enormous.
-
-Recalibration is most useful when the score is meaningfully miscalibrated and the labeled sample is large enough to estimate the second-stage calibrator stably. In that regime, linear recalibration often captures most of the available gain under mild misspecification, as in \texttt{census\_income}, whereas more flexible monotone calibration is mainly competitive once the labeled sample is moderately large, with \texttt{galaxies} providing the clearest example. Overall, these results leave little practical motivation for PPI: when \(m\) is accurate, AIPW is more efficient, and when \(m\) is inaccurate, even simple recalibration methods such as LinearCal often remove much of the misspecification bias.
- 
 \begin{figure}[htb]
 \centering
-\includegraphics[width=\textwidth]{exp_plots_tables/fig_paper_main_grid.pdf}
+\includegraphics[width=\textwidth]{assets/fig_paper_main_grid.pdf}
 \caption{Main-text benchmark summary showing MSE, relative efficiency versus PPI, and coverage across the reproduced PPI benchmarks, restricted to the most informative score-based comparators: AIPW, PPI, LinearCal, and IsoCal (minimum bin size 10). Relative efficiency is computed from empirical Monte Carlo variance, so values above one indicate improvement over PPI. The dashed horizontal line in the coverage panels marks the nominal target coverage, which is \(0.95\) for \texttt{forest} and \(0.90\) for \texttt{galaxies} and \texttt{census\_income}.}
 \label{fig:ppi-main}
 \end{figure}
+
 
 \begin{table}[htb]
 \centering
@@ -998,16 +992,26 @@ Dataset & Smaller labeled-sample regime & Larger labeled-sample regime \\
 \label{tab:ppi-takeaways}
 \end{table}
 
+
+\paragraph{Metrics and main findings.}
+For each estimator, we report Monte Carlo bias, empirical variance, MSE, Wald-interval coverage, and relative efficiency versus PPI, where relative efficiency is computed from empirical Monte Carlo variances. Estimated standard errors are used only to construct Wald intervals; all reported variability summaries are empirical Monte Carlo quantities. 
+
+The results suggest a simple practical picture. AIPW is the natural estimator based on the original score, and it typically matches or outperforms PPI. In \texttt{forest}, where the original score is already strong, PPI becomes less efficient as the labeled sample grows, whereas in \texttt{galaxies} the two methods remain nearly tied. When the unlabeled sample is much larger than the labeled sample, however, AIPW and PPI become nearly indistinguishable because the labeled contribution to the pooled plug-in term is negligible; this is what we observe in \texttt{census\_income}, where the unlabeled sample is enormous.
+
+Recalibration is most useful when the score is meaningfully miscalibrated and the labeled sample is large enough to estimate the second-stage calibrator stably. In that regime, linear recalibration often captures most of the available gain under mild misspecification, as in \texttt{census\_income}, whereas more flexible monotone calibration is mainly competitive once the labeled sample is moderately large, with \texttt{galaxies} providing the clearest example. Overall, these results leave little practical motivation for PPI: when \(m\) is accurate, AIPW is more efficient, and when \(m\) is inaccurate, even simple recalibration methods such as LinearCal often remove much of the misspecification bias.
+ 
+ 
  
 
+\section{Conclusion and closing remarks}
 
-\section{Conclusion}
+We studied semisupervised mean estimation with a black-box prediction score and proposed a simple calibrated plug-in procedure: fit the score, recalibrate it on the labeled sample, and average the recalibrated predictions over the pooled covariate sample. Our main observation is that this seemingly simple plug-in rule also admits an exact AIPW representation, placing it directly within the standard semiparametric framework for debiased estimation. In particular, isotonic calibration yields a lightweight, tuning-free estimator with asymptotic linearity, asymptotic normality, and valid Wald inference under weak conditions. Confidence intervals may be constructed from the influence function, or equivalently from the residual variance; alternatively, the bootstrap may better capture the finite-sample variability of the isotonic regression update.
 
-We studied semisupervised mean estimation with a black-box prediction score and proposed a simple calibrated plug-in procedure: fit the score, recalibrate it on the labeled sample, and average the recalibrated predictions over the pooled covariate sample. Our main observation is that this seemingly simple plug-in rule also admits an exact AIPW representation, placing it directly within the standard semiparametric AIPW framework. In particular, isotonic calibration yields a lightweight, tuning-free estimator with asymptotic linearity, asymptotic normality, and valid Wald inference under weak conditions. Wald-type confidence intervals may be constructed from the influence function, or equivalently from the residual variance. Alternatively, the bootstrap may be used to better capture the finite-sample variability of the isotonic regression update.
+From an efficiency perspective, the isotonic-calibrated estimator is efficient for the information retained by the calibrated score \(m_0(X)\). It is nonparametrically efficient for the full covariate information in \(X\) when the calibrated limit \(m_0\) coincides with the true regression function \(\mu_0\). Isotonic calibration improves efficiency over the simple AIPW estimator based on the original score \(m(X)\), and typically also improves on linear calibration. Empirically, the practical message is simple: when the original score is already well calibrated, recalibration changes little, whereas under meaningful miscalibration, even simple affine or monotone recalibration can improve semisupervised efficiency while preserving a transparent plug-in form.
 
-From an efficiency perspective, the isotonic-calibrated estimator is efficient for the information retained by the calibrated score \(m_0(X)\). It is nonparametrically efficient for the full covariate information in \(X\) when the calibrated limit \(m_0\) coincides with the true regression function \(\mu_0\). Isotonic calibration always improves efficiency over the simple AIPW estimator based on the original score \(m(X)\), and it typically also improves on linear calibration. Empirically, the results suggest a simple practical message: when the original score is already well calibrated, recalibration changes little, whereas under meaningful miscalibration, even simple affine or monotone recalibration can improve semisupervised efficiency while preserving a transparent plug-in form. We also showed that PPI++ is equivalent to AIPW with empirical efficiency maximization \citep{rubin2008empirical}, and can equivalently be understood as linear calibration, classical prognostic-score regression adjustment \citep{hansen2008prognostic,rosenblum2009using,hojbjerre2025powering}, and a special case of TMLE \citep{van2006targeted}.
+\textbf{Positioning within existing semiparametric methods.} More broadly, our results clarify that recent prediction-powered inference methods belong squarely to the standard semiparametric, debiased machine learning, and flexible covariate-adjustment toolkit for randomized trials and missing-at-random settings. In particular, we showed that PPI++ is equivalent to AIPW with empirical efficiency maximization \citep{rubin2008empirical}, and can also be interpreted as linear calibration, classical prognostic-score regression adjustment \citep{hansen2008prognostic,rosenblum2009using,hojbjerre2025powering}, and a special case of TMLE \citep{van2006targeted}. Thus, at least for semisupervised mean estimation, prediction-powered inference is best viewed not as a new inferential paradigm, but as a concrete instance of familiar semiparametric ideas. It is therefore closely related to existing randomized-trial approaches that learn prognostic scores from larger historical or auxiliary data sets and then use them for regression adjustment in smaller trials \citep{hansen2008prognostic,hojbjerre2025powering}. This perspective suggests that semisupervised inference may benefit from closer connection to the broader missing-data, causal-inference, and debiased machine learning literatures, especially through translational work that adapts tools developed for randomized trials and missing-at-random settings to semisupervised problems.
 
-While we focus on calibration of regression functions and inference on means, the ideas here may extend to more general loss-based supervised learning tasks, such as median and quantile regression \citep{noarov2023statistical,jung2021moment,roth2022uncertain,whitehouse2024orthogonal}. In particular, when the target parameter is defined by a moment equation, as in \(M\)-estimation, one could debias or calibrate the corresponding augmented moment equation; see Appendix \ref{appendix::momentgeneral}. However, this would generally require recalibration at each candidate parameter value, which is computationally impractical and may lead to difficult-to-optimize estimating equations, including nonconvex \(M\)-estimation problems. A more practical alternative is a sieve-based, TMLE-style multiaccuracy adjustment of the predictor or weights, as in the Efficient Plug-in Learning framework of \citet{van2024combining}, which addresses this issue for nonconvex Neyman-orthogonal loss functions \citep{foster2023orthogonal}. Inference for generic smooth functionals of an \(M\)-estimand is studied by \citet{van2025automatic}.
+While we focus on calibration of regression functions and inference on means, the ideas here may extend to more general loss-based supervised learning tasks, such as median and quantile regression \citep{noarov2023statistical,jung2021moment,roth2022uncertain,whitehouse2024orthogonal}. As a concrete example, our linear calibrated mean estimator suggests a direct extension to prediction-powered linear regression by including the prediction score as a covariate, as in classical prognostic adjustment. Similarly, for median and quantile regression, one could include prediction scores as covariates and conduct Wald-type inference for the corresponding target parameters. More generally, when the target parameter is defined by a moment equation, as in \(M\)-estimation, one could debias or calibrate the corresponding augmented moment equation; see Appendix~\ref{appendix::momentgeneral}. However, this would generally require recalibration at each candidate parameter value, which is computationally impractical and may lead to difficult-to-optimize estimating equations, including nonconvex \(M\)-estimation problems. A more practical alternative is a sieve-based, TMLE-style multiaccuracy adjustment of the predictor or weights, as in the Efficient Plug-in Learning framework of \citet{van2024combining}, which addresses this issue for nonconvex Neyman-orthogonal loss functions \citep{foster2023orthogonal}. Debiased inference and influence-function theory for generic smooth functionals of an \(M\)-estimand are studied by \citet{van2025automatic}.
 
 \bibliographystyle{plainnat}
 \bibliography{references}
@@ -1824,7 +1828,7 @@ The mildly miscalibrated synthetic regime serves mainly as a sanity check: once 
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=\textwidth]{exp_plots_tables/sim_fig_bias_coverage.pdf}
+\includegraphics[width=\textwidth]{assets/sim_fig_bias_coverage.pdf}
 \caption{Additional synthetic diagnostics at the largest unlabeled ratio \(N/n\). The top row corresponds to the mildly miscalibrated regime and shows that the score-based estimators nearly overlap. The bottom row echoes the main-text advantage of recalibration under stronger nonlinear distortion.}
 \label{fig:simulation-appendix}
 \end{figure}
@@ -1840,14 +1844,14 @@ For the calibration-based plug-in estimators, we fit the recalibrator on the lab
 \begin{table}[h]
 \centering
 \small
-\resizebox{\textwidth}{!}{\input{exp_plots_tables/table_paper_summary.tex}}
+\resizebox{\textwidth}{!}{\input{assets/table_paper_summary.tex}}
 \caption{Representative numerical summary at the smallest, middle, and largest labeled sample sizes for each reproduced benchmark. The reported quantities are Monte Carlo bias, empirical variance of the point estimator, MSE, Wald-interval coverage, and relative efficiency versus PPI.}
 \label{tab:ppi-benchmarks-full}
 \end{table}
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=\textwidth]{exp_plots_tables/fig_paper_metric_grid.pdf}
+\includegraphics[width=\textwidth]{assets/fig_paper_metric_grid.pdf}
 \caption{Full diagnostic grid for the reproduced PPI benchmarks, showing bias, empirical variance, MSE, coverage, and relative efficiency versus PPI across labeled-sample-size regimes. The dashed horizontal line in the coverage panels marks the nominal target coverage \(1-\alpha\), and the dashed horizontal line in the relative-efficiency panels marks parity with  PPI. Platt scaling and Venn--Abers appear only on the binary-outcome datasets where they are well defined.}
 \label{fig:ppi-benchmarks-full}
 \end{figure}

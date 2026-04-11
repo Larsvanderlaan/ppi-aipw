@@ -5,7 +5,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PYTHON_BIN="${PYTHON_BIN:-$ROOT_DIR/.venv/bin/python}"
 OUTPUT_ROOT="$ROOT_DIR/outputs"
-PAPER_ASSETS_DIR="$ROOT_DIR/paper_assets"
+PAPER_ASSETS_DIR="$ROOT_DIR/paper/assets"
 CACHE_DIR="$OUTPUT_ROOT/cache/ppi_datasets"
 SEED="20260411"
 SMOKE=0
