@@ -6,7 +6,7 @@
     <title>ppi_aipw causal inference</title>
     <meta
       name="description"
-      content="Causal inference wrapper for arm-specific potential outcome means and Wald ATEs in ppi_aipw."
+      content="Causal inference for arm-specific potential outcome means and Wald ATEs in ppi_aipw."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -31,14 +31,13 @@
 
         <div class="hero-grid">
           <section class="hero-copy">
-            <p class="eyebrow">Causal Inference Wrapper</p>
-            <h1>Potential outcome means and control-vs-treatment ATEs with a user-friendly Wald interface.</h1>
+            <p class="eyebrow">Causal Inference</p>
+            <h1>Potential outcome means and control-vs-treatment ATEs with Wald inference.</h1>
             <p class="lede">
-              <code>causal_inference(...)</code> wraps the package's
+              <code>causal_inference(...)</code> reuses the package's
               semisupervised mean engine. For each treatment arm, it uses the
               corresponding column of <code>Yhat_potential</code>, treats units
-              in that arm as labeled, and treats units outside that arm as
-              unlabeled.
+              in that arm as labeled, and units outside that arm as unlabeled.
             </p>
             <div class="hero-actions">
               <a class="button button-primary" href="#quickstart">See Example</a>
@@ -54,7 +53,7 @@
 
           <aside class="hero-panel">
             <div class="panel-card gradient-card">
-              <p class="panel-label">Recommended Call</p>
+              <p class="panel-label">Main Function</p>
               <div class="default-stack">
                 <div>
                   <span class="stack-name">Function</span>
@@ -104,7 +103,7 @@ lower, upper = result.ate_cis["treated"]</code></pre>
         <section class="section" id="inputs">
           <div class="section-heading">
             <p class="eyebrow">Inputs</p>
-            <h2>What the wrapper expects</h2>
+            <h2>Inputs</h2>
           </div>
 
           <div class="argument-grid">
@@ -122,7 +121,7 @@ lower, upper = result.ate_cis["treated"]</code></pre>
             </article>
             <article class="argument-card">
               <h3><code>treatment_levels</code></h3>
-              <p>Optional arm labels matching the columns of <code>Yhat_potential</code>. If omitted, DataFrame columns are used; otherwise the wrapper falls back to the sorted unique values in <code>A</code>.</p>
+              <p>Optional arm labels matching the columns of <code>Yhat_potential</code>. If omitted, DataFrame columns are used; otherwise the sorted unique values in <code>A</code> are used.</p>
             </article>
             <article class="argument-card">
               <h3><code>control_arm</code></h3>
@@ -134,7 +133,7 @@ lower, upper = result.ate_cis["treated"]</code></pre>
             </article>
             <article class="argument-card">
               <h3><code>X</code></h3>
-              <p>Optional extra covariates passed through arm-by-arm. This is especially useful with <code>method="prognostic_linear"</code>, which uses the arm-specific score plus <code>X</code> in a linear adjustment.</p>
+              <p>Optional extra covariates passed through arm by arm. This is most useful with <code>method="prognostic_linear"</code>, which uses the arm-specific score plus <code>X</code> in a linear adjustment.</p>
               
             </article>
           </div>
@@ -166,14 +165,14 @@ lower, upper = result.ate_cis["treated"]</code></pre>
           </div>
 
           <div class="history-callout">
-            <h3>What this wrapper is and is not</h3>
+            <h3>Scope</h3>
             <p>
-              This API is a convenience wrapper over the package's existing
-              semisupervised mean machinery. It does not fit a propensity model
-              or estimate nuisance functions for you.
+              This API reuses the package's semisupervised mean machinery. It
+              does not fit a propensity model or other nuisance functions for
+              you.
             </p>
             <p>
-              In this first version, uncertainty is Wald-only. The wrapper uses
+              In this version, uncertainty is Wald-only. The API uses
               arm-specific Wald contributions from the semisupervised mean
               engine to build both arm-level and ATE-level standard errors.
             </p>

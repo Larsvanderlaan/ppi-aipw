@@ -7,7 +7,7 @@ This repository contains the code and manuscript assets for the paper on calibra
 - `experiments/`: core experiment drivers and shared estimator code
 - `src/ppi_aipw/`: user-facing Python package for AIPW with calibration
 - `docs/ppi_aipw_vignette.md`: practitioner-friendly package vignette
-- `docs/index.html`: interactive package website and historical review of PPI
+- `docs/index.html`: interactive package website with docs, examples, and paper links
 - `paper/`: manuscript source files and tracked manuscript-ready assets
 - `scripts/`: public entrypoints for reproduction
 - `tests/`: smoke and unit tests

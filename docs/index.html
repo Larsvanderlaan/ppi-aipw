@@ -6,7 +6,7 @@
     <title>ppi_aipw</title>
     <meta
       name="description"
-      content="Practitioner-friendly semisupervised mean estimation with AIPW, calibration, and practical uncertainty quantification."
+      content="Semisupervised mean estimation with AIPW, calibration, and uncertainty quantification."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -25,26 +25,24 @@
             <a href="#quickstart">Quickstart</a>
             <a href="#methods">Methods</a>
             <a href="./causal.html">Causal Inference</a>
-            <a href="#history">History of PPI</a>
             <a href="#references">References</a>
           </div>
         </nav>
 
         <div class="hero-grid">
           <section class="hero-copy">
-            <p class="eyebrow">Semisupervised Mean Inference For Applied ML</p>
-            <h1>Semisupervised mean inference with AIPW, calibration, and practical uncertainty quantification.</h1>
+            <p class="eyebrow">Semisupervised Mean Inference</p>
+            <h1>Semisupervised mean inference with AIPW and calibration,</h1>
             <p class="lede">
-              <code>ppi_aipw</code> is a practitioner-friendly package for
-              semisupervised mean estimation with labeled outcomes, a larger
-              unlabeled pool, and predictions from a fixed model. It combines
-              AIPW, post-hoc calibration, and practical uncertainty
-              quantification within the broader semiparametric and debiased
-              machine learning toolkit.
+              <code>ppi_aipw</code> is a package for semisupervised mean
+              estimation with labeled outcomes, a larger
+              unlabeled sample, and predictions from a fixed model. It combines
+              AIPW, calibration, and uncertainty quantification within a broader
+              semiparametric and debiased machine learning toolkit.
             </p>
             <div class="hero-actions">
-              <a class="button button-primary" href="#quickstart">Start In 30 Seconds</a>
-              <a class="button button-secondary" href="https://github.com/Larsvanderlaan/ppi-aipw/blob/main/examples/ppi_aipw_quickstart.ipynb">Open Notebook</a>
+              <a class="button button-primary" href="#quickstart">Quickstart</a>
+              <a class="button button-secondary" href="https://github.com/Larsvanderlaan/ppi-aipw/blob/main/examples/ppi_aipw_quickstart.ipynb">Notebook</a>
             </div>
             <ul class="hero-pills">
               <li>AIPW baseline</li>
@@ -52,13 +50,12 @@
               <li>Isotonic defaults to XGBoost</li>
               <li>Optional efficiency maximization</li>
               <li>Wald and bootstrap intervals</li>
-              <li>GitHub Pages ready</li>
             </ul>
           </section>
 
           <aside class="hero-panel">
             <div class="panel-card gradient-card">
-              <p class="panel-label">Recommended Default</p>
+              <p class="panel-label">Default Choice</p>
               <div class="default-stack">
                 <div>
                   <span class="stack-name">Estimator</span>
@@ -70,12 +67,11 @@
                 </div>
               </div>
               <p class="panel-note">
-                A strong default for many workflows: smooth, monotone, and less
-                stepwise than isotonic calibration.
+                Smooth, monotone, and less stepwise than isotonic calibration.
               </p>
             </div>
             <div class="panel-card code-card">
-              <p class="panel-label">Recommended API</p>
+              <p class="panel-label">Main Function</p>
               <pre><code>from ppi_aipw import mean_inference
 
 result = mean_inference(
@@ -89,9 +85,8 @@ estimate = result.pointestimate
 standard_error = result.se
 lower, upper = result.ci</code></pre>
               <p class="panel-note">
-                The narrower wrappers <code>mean_pointestimate</code>,
-                <code>mean_se</code>, and <code>mean_ci</code> are still
-                available when you only want one output at a time.
+                Use <code>mean_pointestimate</code>, <code>mean_se</code>, or
+                <code>mean_ci</code> when you only need one output.
               </p>
             </div>
           </aside>
@@ -102,23 +97,19 @@ lower, upper = result.ci</code></pre>
         <section class="section" id="quickstart">
           <div class="section-heading">
             <p class="eyebrow">Quickstart</p>
-            <h2>What the arguments mean</h2>
+            <h2>Core inputs and defaults</h2>
               <p>
-                The main API is small. You provide labeled outcomes, labeled
-                predictions, unlabeled predictions, and your choices for
-                calibration and interval construction. The recommended entrypoint
-                is <code>mean_inference(...)</code>, which returns the point
-                estimate, standard error, confidence interval, calibrator, and
-                method-selection diagnostics together.
+                The main API is <code>mean_inference(...)</code>. It returns the
+                point estimate, standard error, confidence interval,
+                calibrator, and method-selection diagnostics in one call.
               </p>
               <p>
-                If you want a data-adaptive choice among a few methods, set
-                <code>method="auto"</code> and pass
-                <code>candidate_methods=("aipw", "linear", "isotonic")</code>.
-                By default it uses <code>num_folds=100</code> and
+                For data-adaptive selection, set <code>method="auto"</code> and
+                pass <code>candidate_methods=("aipw", "linear", "isotonic")</code>.
+                By default, selection uses <code>num_folds=100</code> and
                 <code>min(n_unlabeled, 10 * n_labeled)</code> unlabeled rows in
-                the foldwise objective, while the final point estimate still
-                uses the full unlabeled sample.
+                the foldwise objective, while the final estimate uses the full
+                unlabeled sample.
               </p>
             </div>
 
@@ -153,11 +144,11 @@ lower, upper = result.ci</code></pre>
             </article>
             <article class="argument-card">
               <h3><code>inference</code></h3>
-              <p>Choose <code>"wald"</code> for speed or <code>"bootstrap"</code> for a resampling-based interval that refits calibration inside each replicate.</p>
+              <p>Choose <code>"wald"</code> for a fast analytic interval or <code>"bootstrap"</code> to refit calibration inside each replicate.</p>
             </article>
             <article class="argument-card">
               <h3><code>efficiency_maximization</code></h3>
-              <p>Optional rescaling to <code>lambda m(X)</code>, where <code>m(X)</code> is the raw score for <code>method="aipw"</code> and the calibrated score otherwise. The package chooses <code>lambda</code> by empirical efficiency maximization.</p>
+              <p>Optional rescaling to <code>lambda m(X)</code>, where <code>m(X)</code> is the raw score for <code>method="aipw"</code> and the calibrated score otherwise. The scaling factor <code>lambda</code> is chosen by empirical efficiency maximization.</p>
             </article>
             <article class="argument-card">
               <h3><code>isocal_backend</code></h3>
@@ -181,8 +172,8 @@ lower, upper = result.ci</code></pre>
               <h2>Choose the calibration strategy that matches your problem</h2>
             </div>
             <p class="section-side-note">
-              Click through the methods. The panel updates with a high-level
-              explanation, good use cases, and practical tradeoffs.
+              Click through the methods for a short description, typical use
+              case, and main tradeoffs.
             </p>
           </div>
 
@@ -231,9 +222,8 @@ lower, upper = result.ci</code></pre>
               <h2>Wald for speed, bootstrap for a full refit check</h2>
             </div>
             <p class="section-side-note">
-              The bootstrap in <code>ppi_aipw</code> holds the prediction model fixed,
-              resamples labeled and unlabeled rows, and refits the calibration step
-              inside each bootstrap replicate.
+              The bootstrap holds the prediction model fixed, resamples labeled
+              and unlabeled rows, and refits calibration within each replicate.
             </p>
           </div>
 
@@ -245,13 +235,12 @@ lower, upper = result.ci</code></pre>
             <article class="toggle-card">
               <h3 data-inference-title>Wald intervals</h3>
               <p data-inference-summary>
-                Fast analytic intervals and the right place to start for routine
-                package use.
+                Fast analytic intervals for routine use.
               </p>
               <div class="mini-grid">
                 <div class="mini-box">
                   <span>Best for</span>
-                  <strong data-inference-best>Quick first-pass analysis</strong>
+                  <strong data-inference-best>Routine analyses</strong>
                 </div>
                 <div class="mini-box">
                   <span>Cost</span>
@@ -259,122 +248,9 @@ lower, upper = result.ci</code></pre>
                 </div>
                 <div class="mini-box">
                   <span>Use when</span>
-                  <strong data-inference-when>You want speed and clarity</strong>
+                  <strong data-inference-when>You want a fast interval based on the Wald approximation</strong>
                 </div>
               </div>
-            </article>
-          </div>
-        </section>
-
-        <section class="section" id="history">
-          <div class="section-heading">
-            <p class="eyebrow">Historical Review</p>
-            <h2>Historical context for PPI within semisupervised inference</h2>
-            <p>
-              This section is based on the historical framing in your paper. The
-              goal is to place recent prediction-powered inference methods within
-              the broader semiparametric, missing-data, debiased machine learning,
-              and flexible covariate-adjustment literatures, while highlighting
-              how calibration connects these perspectives in a useful way.
-            </p>
-          </div>
-
-          <div class="timeline">
-            <article class="timeline-card">
-              <div class="timeline-year">1970s-2000s</div>
-              <h3>Missing data and semiparametric efficiency came first</h3>
-              <p>
-                Long before “prediction-powered inference,” semiparametric
-                statistics developed influence-function methods, doubly robust
-                estimators, and AIPW-style procedures for missing-at-random
-                outcomes. In your paper’s framing, the semisupervised mean problem
-                is one instance of that older missing-outcome setup.
-              </p>
-            </article>
-
-            <article class="timeline-card">
-              <div class="timeline-year">1990s-2020s</div>
-              <h3>Debiased ML made black-box prediction compatible with valid inference</h3>
-              <p>
-                Debiased machine learning, TMLE, and related orthogonal methods
-                showed how to combine flexible prediction models with valid
-                inference. In the semisupervised mean setting, these ideas provide
-                a natural interpretive framework for AIPW-style estimators built
-                from black-box prediction models.
-              </p>
-            </article>
-
-            <article class="timeline-card">
-              <div class="timeline-year">Recent ML framing</div>
-              <h3>PPI popularized the setup for modern black-box predictors</h3>
-              <p>
-                Recent ML papers recast the same broad problem as prediction-powered
-                inference: a small labeled sample, a large unlabeled sample, and a
-                useful but imperfect predictor. Your paper emphasizes that this
-                modern framing is valuable for applications, while also being
-                closely connected to established AIPW and efficiency-based
-                perspectives.
-              </p>
-            </article>
-
-            <article class="timeline-card">
-              <div class="timeline-year">This paper’s synthesis</div>
-              <h3>Calibration helps position PPI within familiar semiparametric methods</h3>
-              <p>
-                Your paper’s central synthesis is that recent prediction-powered
-                inference methods belong squarely to the standard semiparametric
-                and debiased machine learning toolkit for randomized trials and
-                missing-at-random settings. In particular, PPI++ can be viewed as
-                AIPW with empirical efficiency maximization and, in the one-score
-                setting, also as linear calibration and classical
-                prognostic-score regression adjustment.
-              </p>
-            </article>
-          </div>
-
-          <div class="history-callout">
-            <h3>Positioning within existing semiparametric methods</h3>
-            <p>
-              The paper’s positioning argument is not that prediction-powered
-              inference is unimportant, but that it is most informative when read
-              as a concrete instance of familiar semiparametric ideas. In this
-              view, semisupervised mean estimation connects directly to older
-              missing-data, randomized-trial, and debiased machine learning
-              methods, including work that learns prognostic scores from larger
-              auxiliary data sets and then uses them for regression adjustment in
-              smaller target samples.
-            </p>
-            <p>
-              This perspective also suggests a practical research direction:
-              semisupervised inference may benefit from closer translation of
-              tools developed for missing-at-random problems, randomized trials,
-              and debiased machine learning, rather than being treated as a
-              completely separate inferential paradigm.
-            </p>
-          </div>
-        </section>
-
-        <section class="section" id="benchmarks">
-          <div class="section-heading">
-            <p class="eyebrow">Empirical Takeaways</p>
-            <h2>What the paper and package checks suggest in practice</h2>
-          </div>
-          <div class="takeaway-grid">
-            <article class="takeaway-card">
-              <h3>Default workflow</h3>
-              <p>Start with monotone spline calibration and Wald intervals.</p>
-            </article>
-            <article class="takeaway-card">
-              <h3>Binary or bounded scores</h3>
-              <p>Sigmoid calibration is a sensible robustness check when a smooth sigmoid recalibration is plausible.</p>
-            </article>
-            <article class="takeaway-card">
-              <h3>Nonlinear miscalibration</h3>
-              <p>Isotonic calibration is attractive when monotonicity is believable and labeled data are large enough to fit a stable curve.</p>
-            </article>
-            <article class="takeaway-card">
-              <h3>Where PPI fits</h3>
-              <p>PPI and PPI++ fit naturally within the broader semiparametric and debiased machine learning toolkit for semisupervised mean estimation.</p>
             </article>
           </div>
         </section>
@@ -384,9 +260,8 @@ lower, upper = result.ci</code></pre>
             <p class="eyebrow">References</p>
             <h2>Where this website’s framing comes from</h2>
             <p>
-              The historical review and practitioner recommendations on this page
-              are drawn from the paper text in <code>paper/main.tex</code> in this
-              repository.
+              The framing and method notes on this page are drawn from the
+              paper text in <code>paper/main.tex</code> in this repository.
             </p>
           </div>
           <div class="reference-card">
@@ -395,9 +270,10 @@ lower, upper = result.ci</code></pre>
             </p>
             <ul>
               <li>PPI and PPI++ can be understood within the AIPW, semiparametric-efficiency, and debiased machine learning framework.</li>
-              <li>In the one-score setting, PPI++ aligns algebraically with linear calibration and prognostic-score regression adjustment.</li>
+              <li>In the one-score setting, <code>efficiency_maximization=True</code> for <code>method="aipw"</code> is equivalent to unconstrained PPI++; plain PPI is not implemented because raw-score AIPW is typically at least as efficient.</li>
+              <li>In the one-score setting, PPI++ also aligns algebraically with linear calibration and prognostic-score regression adjustment.</li>
               <li>Calibration is stronger than mean-bias correction alone and can improve semisupervised inference when the score is miscalibrated.</li>
-              <li>Monotone spline calibration is the package's practical default, while linear remains the simplest affine alternative and isotonic calibration is a useful more flexible monotone upgrade when labeled data support it.</li>
+              <li>Monotone spline calibration is the package's default, while linear remains the simplest affine alternative and isotonic calibration is a more flexible monotone option when labeled data support it.</li>
               <li>Bootstrap intervals are a practical complement to Wald intervals.</li>
             </ul>
             <div class="reference-links">

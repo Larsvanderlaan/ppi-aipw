@@ -7,7 +7,7 @@ const methodContent = {
     good: [
       "You want the simplest affine recalibration.",
       "Predictions seem useful but shifted or stretched.",
-      "Your labeled calibration sample is modest rather than huge."
+      "Your labeled sample is modest rather than large."
     ],
     tradeoffs: [
       "Easy to explain and debug.",
@@ -21,19 +21,19 @@ const methodContent = {
     badge: "Score + X",
     title: "Prognostic linear adjustment",
     summary:
-      "Uses the prediction score plus optional covariates X in a semisupervised linear adjustment before AIPW. The intercept and score stay unpenalized; extra covariates are ridge-tuned on the labeled sample.",
+      "Uses the prediction score together with optional covariates X in a semisupervised linear adjustment before AIPW. The intercept and score are unpenalized; extra covariates are ridge-regularized with tuning on the labeled sample.",
     good: [
-      "You want the score to stay in the model no matter what.",
-      "You have extra covariates X that may explain residual outcome variation.",
-      "You want a linear adjustment rather than a nonlinear calibration curve."
+      "You have extra covariates X that may explain residual outcome variation after conditioning on the score.",
+      "You want a score-centered linear adjustment rather than a nonlinear calibration curve.",
+      "You have enough labeled data to support adjustment for X."
     ],
     tradeoffs: [
       "Clear, regression-style interpretation.",
-      "More flexible than score-only linear recalibration when X matters.",
-      "Needs X and X_unlabeled to realize its full benefit."
+      "Can improve on score-only linear adjustment when X carries additional prognostic information.",
+      "Adjusting for many covariates can require a larger labeled sample; ridge regularization helps stabilize the fit."
     ],
     recommendation:
-      "Use when you want a simple regression-style adjustment built around the score, with optional extra covariates."
+      "Use when the score is useful but you also have covariates worth adding in a linear adjustment."
   },
   aipw: {
     badge: "Baseline",
@@ -57,7 +57,7 @@ const methodContent = {
     badge: "Bounded scores",
     title: "Sigmoid calibration before AIPW",
     summary:
-      "Fits a sigmoid-shaped calibration map. For nonbinary outcomes, the package rescales outcomes into the observed labeled range, fits the sigmoid map there, and rescales back.",
+      "Fits a sigmoid-shaped calibration map before AIPW. For nonbinary outcomes, the package rescales outcomes into the observed labeled range, fits the sigmoid map there, and rescales back.",
     good: [
       "Predictions are probability-like or naturally bounded.",
       "A smooth monotone recalibration is plausible.",
@@ -69,7 +69,7 @@ const methodContent = {
       "Can underfit if the true calibration curve is not close to sigmoid-shaped."
     ],
     recommendation:
-      "Good robustness check for bounded scores, especially classification-style workflows."
+      "Use mainly for bounded or probability-like scores when a smooth sigmoid recalibration is plausible."
   },
   monotone_spline: {
     badge: "Default",
@@ -88,7 +88,7 @@ const methodContent = {
       "Still more complex than linear calibration when the labeled sample is very small."
     ],
     recommendation:
-      "Start here unless you have a specific reason not to. This is the package’s recommended default."
+      "A strong default when you want a smooth monotone calibrator without the stepwise behavior of isotonic regression."
   },
   isotonic: {
     badge: "Flexible",
@@ -101,7 +101,7 @@ const methodContent = {
       "You have enough labeled data to fit a stable flexible calibrator."
     ],
     tradeoffs: [
-      "Most flexible option in the package.",
+      "Most flexible monotone option in the package.",
       "Can capture nonlinear score distortions that linear or sigmoid calibration miss.",
       "Less stable than simpler methods when the labeled sample is very small."
     ],
@@ -114,10 +114,10 @@ const inferenceContent = {
   wald: {
     title: "Wald intervals",
     summary:
-      "Fast analytic intervals and the right place to start for routine package use.",
-    best: "Default production workflow",
+      "Fast analytic intervals for routine use.",
+    best: "Routine analyses",
     cost: "Low compute",
-    when: "You want speed, clarity, and a good first-pass interval"
+    when: "You want a fast interval based on the Wald approximation"
   },
   bootstrap: {
     title: "Bootstrap intervals",
@@ -125,7 +125,7 @@ const inferenceContent = {
       "Resampling-based intervals that treat the prediction model as fixed, resample rows, and refit the calibration step inside each replicate.",
     best: "Robustness checks and final reporting",
     cost: "Higher compute",
-    when: "You want a more empirical uncertainty check and can afford the extra runtime"
+    when: "You want a resampling-based uncertainty check and can afford the extra runtime"
   }
 };
 
@@ -188,7 +188,7 @@ const observer = new IntersectionObserver(
 );
 
 document
-  .querySelectorAll(".section, .panel-card, .timeline-card, .history-callout")
+  .querySelectorAll(".section, .panel-card")
   .forEach((node) => observer.observe(node));
 
 updateMethod("monotone_spline");
