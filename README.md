@@ -2,7 +2,7 @@
 
 Many modern applications involve a small labeled dataset, a much larger unlabeled dataset, and model predictions for far more units than those with observed outcomes. A common example is a small randomized trial paired with a larger observational study or registry: predictions may improve power and precision, but outcome labels are scarce and the prediction model may be imperfect.
 
-`ppi_aipw` is designed for this setting. It uses AIPW as a safe baseline for semisupervised mean inference when outcomes are missing completely at random. AIPW remains valid even when the prediction model is misspecified because it is doubly robust. The package then goes beyond mean-bias correction by adding calibration methods that improve the reliability of the prediction score itself, which can yield more efficient semisupervised inference when the raw predictions are miscalibrated.
+`ppi_aipw` is designed for this setting. It uses AIPW (Robins et al., 1994) as a safe baseline for semisupervised mean inference when outcomes are missing completely at random. AIPW remains valid even when the prediction model is misspecified because it is doubly robust. The package then goes beyond mean-bias correction by adding calibration methods that improve the reliability of the prediction score itself, which can yield more efficient semisupervised inference when the raw predictions are miscalibrated.
 
 This repository contains the code and manuscript assets for our paper on calibration-based semisupervised mean inference. The repository is organized around two experiment pipelines: a synthetic simulation study and a real-data reproduction of the original PPI mean benchmarks, together with a user-facing Python package for semisupervised mean estimation with AIPW, calibration, and practical uncertainty quantification.
 
@@ -259,3 +259,8 @@ The full reproduction is a multi-hour run. The finalized paper settings use larg
 ## Dataset downloads
 
 The real-data reproduction uses the official `ppi_py` dataset bundle. If the cached files are not already present, they are downloaded automatically into the local cache directory under `outputs/cache/ppi_datasets/`.
+
+## References
+
+- Robins, J. M., Rotnitzky, A., and Zhao, L. P. (1994). "Estimation of regression coefficients when some regressors are not always observed." *Journal of the American Statistical Association* 89(427): 846-866.
+- van der Laan, L. and van der Laan, M. (2024). "Prediction-Powered Inference via Calibration." [arXiv:2411.02771](https://arxiv.org/pdf/2411.02771).
