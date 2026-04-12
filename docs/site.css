@@ -439,6 +439,17 @@ pre {
   color: var(--muted);
 }
 
+.math-label {
+  font-family: "Source Serif 4", Georgia, serif;
+  font-style: italic;
+  color: var(--ink);
+}
+
+.math-label sub,
+.math-label sup {
+  font-style: normal;
+}
+
 .curve-legend {
   grid-column: 2;
   display: flex;
