@@ -31,6 +31,7 @@ METHOD_ALIASES = {
     "isocal": "isotonic",
     "isotonic_calibration": "isotonic",
     "monotone_spline": "monotone_spline",
+    "isotonic_spline": "monotone_spline",
     "smooth_spline": "monotone_spline",
     "mspline": "monotone_spline",
 }

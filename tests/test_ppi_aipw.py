@@ -280,6 +280,28 @@ def test_cv_method_selection_prefers_linear_when_score_is_affinely_miscalibrated
     assert calibrator.metadata["selected_method"] == "linear"
 
 
+def test_auto_default_shortlist_includes_monotone_spline() -> None:
+    rng = np.random.default_rng(123)
+    yhat = np.linspace(0.05, 0.95, 80)
+    y = np.clip(
+        0.1 + 0.8 * yhat + 0.05 * np.sin(4.0 * np.pi * yhat) + rng.normal(scale=0.01, size=yhat.shape[0]),
+        0.0,
+        1.0,
+    )
+    yhat_unlabeled = np.linspace(0.02, 0.98, 120)
+
+    selected_method, diagnostics = select_mean_method_cv(
+        y,
+        yhat,
+        yhat_unlabeled,
+        num_folds=5,
+        selection_random_state=0,
+    )
+
+    assert selected_method in {"aipw", "linear", "monotone_spline", "isotonic"}
+    assert "monotone_spline" in diagnostics["scores"]
+
+
 def test_prognostic_linear_matches_manual_semisupervised_linear_adjustment() -> None:
     yhat = np.array([-1.0, -0.5, 0.0, 0.5, 1.0], dtype=float)
     y = 1.5 + 2.0 * yhat
@@ -479,7 +501,7 @@ def test_auto_method_bootstrap_path_is_reproducible() -> None:
         yhat,
         yhat_unlabeled,
         method="auto",
-        candidate_methods=("aipw", "linear", "isotonic"),
+        candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
         num_folds=5,
         selection_random_state=0,
         inference="bootstrap",
@@ -491,7 +513,7 @@ def test_auto_method_bootstrap_path_is_reproducible() -> None:
         yhat,
         yhat_unlabeled,
         method="auto",
-        candidate_methods=("aipw", "linear", "isotonic"),
+        candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
         num_folds=5,
         selection_random_state=0,
         inference="bootstrap",
@@ -515,7 +537,7 @@ def test_auto_method_jackknife_path_is_reproducible() -> None:
         yhat,
         yhat_unlabeled,
         method="auto",
-        candidate_methods=("aipw", "linear", "isotonic"),
+        candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
         num_folds=5,
         selection_random_state=0,
         inference="jackknife",
@@ -527,7 +549,7 @@ def test_auto_method_jackknife_path_is_reproducible() -> None:
         yhat,
         yhat_unlabeled,
         method="auto",
-        candidate_methods=("aipw", "linear", "isotonic"),
+        candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
         num_folds=5,
         selection_random_state=0,
         inference="jackknife",
@@ -550,7 +572,7 @@ def test_auto_bootstrap_reuses_selected_method_instead_of_rerunning_cv() -> None
         y,
         yhat,
         yhat_unlabeled,
-        candidate_methods=("aipw", "linear", "isotonic"),
+        candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
         num_folds=5,
         selection_random_state=0,
     )
@@ -560,7 +582,7 @@ def test_auto_bootstrap_reuses_selected_method_instead_of_rerunning_cv() -> None
         yhat,
         yhat_unlabeled,
         method="auto",
-        candidate_methods=("aipw", "linear", "isotonic"),
+        candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
         num_folds=5,
         selection_random_state=0,
         inference="bootstrap",
@@ -582,7 +604,7 @@ def test_auto_bootstrap_reuses_selected_method_instead_of_rerunning_cv() -> None
         yhat,
         yhat_unlabeled,
         method="auto",
-        candidate_methods=("aipw", "linear", "isotonic"),
+        candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
         num_folds=5,
         selection_random_state=0,
         inference="bootstrap",
@@ -615,7 +637,7 @@ def test_auto_jackknife_reuses_selected_method_instead_of_rerunning_cv() -> None
         y,
         yhat,
         yhat_unlabeled,
-        candidate_methods=("aipw", "linear", "isotonic"),
+        candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
         num_folds=5,
         selection_random_state=0,
     )
@@ -625,7 +647,7 @@ def test_auto_jackknife_reuses_selected_method_instead_of_rerunning_cv() -> None
         yhat,
         yhat_unlabeled,
         method="auto",
-        candidate_methods=("aipw", "linear", "isotonic"),
+        candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
         num_folds=5,
         selection_random_state=0,
         inference="jackknife",
@@ -647,7 +669,7 @@ def test_auto_jackknife_reuses_selected_method_instead_of_rerunning_cv() -> None
         yhat,
         yhat_unlabeled,
         method="auto",
-        candidate_methods=("aipw", "linear", "isotonic"),
+        candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
         num_folds=5,
         selection_random_state=0,
         inference="jackknife",
@@ -681,7 +703,7 @@ def test_auto_wald_uses_full_sample_pointestimate_and_cross_fitted_lambda_for_wa
         yhat,
         yhat_unlabeled,
         method="auto",
-        candidate_methods=("aipw", "linear", "isotonic"),
+        candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
         num_folds=5,
         selection_random_state=0,
     )
@@ -690,7 +712,7 @@ def test_auto_wald_uses_full_sample_pointestimate_and_cross_fitted_lambda_for_wa
         yhat,
         yhat_unlabeled,
         method="auto",
-        candidate_methods=("aipw", "linear", "isotonic"),
+        candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
         num_folds=5,
         selection_random_state=0,
     )
@@ -699,7 +721,7 @@ def test_auto_wald_uses_full_sample_pointestimate_and_cross_fitted_lambda_for_wa
         y,
         yhat,
         yhat_unlabeled,
-        candidate_methods=("aipw", "linear", "isotonic"),
+        candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
         num_folds=5,
         selection_random_state=0,
     )
@@ -711,7 +733,7 @@ def test_auto_wald_uses_full_sample_pointestimate_and_cross_fitted_lambda_for_wa
         w=None,
         w_unlabeled=None,
         efficiency_maximization=False,
-        candidate_methods=("aipw", "linear", "isotonic"),
+        candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
         num_folds=5,
         selection_random_state=0,
     )
@@ -913,7 +935,7 @@ def test_mean_inference_auto_wald_matches_existing_separate_calls() -> None:
         yhat,
         yhat_unlabeled,
         method="auto",
-        candidate_methods=("aipw", "linear", "isotonic"),
+        candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
         num_folds=5,
         selection_random_state=0,
         inference="wald",
@@ -922,7 +944,7 @@ def test_mean_inference_auto_wald_matches_existing_separate_calls() -> None:
         y,
         yhat,
         yhat_unlabeled,
-        candidate_methods=("aipw", "linear", "isotonic"),
+        candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
         num_folds=5,
         selection_random_state=0,
     )
@@ -934,7 +956,7 @@ def test_mean_inference_auto_wald_matches_existing_separate_calls() -> None:
             yhat,
             yhat_unlabeled,
             method="auto",
-            candidate_methods=("aipw", "linear", "isotonic"),
+            candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
             num_folds=5,
             selection_random_state=0,
         ),
@@ -946,7 +968,7 @@ def test_mean_inference_auto_wald_matches_existing_separate_calls() -> None:
             yhat,
             yhat_unlabeled,
             method="auto",
-            candidate_methods=("aipw", "linear", "isotonic"),
+            candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
             num_folds=5,
             selection_random_state=0,
         ),
@@ -956,7 +978,7 @@ def test_mean_inference_auto_wald_matches_existing_separate_calls() -> None:
         yhat,
         yhat_unlabeled,
         method="auto",
-        candidate_methods=("aipw", "linear", "isotonic"),
+        candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
         num_folds=5,
         selection_random_state=0,
         alpha=0.1,
@@ -985,7 +1007,7 @@ def test_mean_inference_auto_bootstrap_matches_selected_method_semantics() -> No
         yhat,
         yhat_unlabeled,
         method="auto",
-        candidate_methods=("aipw", "linear", "isotonic"),
+        candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
         num_folds=5,
         selection_random_state=0,
         inference="bootstrap",
@@ -996,7 +1018,7 @@ def test_mean_inference_auto_bootstrap_matches_selected_method_semantics() -> No
         y,
         yhat,
         yhat_unlabeled,
-        candidate_methods=("aipw", "linear", "isotonic"),
+        candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
         num_folds=5,
         selection_random_state=0,
     )
@@ -1050,7 +1072,7 @@ def test_mean_inference_auto_jackknife_matches_selected_method_semantics() -> No
         yhat,
         yhat_unlabeled,
         method="auto",
-        candidate_methods=("aipw", "linear", "isotonic"),
+        candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
         num_folds=5,
         selection_random_state=0,
         inference="jackknife",
@@ -1061,7 +1083,7 @@ def test_mean_inference_auto_jackknife_matches_selected_method_semantics() -> No
         y,
         yhat,
         yhat_unlabeled,
-        candidate_methods=("aipw", "linear", "isotonic"),
+        candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
         num_folds=5,
         selection_random_state=0,
     )

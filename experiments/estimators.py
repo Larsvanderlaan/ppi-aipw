@@ -78,6 +78,7 @@ def canonical_auto_method(method: str) -> str:
         "linear": "linear",
         "linear_calibration": "linear",
         "monotone_spline": "monotone_spline",
+        "isotonic_spline": "monotone_spline",
         "smooth_spline": "monotone_spline",
         "mspline": "monotone_spline",
         "isocal": "isocal",

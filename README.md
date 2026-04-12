@@ -96,7 +96,7 @@ result = mean_inference(
     Yhat,
     Yhat_unlabeled,
     method="auto",
-    candidate_methods=("aipw", "linear", "isotonic"),
+    candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
     num_folds=100,
 )
 
@@ -177,7 +177,7 @@ Recommended defaults:
 - use `method="monotone_spline"` when you want the default smooth monotone nonlinear recalibration that is less stepwise than isotonic
 - use `method="isotonic"` when you expect monotone nonlinear miscalibration and have enough labeled data; the default backend is monotone XGBoost, with `isocal_backend="sklearn"` available as a simpler fallback
 - use `efficiency_maximization=True` when you want the package to empirically rescale the score for lower variance, especially for raw-score `method="aipw"`
-- use `method="auto"` when you want a data-adaptive choice among `aipw`, `linear`, and `isotonic`, while also letting the selector compare against an efficiency-maximized AIPW candidate
+- use `method="auto"` when you want a data-adaptive choice among `aipw`, `linear`, `monotone_spline`, and `isotonic`, while also letting the selector compare against an efficiency-maximized AIPW candidate
 - use `num_folds=100` as the default auto-selection setting unless you have a reason to make it smaller
 - use `inference="jackknife", jackknife_folds=20` as the default resampling-style uncertainty check
 - use `inference="bootstrap"` when you specifically want percentile bootstrap intervals and can afford extra compute

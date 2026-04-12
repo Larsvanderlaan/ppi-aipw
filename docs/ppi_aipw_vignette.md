@@ -217,7 +217,7 @@ estimate = mean_pointestimate(
     Yhat,
     Yhat_unlabeled,
     method="auto",
-    candidate_methods=("aipw", "linear", "isotonic"),
+    candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
     num_folds=100,
 )
 ```

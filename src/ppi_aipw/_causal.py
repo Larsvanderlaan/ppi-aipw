@@ -251,7 +251,7 @@ def causal_inference(
     alpha: float = 0.1,
     alternative: str = "two-sided",
     efficiency_maximization: bool = False,
-    candidate_methods: tuple[str, ...] = ("aipw", "linear", "isotonic"),
+    candidate_methods: tuple[str, ...] = ("aipw", "linear", "monotone_spline", "isotonic"),
     num_folds: int = 100,
     auto_unlabeled_subsample_size: int | None = None,
     selection_random_state: int | np.random.Generator | None = None,

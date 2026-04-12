@@ -223,13 +223,13 @@ def test_causal_auto_runs_independently_by_arm() -> None:
         A,
         Yhat_potential,
         method="auto",
-        candidate_methods=("aipw", "linear", "isotonic"),
+        candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
         num_folds=4,
         selection_random_state=0,
     )
 
     for arm in (0, 1, 2):
-        assert result.arm_results[arm].method in {"aipw", "linear", "isotonic"}
+        assert result.arm_results[arm].method in {"aipw", "linear", "monotone_spline", "isotonic"}
         assert "selected_candidate" in result.arm_results[arm].diagnostics
 
 

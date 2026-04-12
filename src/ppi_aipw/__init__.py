@@ -77,8 +77,10 @@ Rule of thumb:
     chosen predictor by ``lambda m(X)`` using empirical influence-function
     variance minimization, or use ``method="auto"`` to choose among candidate
     methods by cross-validated IF-variance minimization with ``num_folds=100``
-    by default. If ``"aipw"`` is among the candidates, ``method="auto"`` also
-    compares against an efficiency-maximized AIPW candidate. Under
+    by default. The default automatic shortlist is
+    ``("aipw", "linear", "monotone_spline", "isotonic")``. If ``"aipw"`` is
+    among the candidates, ``method="auto"`` also compares against an
+    efficiency-maximized AIPW candidate. Under
     ``method="auto"``, the foldwise objective uses an unlabeled subset of size
     ``min(n_unlabeled, 10 * n_labeled)`` by default, the selected calibration
     map is refit on the full labeled sample, the final point estimate uses the

@@ -139,7 +139,7 @@ lower, upper = result.ci</code></pre>
               </p>
               <p>
                 For data-adaptive selection, set <code>method="auto"</code> and
-                pass <code>candidate_methods=("aipw", "linear", "isotonic")</code>.
+                pass <code>candidate_methods=("aipw", "linear", "monotone_spline", "isotonic")</code>.
                 By default, selection uses <code>num_folds=100</code> and
                 <code>min(n_unlabeled, 10 * n_labeled)</code> unlabeled rows in
                 the foldwise objective, while the final estimate uses the full
@@ -289,12 +289,12 @@ lower, upper = result.ci</code></pre>
           <div class="section-heading split">
             <div>
               <p class="eyebrow">Intervals</p>
-              <h2>Wald for speed, jackknife for the main resampling check</h2>
+              <h2>Wald for speed, jackknife and bootstrap for capturing finite-sample variability</h2>
             </div>
             <p class="section-side-note">
-              The jackknife drops one fold of labeled and unlabeled rows at a
-              time, refits calibration, and uses the resulting SE in a normal
-              interval.
+              Jackknife and bootstrap both refit the calibration step under
+              resampling; jackknife uses delete-a-group folds, while bootstrap
+              uses classical resampling with replacement.
             </p>
           </div>
 
@@ -352,7 +352,7 @@ lower, upper = result.ci</code></pre>
               <li>In the one-score setting, AIPW with empirical efficiency maximization (PPI++) is asymptotically equivalent to linear calibration and prognostic-score regression adjustment.</li>
               <li>Calibration is stronger than mean-bias correction alone and can improve semisupervised inference when the score is miscalibrated. Linear calibration is the less flexible parametric option, while isotonic calibration is a nonparametric calibrator.</li>
               <li>Monotone spline calibration implements a smoothed version of isotonic calibration and is the package default, while linear calibration remains the simplest affine alternative and isotonic calibration provides a more flexible monotone option when the labeled sample is large enough.</li>
-              <li>Jackknife and bootstrap intervals are practical complements to Wald intervals, with jackknife serving as the main resampling-style option in the package docs.</li>
+              <li>Jackknife and bootstrap intervals are practical complements to Wald intervals when finite-sample variability matters.</li>
             </ul>
           </div>
         </section>

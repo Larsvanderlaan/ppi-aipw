@@ -828,7 +828,7 @@ def _select_mean_method_cv_internal(
     Yhat: np.ndarray,
     Yhat_unlabeled: np.ndarray,
     *,
-    candidate_methods: tuple[str, ...] = ("aipw", "linear", "isotonic"),
+    candidate_methods: tuple[str, ...] = ("aipw", "linear", "monotone_spline", "isotonic"),
     w: np.ndarray | None = None,
     w_unlabeled: np.ndarray | None = None,
     X: np.ndarray | None = None,
@@ -950,7 +950,7 @@ def select_mean_method_cv(
     Yhat: np.ndarray,
     Yhat_unlabeled: np.ndarray,
     *,
-    candidate_methods: tuple[str, ...] = ("aipw", "linear", "isotonic"),
+    candidate_methods: tuple[str, ...] = ("aipw", "linear", "monotone_spline", "isotonic"),
     w: np.ndarray | None = None,
     w_unlabeled: np.ndarray | None = None,
     X: np.ndarray | None = None,
@@ -1005,7 +1005,7 @@ def _prepare_inference_inputs(
     X: np.ndarray | None = None,
     X_unlabeled: np.ndarray | None = None,
     efficiency_maximization: bool,
-    candidate_methods: tuple[str, ...] = ("aipw", "linear", "isotonic"),
+    candidate_methods: tuple[str, ...] = ("aipw", "linear", "monotone_spline", "isotonic"),
     num_folds: int = 5,
     auto_unlabeled_subsample_size: int | None = None,
     selection_random_state: int | np.random.Generator | None = None,
@@ -1195,7 +1195,7 @@ def _prepare_mean_estimation_inputs(
     X: np.ndarray | None = None,
     X_unlabeled: np.ndarray | None = None,
     efficiency_maximization: bool,
-    candidate_methods: tuple[str, ...] = ("aipw", "linear", "isotonic"),
+    candidate_methods: tuple[str, ...] = ("aipw", "linear", "monotone_spline", "isotonic"),
     num_folds: int = 5,
     auto_unlabeled_subsample_size: int | None = None,
     selection_random_state: int | np.random.Generator | None = None,
@@ -1380,7 +1380,7 @@ def _fit_mean_inference(
     X: np.ndarray | None = None,
     X_unlabeled: np.ndarray | None = None,
     efficiency_maximization: bool | None = None,
-    candidate_methods: tuple[str, ...] = ("aipw", "linear", "isotonic"),
+    candidate_methods: tuple[str, ...] = ("aipw", "linear", "monotone_spline", "isotonic"),
     num_folds: int | None = None,
     auto_unlabeled_subsample_size: int | None = None,
     selection_random_state: int | np.random.Generator | None = None,
@@ -1525,7 +1525,7 @@ def aipw_mean_inference(
     X: np.ndarray | None = None,
     X_unlabeled: np.ndarray | None = None,
     efficiency_maximization: bool | None = None,
-    candidate_methods: tuple[str, ...] = ("aipw", "linear", "isotonic"),
+    candidate_methods: tuple[str, ...] = ("aipw", "linear", "monotone_spline", "isotonic"),
     num_folds: int | None = None,
     auto_unlabeled_subsample_size: int | None = None,
     selection_random_state: int | np.random.Generator | None = None,
@@ -1604,7 +1604,7 @@ def aipw_mean_pointestimate(
     X: np.ndarray | None = None,
     X_unlabeled: np.ndarray | None = None,
     efficiency_maximization: bool | None = None,
-    candidate_methods: tuple[str, ...] = ("aipw", "linear", "isotonic"),
+    candidate_methods: tuple[str, ...] = ("aipw", "linear", "monotone_spline", "isotonic"),
     num_folds: int | None = None,
     auto_unlabeled_subsample_size: int | None = None,
     selection_random_state: int | np.random.Generator | None = None,
@@ -1725,14 +1725,15 @@ def aipw_mean_pointestimate(
                 efficiency_maximization=True,
             )
 
-        Choose among AIPW, linear calibration, and isotonic calibration by CV::
+        Choose among AIPW, linear calibration, monotone spline calibration,
+        and isotonic calibration by CV::
 
             estimate = aipw_mean_pointestimate(
                 Y,
                 Yhat,
                 Yhat_unlabeled,
                 method="auto",
-                candidate_methods=("aipw", "linear", "isotonic"),
+                candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
             )
     """
     state = _fit_mean_inference(
@@ -1773,7 +1774,7 @@ def aipw_mean_se(
     X: np.ndarray | None = None,
     X_unlabeled: np.ndarray | None = None,
     efficiency_maximization: bool | None = None,
-    candidate_methods: tuple[str, ...] = ("aipw", "linear", "isotonic"),
+    candidate_methods: tuple[str, ...] = ("aipw", "linear", "monotone_spline", "isotonic"),
     num_folds: int | None = None,
     auto_unlabeled_subsample_size: int | None = None,
     selection_random_state: int | np.random.Generator | None = None,
@@ -1845,7 +1846,7 @@ def aipw_mean_ci(
     X: np.ndarray | None = None,
     X_unlabeled: np.ndarray | None = None,
     efficiency_maximization: bool | None = None,
-    candidate_methods: tuple[str, ...] = ("aipw", "linear", "isotonic"),
+    candidate_methods: tuple[str, ...] = ("aipw", "linear", "monotone_spline", "isotonic"),
     num_folds: int | None = None,
     auto_unlabeled_subsample_size: int | None = None,
     selection_random_state: int | np.random.Generator | None = None,

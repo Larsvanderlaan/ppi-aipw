@@ -124,7 +124,7 @@ const methodContent = {
     badge: "Adaptive",
     title: "Automatic method selection",
     summary:
-      "Compares a candidate shortlist by cross-validated influence-function variance, then refits the selected method on the full labeled sample before the final estimate. By default the shortlist is `(\"aipw\", \"linear\", \"isotonic\")`.",
+      "Compares a candidate shortlist by cross-validated influence-function variance, then refits the selected method on the full labeled sample before the final estimate. By default the shortlist is `(\"aipw\", \"linear\", \"monotone_spline\", \"isotonic\")`.",
     good: [
       "You want the package to choose among a small, interpretable shortlist for you.",
       "You are comfortable spending extra compute to avoid hand-picking a method.",
@@ -274,6 +274,20 @@ const methodCurves = {
         ]
       },
       {
+        label: "Monotone spline candidate",
+        color: "var(--muted)",
+        width: 4,
+        points: [
+          [0.06, 0.11],
+          [0.18, 0.16],
+          [0.31, 0.25],
+          [0.46, 0.39],
+          [0.61, 0.56],
+          [0.76, 0.72],
+          [0.92, 0.87]
+        ]
+      },
+      {
         label: "Isotonic candidate",
         color: "var(--accent)",
         width: 4,
@@ -309,17 +323,17 @@ const inferenceContent = {
     title: "Jackknife intervals",
     summary:
       "V-fold delete-a-group intervals that refit calibration after dropping one labeled and one unlabeled fold at a time, then use the jackknife SE in a normal approximation.",
-    best: "Recommended resampling check",
+    best: "Finite-sample checks",
     cost: "Moderate compute",
-    when: "You want the package's main resampling-style uncertainty check without running a large bootstrap"
+    when: "You want a finite-sample check; it may work better than bootstrap in practice"
   },
   bootstrap: {
     title: "Bootstrap intervals",
     summary:
       "Percentile bootstrap intervals that treat the prediction model as fixed, resample rows, and refit the calibration step inside each replicate.",
-    best: "Percentile interval checks",
+    best: "Classical resampling",
     cost: "Higher compute",
-    when: "You specifically want percentile bootstrap intervals and can afford the extra runtime"
+    when: "You want a classical resampling check with percentile intervals"
   }
 };
 
