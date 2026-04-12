@@ -311,23 +311,18 @@ lower, upper = result.ci</code></pre>
         <section class="section" id="references">
           <div class="section-heading">
             <p class="eyebrow">References</p>
-            <h2>Prediction-Powered Inference via Calibration</h2>
+            <h2>Selected References</h2>
             <p>
               The methods implemented here can be viewed as special cases of
-              calibrated debiased machine learning and targeted minimum loss
-              estimation; see
-              <a href="https://arxiv.org/pdf/2411.02771"><em>Prediction-Powered Inference via Calibration</em></a>.
+              <a href="https://arxiv.org/pdf/2411.02771">calibrated debiased machine learning</a>
+              and
+              <a href="https://doi.org/10.2202/1557-4679.1043">targeted minimum loss estimation</a>.
             </p>
             <p>
               The AIPW baseline cited above goes back to Robins, Rotnitzky, and
               Zhao (1994),
               <em>"Estimation of regression coefficients when some regressors are not always observed"</em>,
               <em>Journal of the American Statistical Association</em> 89(427): 846-866.
-            </p>
-            <p>
-              For the broader TMLE perspective, see van der Laan and Rose
-              (2011), <em>Targeted Learning: Causal Inference for Observational
-              and Experimental Data</em>.
             </p>
           </div>
           <div class="reference-card">
@@ -345,6 +340,20 @@ lower, upper = result.ci</code></pre>
               <li>Calibration is stronger than mean-bias correction alone and can improve semisupervised inference when the score is miscalibrated. Linear calibration is the less flexible parametric option, while isotonic calibration is a nonparametric calibrator.</li>
               <li>Monotone spline calibration implements a smoothed version of isotonic calibration and is the package default, while linear calibration remains the simplest affine alternative and isotonic calibration provides a more flexible monotone option when the labeled sample is large enough.</li>
               <li>Jackknife and bootstrap intervals are practical complements to Wald intervals when finite-sample variability matters.</li>
+            </ul>
+            <p>
+              Classic and closely related references:
+            </p>
+            <ul>
+              <li>Robins, Rotnitzky, and Zhao (1994), <em>"Estimation of regression coefficients when some regressors are not always observed"</em>, <em>Journal of the American Statistical Association</em> 89(427): 846-866.</li>
+              <li>Robins and Rotnitzky (1995), <em>"Semiparametric efficiency in multivariate regression models with missing data"</em>, <em>Journal of the American Statistical Association</em> 90(429): 122-129.</li>
+              <li>van der Laan and Robins (2003), <em>Unified Methods for Censored Longitudinal Data and Causality</em>.</li>
+              <li>van der Laan and Rubin (2006), <em>"Targeted maximum likelihood learning"</em>.</li>
+              <li>van der Laan and Rose (2011), <em>Targeted Learning: Causal Inference for Observational and Experimental Data</em>.</li>
+              <li>van der Laan, Luedtke, and Carone (2024), <em>"Doubly robust inference via calibration"</em>.</li>
+              <li>van der Laan and van der Laan, <em>"Prediction-Powered Inference via Calibration"</em>.</li>
+              <li>Angelopoulos, Bates, Fannjiang, Jordan, and Zrnic (2023), <em>"Prediction-powered inference"</em>, <em>Science</em> 382(6671): 669-674.</li>
+              <li>Angelopoulos, Duchi, and Zrnic (2023), <em>"PPI++: Efficient prediction-powered inference"</em>.</li>
             </ul>
           </div>
         </section>
