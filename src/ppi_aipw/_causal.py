@@ -11,7 +11,7 @@ from ._api import (
     _prepare_inference_inputs,
     _wald_influence_components,
 )
-from ._utils import z_interval
+from ._utils import construct_weight_vector, z_interval
 
 
 @dataclass(frozen=True)
@@ -146,6 +146,82 @@ def _resolve_control_arm(
         ) from exc
 
 
+def _coerce_prediction_vector(
+    prediction: np.ndarray,
+    *,
+    expected_length: int,
+    name: str,
+) -> np.ndarray:
+    prediction_arr = np.asarray(prediction, dtype=float).reshape(-1)
+    if prediction_arr.shape != (expected_length,):
+        raise ValueError(f"Expected {name} with shape {(expected_length,)}, got {prediction_arr.shape}.")
+    return prediction_arr
+
+
+def _assemble_full_sample_prediction(
+    labeled_mask: np.ndarray,
+    pred_labeled: np.ndarray,
+    pred_unlabeled: np.ndarray,
+    *,
+    name: str,
+    fallback_unlabeled: np.ndarray | None = None,
+) -> tuple[np.ndarray, bool]:
+    n_obs = labeled_mask.shape[0]
+    n_labeled = int(np.sum(labeled_mask))
+    n_unlabeled = int(n_obs - n_labeled)
+
+    pred_labeled_vec = _coerce_prediction_vector(
+        pred_labeled,
+        expected_length=n_labeled,
+        name=f"{name} labeled predictions",
+    )
+
+    pred_unlabeled_vec = np.asarray(pred_unlabeled, dtype=float).reshape(-1)
+    used_fallback = False
+    if pred_unlabeled_vec.shape != (n_unlabeled,):
+        if fallback_unlabeled is None:
+            raise ValueError(
+                f"Expected {name} unlabeled predictions with shape {(n_unlabeled,)}, "
+                f"got {pred_unlabeled_vec.shape}."
+            )
+        pred_unlabeled_vec = _coerce_prediction_vector(
+            fallback_unlabeled,
+            expected_length=n_unlabeled,
+            name=f"{name} fallback unlabeled predictions",
+        )
+        used_fallback = True
+
+    full_prediction = np.empty(n_obs, dtype=float)
+    full_prediction[labeled_mask] = pred_labeled_vec
+    full_prediction[~labeled_mask] = pred_unlabeled_vec
+    return full_prediction, used_fallback
+
+
+def _causal_arm_pointestimate_and_influence(
+    Y: np.ndarray,
+    *,
+    labeled_mask: np.ndarray,
+    pred_point: np.ndarray,
+    pred_variance: np.ndarray,
+    full_sample_weights: np.ndarray,
+) -> tuple[float, np.ndarray]:
+    arm_probability = float(np.mean(labeled_mask))
+    if arm_probability <= 0.0:
+        raise ValueError("Each treatment arm must contain at least one observation.")
+
+    labeled_indicator = labeled_mask.astype(float)
+    pseudo_outcome_point = full_sample_weights * (
+        pred_point + (labeled_indicator / arm_probability) * (Y - pred_point)
+    )
+    pointestimate = float(np.mean(pseudo_outcome_point))
+
+    pseudo_outcome_variance = full_sample_weights * (
+        pred_variance + (labeled_indicator / arm_probability) * (Y - pred_variance)
+    )
+    influence = (pseudo_outcome_variance - np.mean(pseudo_outcome_variance)) / Y.shape[0]
+    return pointestimate, influence
+
+
 def _aligned_wald_influence(
     labeled_mask: np.ndarray,
     prepared: Any,
@@ -240,7 +316,13 @@ def causal_inference(
         raise ValueError("causal_inference currently supports inference='wald' only.")
 
     Y_arr = _validate_outcome_vector(Y)
-    weights = _validate_weight_vector(w, Y_arr.shape[0])
+    raw_weights = _validate_weight_vector(w, Y_arr.shape[0])
+    use_unweighted_causal_path = raw_weights is None or bool(np.allclose(raw_weights, raw_weights[0]))
+    full_sample_weights = (
+        None
+        if use_unweighted_causal_path
+        else construct_weight_vector(Y_arr.shape[0], raw_weights, vectorized=False)
+    )
     X_arr = _validate_covariate_matrix(X, Y_arr.shape[0])
     A_arr, potential_matrix, resolved_levels, arm_to_column = _resolve_potential_outcome_inputs(
         A,
@@ -265,8 +347,8 @@ def causal_inference(
             arm_predictions[labeled_mask],
             arm_predictions[unlabeled_mask],
             method=method,
-            w=None if weights is None else weights[labeled_mask],
-            w_unlabeled=None if weights is None else weights[unlabeled_mask],
+            w=None if raw_weights is None else raw_weights[labeled_mask],
+            w_unlabeled=None if raw_weights is None else raw_weights[unlabeled_mask],
             X=None if X_arr is None else X_arr[labeled_mask],
             X_unlabeled=None if X_arr is None else X_arr[unlabeled_mask],
             efficiency_maximization=efficiency_maximization,
@@ -284,11 +366,62 @@ def causal_inference(
             alternative=alternative,
             reference=Y_arr,
         )
-        arm_results[arm] = result
-        arm_means[arm] = float(result.pointestimate)
-        arm_ses[arm] = float(result.se)
-        arm_cis[arm] = (float(result.ci[0]), float(result.ci[1]))
-        arm_influences[arm] = _aligned_wald_influence(labeled_mask, prepared, Y_arr.shape[0]).reshape(-1)
+        if use_unweighted_causal_path:
+            arm_results[arm] = result
+            arm_means[arm] = float(result.pointestimate)
+            arm_ses[arm] = float(result.se)
+            arm_cis[arm] = (float(result.ci[0]), float(result.ci[1]))
+            arm_influences[arm] = _aligned_wald_influence(labeled_mask, prepared, Y_arr.shape[0]).reshape(-1)
+        else:
+            pred_point_full, _ = _assemble_full_sample_prediction(
+                labeled_mask,
+                prepared.pred_labeled_point,
+                prepared.pred_unlabeled_point,
+                name=f"arm {arm!r} point",
+            )
+            pred_variance_full, used_unlabeled_point_fallback = _assemble_full_sample_prediction(
+                labeled_mask,
+                prepared.pred_labeled_variance,
+                prepared.pred_unlabeled_variance,
+                name=f"arm {arm!r} variance",
+                fallback_unlabeled=prepared.pred_unlabeled_point,
+            )
+            arm_pointestimate, arm_influence = _causal_arm_pointestimate_and_influence(
+                Y_arr,
+                labeled_mask=labeled_mask,
+                pred_point=pred_point_full,
+                pred_variance=pred_variance_full,
+                full_sample_weights=full_sample_weights,
+            )
+            arm_standard_error = float(np.sqrt(np.sum(arm_influence**2)))
+            arm_lower, arm_upper = z_interval(
+                np.array([arm_pointestimate], dtype=float),
+                np.array([arm_standard_error], dtype=float),
+                alpha=alpha,
+                alternative=alternative,
+            )
+
+            arm_diagnostics = dict(result.diagnostics)
+            arm_diagnostics["causal_weight_normalization"] = "global_full_sample"
+            arm_diagnostics["causal_unlabeled_variance_prediction_source"] = (
+                "point_predictions_fallback" if used_unlabeled_point_fallback else "variance_predictions"
+            )
+            arm_results[arm] = MeanInferenceResult(
+                pointestimate=arm_pointestimate,
+                se=arm_standard_error,
+                ci=(float(arm_lower[0]), float(arm_upper[0])),
+                method=result.method,
+                selected_candidate=result.selected_candidate,
+                selected_efficiency_maximization=result.selected_efficiency_maximization,
+                efficiency_lambda=result.efficiency_lambda,
+                inference=result.inference,
+                diagnostics=arm_diagnostics,
+                calibrator=result.calibrator,
+            )
+            arm_means[arm] = arm_pointestimate
+            arm_ses[arm] = arm_standard_error
+            arm_cis[arm] = (float(arm_lower[0]), float(arm_upper[0]))
+            arm_influences[arm] = arm_influence.reshape(-1)
 
     ordered_arms = list(resolved_levels)
     influence_matrix = np.column_stack([arm_influences[arm] for arm in ordered_arms])
@@ -326,6 +459,8 @@ def causal_inference(
         "arm_prediction_columns": arm_to_column,
         "per_arm": {arm: result.diagnostics for arm, result in arm_results.items()},
     }
+    if not use_unweighted_causal_path:
+        diagnostics["causal_weight_normalization"] = "global_full_sample"
     return CausalInferenceResult(
         arm_means=arm_means,
         arm_ses=arm_ses,

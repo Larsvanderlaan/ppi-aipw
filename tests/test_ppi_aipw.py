@@ -372,6 +372,39 @@ def test_uniform_weights_reproduce_unweighted_mean_inference() -> None:
     np.testing.assert_allclose(weighted.ci[1], unweighted.ci[1])
 
 
+def test_mean_inference_is_invariant_to_weight_scaling() -> None:
+    rng = np.random.default_rng(220)
+    y = rng.normal(size=40)
+    yhat = y + rng.normal(scale=0.3, size=40)
+    yhat_unlabeled = rng.normal(size=70)
+    w = rng.uniform(0.5, 2.0, size=y.shape[0])
+    w_unlabeled = rng.uniform(0.5, 2.0, size=yhat_unlabeled.shape[0])
+
+    baseline = mean_inference(
+        y,
+        yhat,
+        yhat_unlabeled,
+        method="linear",
+        inference="wald",
+        w=w,
+        w_unlabeled=w_unlabeled,
+    )
+    rescaled = mean_inference(
+        y,
+        yhat,
+        yhat_unlabeled,
+        method="linear",
+        inference="wald",
+        w=7.0 * w,
+        w_unlabeled=3.0 * w_unlabeled,
+    )
+
+    np.testing.assert_allclose(rescaled.pointestimate, baseline.pointestimate)
+    np.testing.assert_allclose(rescaled.se, baseline.se)
+    np.testing.assert_allclose(rescaled.ci[0], baseline.ci[0])
+    np.testing.assert_allclose(rescaled.ci[1], baseline.ci[1])
+
+
 def test_weighted_linear_calibration_matches_row_duplication() -> None:
     y = np.array([0.2, 1.0, -0.3, 0.8], dtype=float)
     yhat = np.array([0.1, 0.7, -0.1, 0.6], dtype=float)
