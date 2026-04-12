@@ -144,7 +144,7 @@ Optional weights:
 
 - `w` and `w_unlabeled` are available throughout the mean API
 - weights are used in the weighted means, calibration/regression fits, method selection, and standard errors
-- these can be ordinary observation weights or balancing weights if you want to reweight toward a covariate-adjusted target population
+- these can be inverse probability of missingness weights to adjust for informative missingness, or balancing weights if you want to reweight toward a covariate-adjusted target population
 - uniform weights reproduce the unweighted behavior
 - `compute_two_sample_balancing_weights(X_labeled, X_unlabeled, ...)` computes nonnegative labeled-sample balancing weights for the two-sample mean problem
 - this utility is intended for the semisupervised mean setup and does not construct causal-arm-specific weights
@@ -187,14 +187,16 @@ Causal API:
 - `Yhat_potential` should have one column per treatment arm and one row per unit
 - optional `X` is passed through arm-by-arm, so `method="prognostic_linear"`
   gives the same score-plus-covariate linear adjustment inside each arm
-- optional full-sample weights `w` are also supported and can be ordinary
-  observation weights or balancing weights
+- optional full-sample weights `w` are also supported and can be inverse
+  propensity weights or balancing weights; in randomized studies they can
+  adjust for chance covariate imbalance for efficiency, and in observational
+  studies they can adjust for confounding for bias reduction
 - `control_arm=None` defaults to the minimum resolved treatment level
 - this API is a convenience layer over the semisupervised mean engine, not a
   full observational causal pipeline
 
 The full user guide is in [docs/ppi_aipw_vignette.md](docs/ppi_aipw_vignette.md).
-There is also a tiny runnable notebook example in [examples/ppi_aipw_quickstart.ipynb](examples/ppi_aipw_quickstart.ipynb).
+There is also a compact runnable notebook covering both the mean and causal APIs in [examples/ppi_aipw_quickstart.ipynb](examples/ppi_aipw_quickstart.ipynb).
 The package website lives at [docs/index.html](docs/index.html), with a
 dedicated causal page at [docs/causal.html](docs/causal.html).
 

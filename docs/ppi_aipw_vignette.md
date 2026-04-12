@@ -70,7 +70,7 @@ lower, upper = mean_ci(
 
 If you only remember one pattern, remember `result = mean_inference(...)`.
 
-A tiny notebook version of this workflow is in
+A compact notebook covering both the mean and causal APIs is in
 `examples/ppi_aipw_quickstart.ipynb`.
 
 ## What The Arguments Mean
@@ -566,7 +566,8 @@ estimate = aipw_mean_pointestimate(
 The weights should be 1D arrays matching the number of rows in the corresponding sample.
 
 They are used throughout the weighted mean, calibration/regression, method-selection,
-and standard-error calculations. They can also be balancing weights if you want
+and standard-error calculations. They can be inverse probability of missingness
+weights to adjust for informative missingness, or balancing weights if you want
 to target a covariate-adjusted population rather than the raw empirical sample.
 Uniform weights reproduce the unweighted behavior.
 

@@ -41,7 +41,7 @@
             </p>
             <div class="hero-actions">
               <a class="button button-primary" href="#quickstart">See Example</a>
-              <a class="button button-secondary" href="./index.html">Back To Main Site</a>
+              <a class="button button-secondary" href="https://github.com/Larsvanderlaan/ppi-aipw/blob/main/examples/ppi_aipw_quickstart.ipynb">Notebook: Mean + Causal</a>
             </div>
             <ul class="hero-pills">
               <li>Binary, discrete, and categorical treatments</li>
@@ -78,6 +78,11 @@
           <div class="section-heading">
             <p class="eyebrow">Quickstart</p>
             <h2>One column per arm, one result object back</h2>
+            <p>
+              The combined
+              <a href="https://github.com/Larsvanderlaan/ppi-aipw/blob/main/examples/ppi_aipw_quickstart.ipynb">quickstart notebook</a>
+              pairs this causal example with the main semisupervised mean workflow, so it is a good single entry point if you want both APIs side by side.
+            </p>
           </div>
 
           <div class="panel-card code-card">
@@ -139,7 +144,7 @@ lower, upper = result.ate_cis["treated"]</code></pre>
             </article>
             <article class="argument-card">
               <h3><code>w</code></h3>
-              <p>Optional full-sample observation weights. These can also be balancing weights if you want to reweight the arm-specific mean target; uniform weights reproduce the unweighted behavior.</p>
+              <p>Optional full-sample observation weights. These can be inverse propensity weights or balancing weights. In randomized studies, they can be used to adjust for chance covariate imbalance and improve efficiency; in observational studies, they can be used to adjust for confounding and reduce bias. Uniform weights reproduce the unweighted behavior.</p>
             </article>
           </div>
         </section>
