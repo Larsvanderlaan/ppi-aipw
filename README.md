@@ -18,6 +18,18 @@ This repository contains the code and manuscript assets for the paper on calibra
 This repo now includes `ppi_aipw`, a Python package for semisupervised mean
 estimation with AIPW, calibration, and uncertainty quantification.
 
+Install directly from GitHub:
+
+```bash
+python -m pip install "git+https://github.com/Larsvanderlaan/ppi-aipw.git"
+```
+
+For local development from this checkout:
+
+```bash
+python -m pip install -e .
+```
+
 Most users should start with:
 
 ```python
@@ -243,4 +255,3 @@ The full reproduction is a multi-hour run. The finalized paper settings use larg
 ## Dataset downloads
 
 The real-data reproduction uses the official `ppi_py` dataset bundle. If the cached files are not already present, they are downloaded automatically into the local cache directory under `outputs/cache/ppi_datasets/`.
-# ppi-aipw

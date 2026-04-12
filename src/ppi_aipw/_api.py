@@ -1650,14 +1650,16 @@ def aipw_mean_pointestimate(
               efficiency-maximized AIPW candidate when ``"aipw"`` is included.
         w:
             Optional sample weights for labeled data. If provided, must have
-            length ``n_labeled``. These may also be balancing weights if you
-            want to reweight the target mean toward a covariate-adjusted
-            population. Uniform weights reproduce the unweighted behavior.
+            length ``n_labeled``. These can be inverse probability of
+            missingness weights to adjust for informative missingness, or
+            balancing weights if you want to reweight the target mean toward a
+            covariate-adjusted population. Uniform weights reproduce the
+            unweighted behavior.
         w_unlabeled:
             Optional sample weights for unlabeled data. If provided, must have
-            length ``n_unlabeled``. These may likewise be balancing weights for
-            the unlabeled sample. Uniform weights reproduce the unweighted
-            behavior.
+            length ``n_unlabeled``. These can likewise be inverse probability
+            of missingness weights or balancing weights for the unlabeled
+            sample. Uniform weights reproduce the unweighted behavior.
         X:
             Optional extra covariates for the labeled sample. These are used by
             ``method="prognostic_linear"``.

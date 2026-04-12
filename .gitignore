@@ -4,6 +4,7 @@
 __pycache__/
 .pytest_cache/
 .mplconfig/
+docs/.Rhistory
 
 outputs/
 tmp_data/
@@ -16,3 +17,11 @@ tmp_data/
 /*.log
 /*.out
 /*.pdf
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.fdb_latexmk
+paper/*.fls
+paper/*.log
+paper/*.out
+paper/*.toc

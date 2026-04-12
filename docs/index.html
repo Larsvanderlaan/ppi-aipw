@@ -20,8 +20,9 @@
     <div class="page-shell">
       <header class="hero">
         <nav class="topbar">
-          <div class="brand">ppi_aipw</div>
+          <div class="brand"><a href="./index.html">ppi_aipw</a></div>
           <div class="toplinks">
+            <a href="#install">Install</a>
             <a href="#quickstart">Quickstart</a>
             <a href="#methods">Methods</a>
             <a href="./causal.html">Causal Inference</a>
@@ -93,6 +94,40 @@ lower, upper = result.ci</code></pre>
       </header>
 
       <main>
+        <section class="section" id="install">
+          <div class="section-heading split">
+            <div>
+              <p class="eyebrow">Install</p>
+              <h2>Install from GitHub or work locally</h2>
+            </div>
+            <p class="section-side-note">
+              The package is shipped from this repository, so the GitHub URL is
+              the shortest install path.
+            </p>
+          </div>
+
+          <div class="argument-grid">
+            <article class="argument-card">
+              <h3>GitHub install</h3>
+              <pre><code>python -m pip install "git+https://github.com/Larsvanderlaan/ppi-aipw.git"</code></pre>
+            </article>
+            <article class="argument-card">
+              <h3>Local editable install</h3>
+              <pre><code>python -m pip install -e .</code></pre>
+            </article>
+            <article class="argument-card">
+              <h3>Source</h3>
+              <p>
+                Browse the
+                <a href="https://github.com/Larsvanderlaan/ppi-aipw">repository</a>,
+                the
+                <a href="https://github.com/Larsvanderlaan/ppi-aipw/blob/main/examples/ppi_aipw_quickstart.ipynb">quickstart notebook</a>,
+                and the <a href="./paper.pdf">paper PDF</a>.
+              </p>
+            </article>
+          </div>
+        </section>
+
         <section class="section" id="quickstart">
           <div class="section-heading">
             <p class="eyebrow">Quickstart</p>
@@ -173,7 +208,7 @@ lower, upper = result.ci</code></pre>
           <div class="section-heading split">
             <div>
               <p class="eyebrow">Method Explorer</p>
-              <h2>Choose the calibration strategy that matches your problem</h2>
+              <h2>Choose the estimation strategy that matches your problem</h2>
             </div>
             <p class="section-side-note">
               Click through the methods for a short description, typical use
@@ -182,13 +217,14 @@ lower, upper = result.ci</code></pre>
           </div>
 
           <div class="method-explorer" data-module="method-explorer">
-            <div class="method-tabs" role="tablist" aria-label="Calibration methods">
+            <div class="method-tabs" role="tablist" aria-label="Estimation methods">
               <button class="tab-button" data-method="linear">Linear</button>
               <button class="tab-button" data-method="prognostic_linear">Prognostic Linear</button>
               <button class="tab-button" data-method="aipw">AIPW</button>
               <button class="tab-button" data-method="sigmoid">Sigmoid</button>
               <button class="tab-button is-active" data-method="monotone_spline">Monotone Spline</button>
               <button class="tab-button" data-method="isotonic">Isotonic</button>
+              <button class="tab-button" data-method="auto">Auto</button>
             </div>
 
             <div class="method-panel">

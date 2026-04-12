@@ -77,7 +77,7 @@ const methodContent = {
     recommendation:
       "Use mainly for bounded or probability-like scores when a smooth sigmoid recalibration is plausible.",
     visualNote:
-      "A smooth S-shaped map compresses the extremes and expands the middle when the score behaves like a probability."
+      "A smooth S-shaped map can correct systematic nonlinear distortion by moderating the extremes and expanding the middle of the score range."
   },
   monotone_spline: {
     badge: "Default",
@@ -119,6 +119,26 @@ const methodContent = {
       "Use when you want a nonlinear upgrade and the labeled sample is large enough to support it.",
     visualNote:
       "The fitted map is monotone and piecewise constant, so the calibration curve moves in visible steps."
+  },
+  auto: {
+    badge: "Adaptive",
+    title: "Automatic method selection",
+    summary:
+      "Compares a candidate shortlist by cross-validated influence-function variance, then refits the selected method on the full labeled sample before the final estimate. By default the shortlist is `(\"aipw\", \"linear\", \"isotonic\")`.",
+    good: [
+      "You want the package to choose among a small, interpretable shortlist for you.",
+      "You are comfortable spending extra compute to avoid hand-picking a method.",
+      "You want a practical default selector rather than a single fixed calibration family."
+    ],
+    tradeoffs: [
+      "More compute than fitting one method directly.",
+      "Only chooses among the candidate methods you provide.",
+      "If `\"aipw\"` is in the shortlist, the selector also compares an efficiency-maximized AIPW candidate."
+    ],
+    recommendation:
+      "Use when you want a data-adaptive choice across a small candidate set rather than committing to one method up front.",
+    visualNote:
+      "Shown as a candidate comparison rather than a single calibration map: the selector scores the shortlisted methods and then refits the winner."
   }
 };
 
@@ -213,6 +233,48 @@ const methodCurves = {
     curves: [
       {
         label: "Isotonic step fit",
+        color: "var(--accent)",
+        width: 4,
+        points: [
+          [0.06, 0.14],
+          [0.18, 0.14],
+          [0.18, 0.23],
+          [0.33, 0.23],
+          [0.33, 0.37],
+          [0.49, 0.37],
+          [0.49, 0.56],
+          [0.68, 0.56],
+          [0.68, 0.73],
+          [0.83, 0.73],
+          [0.83, 0.88],
+          [0.94, 0.88]
+        ]
+      }
+    ]
+  },
+  auto: {
+    curves: [
+      {
+        label: "Original score",
+        color: "var(--ink)",
+        width: 3,
+        dasharray: "8 7",
+        points: [
+          [0.08, 0.08],
+          [0.92, 0.92]
+        ]
+      },
+      {
+        label: "Linear candidate",
+        color: "var(--warm)",
+        width: 4,
+        points: [
+          [0.08, 0.14],
+          [0.92, 0.84]
+        ]
+      },
+      {
+        label: "Isotonic candidate",
         color: "var(--accent)",
         width: 4,
         points: [

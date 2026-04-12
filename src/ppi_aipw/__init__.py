@@ -35,9 +35,10 @@ Arguments:
         additional covariates.
     w, w_unlabeled:
         Optional observation weights for the labeled and unlabeled samples.
-        These can also be balancing weights if you want the mean target to be
-        reweighted toward a covariate-adjusted population. Uniform weights
-        reproduce the unweighted behavior.
+        These can be inverse probability of missingness weights to adjust for
+        informative missingness, or balancing weights if you want the mean
+        target to be reweighted toward a covariate-adjusted population.
+        Uniform weights reproduce the unweighted behavior.
         The package also exposes
         :func:`compute_two_sample_balancing_weights` for constructing
         nonnegative labeled-sample balancing weights in the two-sample mean
@@ -93,9 +94,11 @@ Causal API:
     plus control-vs-treatment ATEs. Optional covariates ``X`` are passed
     through arm-by-arm, so ``method="prognostic_linear"`` works there too.
     Optional full-sample weights ``w`` are also supported there, including
-    balancing weights if you want to reweight the arm-specific mean targets.
-    This first version is Wald-only and treats each arm-specific mean as a
-    semisupervised mean problem under the hood.
+    inverse propensity weights or balancing weights. In randomized studies,
+    they can be used to adjust for chance covariate imbalance and improve
+    efficiency; in observational studies, they can be used to adjust for
+    confounding and reduce bias. This first version is Wald-only and treats
+    each arm-specific mean as a semisupervised mean problem under the hood.
 """
 
 from ._api import (

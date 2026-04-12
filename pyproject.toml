@@ -8,12 +8,27 @@ version = "0.1.0"
 description = "AIPW-style semisupervised mean inference with calibration methods."
 readme = "README.md"
 requires-python = ">=3.9"
+keywords = ["semi-supervised learning", "aipw", "calibration", "causal inference", "inference"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+]
 dependencies = [
     "numpy",
     "scipy",
     "scikit-learn",
     "xgboost",
 ]
+
+[project.urls]
+Homepage = "https://github.com/Larsvanderlaan/ppi-aipw"
+Repository = "https://github.com/Larsvanderlaan/ppi-aipw"
+Documentation = "https://larsvanderlaan.github.io/ppi-aipw/"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
