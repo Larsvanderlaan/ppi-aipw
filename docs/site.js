@@ -15,7 +15,7 @@ const methodContent = {
       "Cannot capture strongly nonlinear calibration error."
     ],
     recommendation:
-      "Use when you want the simplest affine recalibration and a very easy-to-explain baseline."
+      "Use when affine recalibration is adequate and you want the simplest calibrated estimator."
   },
   prognostic_linear: {
     badge: "Score + X",
@@ -51,7 +51,7 @@ const methodContent = {
       "Can miss efficiency gains when the score is systematically mis-scaled unless you turn on efficiency maximization."
     ],
     recommendation:
-      "Use as a baseline and sanity check. Turn on efficiency maximization when you want the package to rescale the raw score for lower variance."
+      "Use when you want uncalibrated AIPW on the original score, optionally with empirical efficiency rescaling."
   },
   sigmoid: {
     badge: "Bounded scores",
@@ -88,7 +88,7 @@ const methodContent = {
       "Still more complex than linear calibration when the labeled sample is very small."
     ],
     recommendation:
-      "A strong default when you want a smooth monotone calibrator without the stepwise behavior of isotonic regression."
+      "Use as the default monotone calibrator when you want a smooth nonlinear adjustment."
   },
   isotonic: {
     badge: "Flexible",

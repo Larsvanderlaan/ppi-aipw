@@ -6,7 +6,7 @@ This repository contains the code and manuscript assets for the paper on calibra
 
 - `experiments/`: core experiment drivers and shared estimator code
 - `src/ppi_aipw/`: user-facing Python package for AIPW with calibration
-- `docs/ppi_aipw_vignette.md`: practitioner-friendly package vignette
+- `docs/ppi_aipw_vignette.md`: package vignette
 - `docs/index.html`: interactive package website with docs, examples, and paper links
 - `paper/`: manuscript source files and tracked manuscript-ready assets
 - `scripts/`: public entrypoints for reproduction
@@ -15,10 +15,8 @@ This repository contains the code and manuscript assets for the paper on calibra
 
 ## `ppi_aipw` package
 
-This repo now includes `ppi_aipw`, a practitioner-friendly Python package for
-semisupervised mean estimation with AIPW, calibration, and practical
-uncertainty quantification within the broader semiparametric, missing-data, and
-debiased machine learning toolkit.
+This repo now includes `ppi_aipw`, a Python package for semisupervised mean
+estimation with AIPW, calibration, and uncertainty quantification.
 
 Most users should start with:
 
@@ -51,7 +49,7 @@ result = mean_inference(
 )
 ```
 
-If you only want one output at a time, the narrower convenience wrappers are
+If you only want one output at a time, the narrower convenience functions are
 still available:
 
 ```python
@@ -149,9 +147,9 @@ Recommended defaults:
 - start with `method="monotone_spline"`
 - start with `inference="wald"`
 - use `method="linear"` when you want the simplest affine recalibration and maximum interpretability
-- use `method="prognostic_linear"` when you want a linear prognostic adjustment with the score always included and optional extra covariates `X`
+- use `method="prognostic_linear"` when you want a linear prognostic adjustment with optional extra covariates `X`
 - use `method="sigmoid"` when predictions are probability-like or naturally bounded
-- use `method="monotone_spline"` when you want the package default smooth monotone nonlinear recalibration that is less stepwise than isotonic
+- use `method="monotone_spline"` when you want the default smooth monotone nonlinear recalibration that is less stepwise than isotonic
 - use `method="isotonic"` when you expect monotone nonlinear miscalibration and have enough labeled data; the default backend is monotone XGBoost, with `isocal_backend="sklearn"` available as a simpler fallback
 - use `efficiency_maximization=True` when you want the package to empirically rescale the score for lower variance, especially for raw-score `method="aipw"`
 - use `method="auto"` when you want a data-adaptive choice among `aipw`, `linear`, and `isotonic`, while also letting the selector compare against an efficiency-maximized AIPW candidate
@@ -168,7 +166,7 @@ Result object:
 - `result.efficiency_lambda`: estimated lambda when efficiency maximization is active
 - `result.diagnostics`: method-selection and inference metadata
 
-Causal wrapper:
+Causal API:
 
 - `causal_inference(Y, A, Yhat_potential, ...)` computes arm-specific potential
   outcome means plus all control-vs-treatment ATEs in one Wald-only call
@@ -176,7 +174,7 @@ Causal wrapper:
 - optional `X` is passed through arm-by-arm, so `method="prognostic_linear"`
   gives the same score-plus-covariate linear adjustment inside each arm
 - `control_arm=None` defaults to the minimum resolved treatment level
-- this wrapper is a convenience layer over the semisupervised mean engine, not a
+- this API is a convenience layer over the semisupervised mean engine, not a
   full observational causal pipeline
 
 The full user guide is in [docs/ppi_aipw_vignette.md](docs/ppi_aipw_vignette.md).

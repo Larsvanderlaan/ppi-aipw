@@ -1,4 +1,4 @@
-"""ppi_aipw: semisupervised AIPW / DML-style mean inference with easy calibration.
+"""ppi_aipw: semisupervised mean inference with AIPW and calibration.
 
 Most users should start with `mean_inference(...)`:
 
@@ -51,14 +51,15 @@ Arguments:
         resampling-based intervals via :func:`aipw_mean_ci`.
 
 Rule of thumb:
-    Use ``method="monotone_spline"`` as the package default, ``"aipw"`` as the
-    no-calibration baseline, ``"linear"`` when you want the simplest affine
-    recalibration, ``"prognostic_linear"`` when you want linear adjustment on
-    the score plus optional extra covariates, ``"sigmoid"`` when predictions are
-    probability-like or bounded scores, and ``"isotonic"`` when you want the
-    most flexible monotone calibration curve and have enough labeled data to
-    fit it stably. ``method="isotonic"`` uses a one-round monotone XGBoost
-    calibrator by default, with ``isocal_min_child_weight=10`` and an optional
+    Use ``method="monotone_spline"`` as the package default, ``"aipw"`` for
+    uncalibrated AIPW on the original score, ``"linear"`` when you want the
+    simplest affine recalibration, ``"prognostic_linear"`` when you want linear
+    adjustment on the score plus optional extra covariates, ``"sigmoid"`` when
+    predictions are probability-like or bounded scores, and ``"isotonic"`` when
+    you want the most flexible monotone calibration curve and have enough
+    labeled data to fit it stably. ``method="isotonic"`` uses a one-round
+    monotone XGBoost calibrator by default, with
+    ``isocal_min_child_weight=10`` and an optional
     ``isocal_backend="sklearn"`` fallback. Turn on
     ``efficiency_maximization=True`` when you want the package to replace the
     chosen predictor by ``lambda m(X)`` using empirical influence-function
@@ -73,7 +74,7 @@ Rule of thumb:
     cross-fitted predictions plus that unlabeled subset and reused for Wald
     inference.
 
-Causal wrapper:
+Causal API:
     Use ``causal_inference(...)`` when you have treatment-specific predictions
     with one column per arm and you want arm-specific potential outcome means
     plus control-vs-treatment ATEs. Optional covariates ``X`` are passed

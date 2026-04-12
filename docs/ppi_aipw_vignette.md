@@ -1,6 +1,6 @@
 # `ppi_aipw` Vignette
 
-`ppi_aipw` is a practitioner-friendly package for estimating a population mean
+`ppi_aipw` is a package for estimating a population mean
 when you have:
 
 - a labeled sample with observed outcomes `Y`
@@ -8,12 +8,10 @@ when you have:
 - a larger unlabeled sample where you only have predictions, `Yhat_unlabeled`
 
 The package uses AIPW-style augmentation: it starts from a prediction-based mean
-and then debiases it using the labeled sample. It sits in the broader
-semiparametric, missing-data, and debiased machine learning toolkit.
+and then debiases it using the labeled sample.
 
-This vignette is written for applied ML and practitioner workflows. It focuses on
-what to call, what the arguments mean, and how to choose among the available
-calibration methods.
+This vignette focuses on what to call, what the arguments mean, and how to
+choose among the available calibration methods.
 
 ## Start Here
 
@@ -40,7 +38,7 @@ standard_error = result.se
 lower, upper = result.ci
 ```
 
-If you prefer narrower wrappers, the package also exports:
+If you prefer narrower convenience functions, the package also exports:
 
 - `mean_pointestimate`
 - `mean_ci`
@@ -49,7 +47,7 @@ If you prefer narrower wrappers, the package also exports:
 - `aipw_mean_ci`
 - `aipw_mean_se`
 
-Typical wrapper usage:
+Typical usage:
 
 ```python
 from ppi_aipw import mean_pointestimate, mean_ci
@@ -77,7 +75,7 @@ A tiny notebook version of this workflow is in
 
 ## What The Arguments Mean
 
-The core wrapper API follows the same basic shape everywhere:
+The core API follows the same basic shape everywhere:
 
 ```python
 aipw_mean_pointestimate(
@@ -291,7 +289,7 @@ What it does:
 
 When it is a good choice:
 
-- You want a strong default.
+- You want the simplest affine recalibration that is still calibrated.
 - You think the model is mostly right but maybe shifted or stretched.
 - You do not have a huge labeled calibration sample.
 
@@ -451,7 +449,7 @@ lower, upper = aipw_mean_ci(
 
 ## Shortcut Functions
 
-If you prefer explicit method names instead of `method=...`, these wrappers are available:
+If you prefer explicit method names instead of `method=...`, these convenience functions are available:
 
 - `linear_calibration_mean_pointestimate`
 - `linear_calibration_mean_ci`
@@ -468,12 +466,12 @@ from ppi_aipw import isotonic_mean_pointestimate
 estimate = isotonic_mean_pointestimate(Y, Yhat, Yhat_unlabeled)
 ```
 
-These are just convenience wrappers around the generic API.
+These are convenience functions around the generic API.
 
-## Causal Wrapper
+## Causal API
 
 If you have treatment-specific predictions with one column per arm, the package
-also exposes a thin causal wrapper:
+also exposes a causal API:
 
 ```python
 from ppi_aipw import causal_inference
@@ -503,7 +501,7 @@ Important notes:
 - this first version supports one-dimensional outcomes
 - `Yhat_potential` must have one column per treatment arm
 - `control_arm=None` defaults to the minimum resolved treatment level
-- `inference="wald"` is the only supported option in the causal wrapper
+- `inference="wald"` is the only supported option in the causal API
 
 ## Reusing A Fitted Calibration Model
 

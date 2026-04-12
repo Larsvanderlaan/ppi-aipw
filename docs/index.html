@@ -32,13 +32,12 @@
         <div class="hero-grid">
           <section class="hero-copy">
             <p class="eyebrow">Semisupervised Mean Inference</p>
-            <h1>Semisupervised mean inference with AIPW and calibration,</h1>
+            <h1>Semisupervised mean inference with AIPW and calibration</h1>
             <p class="lede">
-              <code>ppi_aipw</code> is a package for semisupervised mean
-              estimation with labeled outcomes, a larger
-              unlabeled sample, and predictions from a fixed model. It combines
-              AIPW, calibration, and uncertainty quantification within a broader
-              semiparametric and debiased machine learning toolkit.
+              <code>ppi_aipw</code> estimates a population mean from a labeled
+              sample, a larger unlabeled sample, and predictions from a fixed
+              model. It provides AIPW, calibration methods, and uncertainty
+              quantification in one API.
             </p>
             <div class="hero-actions">
               <a class="button button-primary" href="#quickstart">Quickstart</a>
@@ -258,30 +257,30 @@ lower, upper = result.ci</code></pre>
         <section class="section" id="references">
           <div class="section-heading">
             <p class="eyebrow">References</p>
-            <h2>Where this website’s framing comes from</h2>
+            <h2>Prediction-Powered Inference via Calibration</h2>
             <p>
-              The framing and method notes on this page are drawn from the
-              paper text in <code>paper/main.tex</code> in this repository.
+              This package implements the methods in
+              <em>Prediction-Powered Inference via Calibration</em>
+              (<a href="./paper.pdf">PDF</a>).
             </p>
           </div>
           <div class="reference-card">
+            <div class="reference-links">
+              <a href="./paper.pdf">Open paper PDF</a>
+              <a href="https://github.com/Larsvanderlaan/ppi-aipw/blob/main/paper/main.tex">Open <code>paper/main.tex</code></a>
+              <a href="https://github.com/Larsvanderlaan/ppi-aipw/blob/main/docs/ppi_aipw_vignette.md">Open package vignette</a>
+            </div>
             <p>
               Main paper themes reflected here:
             </p>
             <ul>
               <li>PPI and PPI++ can be understood within the AIPW, semiparametric-efficiency, and debiased machine learning framework.</li>
-              <li>In the one-score setting, <code>efficiency_maximization=True</code> for <code>method="aipw"</code> is equivalent to unconstrained PPI++; plain PPI is not implemented because raw-score AIPW is typically at least as efficient.</li>
-              <li>In the one-score setting, PPI++ also aligns algebraically with linear calibration and prognostic-score regression adjustment.</li>
-              <li>Calibration is stronger than mean-bias correction alone and can improve semisupervised inference when the score is miscalibrated.</li>
-              <li>Monotone spline calibration is the package's default, while linear remains the simplest affine alternative and isotonic calibration is a more flexible monotone option when labeled data support it.</li>
+              <li>In the one-score setting, <code>efficiency_maximization=True</code> for <code>method="aipw"</code> is equivalent to PPI++; plain PPI is not implemented because raw-score AIPW is typically at least as efficient.</li>
+              <li>In the one-score setting, PPI++ is asymptotically equivalent to linear calibration and prognostic-score regression adjustment.</li>
+              <li>Calibration is stronger than mean-bias correction alone and can improve semisupervised inference when the score is miscalibrated. Linear calibration is the less flexible parametric option, while isotonic calibration is a nonparametric calibrator.</li>
+              <li>Monotone spline calibration is the package default, while linear remains the simplest affine alternative and isotonic calibration is a more flexible monotone option when labeled data support it.</li>
               <li>Bootstrap intervals are a practical complement to Wald intervals.</li>
             </ul>
-            <div class="reference-links">
-              <a href="./paper.pdf">Open paper PDF</a>
-              <a href="https://github.com/Larsvanderlaan/ppi-aipw/blob/main/paper/main.tex">Open <code>paper/main.tex</code></a>
-              <a href="https://github.com/Larsvanderlaan/ppi-aipw/tree/main/paper/assets">Open paper assets</a>
-              <a href="https://github.com/Larsvanderlaan/ppi-aipw/blob/main/docs/ppi_aipw_vignette.md">Open package vignette</a>
-            </div>
           </div>
         </section>
       </main>
