@@ -12,6 +12,7 @@ dependencies = [
     "numpy",
     "scipy",
     "scikit-learn",
+    "xgboost",
 ]
 
 [tool.setuptools]

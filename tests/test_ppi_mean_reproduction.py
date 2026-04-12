@@ -12,17 +12,22 @@ from ppi_py import ppi_mean_ci, ppi_mean_pointestimate
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
+from experiments.estimators import auto_aipw_pointestimate_and_se
 from experiments.ppi_mean_reproduction import (
     isotonic_calibrated_predictions,
     isotonic_min10_calibrated_predictions,
     linear_calibrated_predictions,
     main,
+    monotone_spline_calibrated_predictions,
+    run_auto_calibration_estimator,
+    run_monotone_spline_estimator,
     platt_calibrated_predictions,
     run_aipw_estimator,
     run_classical_estimator,
     run_isotonic_calibration_estimator,
     run_linear_calibration_estimator,
     run_ppi_estimator,
+    run_ppi_plus_plus_estimator,
     venn_abers_calibrated_predictions,
 )
 
@@ -128,6 +133,19 @@ def test_platt_predictions_stay_bounded() -> None:
     assert np.all(pred_u <= 1.0)
 
 
+def test_monotone_spline_predictions_stay_bounded_and_monotone() -> None:
+    y = np.array([0.0, 0.0, 0.0, 1.0, 1.0, 1.0], dtype=float)
+    yhat_l = np.array([0.05, 0.15, 0.45, 0.55, 0.85, 0.95], dtype=float)
+    yhat_u = np.array([0.1, 0.2, 0.8, 0.9], dtype=float)
+    pred_l, pred_u = monotone_spline_calibrated_predictions(y, yhat_l, yhat_u)
+    assert np.all(pred_l >= 0.0)
+    assert np.all(pred_l <= 1.0)
+    assert np.all(pred_u >= 0.0)
+    assert np.all(pred_u <= 1.0)
+    assert np.all(np.diff(pred_l[np.argsort(yhat_l)]) >= -1e-12)
+    assert pred_u.shape == yhat_u.shape
+
+
 def test_aipw_matches_pooled_plugin_plus_augmentation() -> None:
     y = np.array([0.0, 1.0, 0.0, 1.0], dtype=float)
     yhat_l = np.array([0.1, 0.4, 0.6, 0.8], dtype=float)
@@ -138,6 +156,36 @@ def test_aipw_matches_pooled_plugin_plus_augmentation() -> None:
     expected = pooled_plugin + np.mean(y - yhat_l)
     assert result["estimate"] == pytest.approx(expected)
     assert result["se"] > 0.0
+
+
+def test_auto_baseline_matches_vendored_helper() -> None:
+    rng = np.random.default_rng(8)
+    y = rng.normal(size=140)
+    yhat_l = y + rng.normal(scale=0.35, size=140)
+    yhat_u = rng.normal(loc=float(np.mean(y)), scale=1.0, size=220)
+
+    result = run_auto_calibration_estimator(y, yhat_l, yhat_u, alpha=0.1)
+    expected = auto_aipw_pointestimate_and_se(
+        y,
+        yhat_l,
+        yhat_u,
+        candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
+        num_folds=20,
+        random_state=0,
+    )
+
+    assert result["estimate"] == pytest.approx(expected["estimate"])
+    assert result["se"] == pytest.approx(expected["se"])
+
+
+def test_monotone_spline_baseline_runs() -> None:
+    rng = np.random.default_rng(9)
+    y = rng.normal(size=160)
+    yhat_l = y + rng.normal(scale=0.3, size=160)
+    yhat_u = rng.normal(loc=float(np.mean(y)), scale=1.1, size=240)
+    result = run_monotone_spline_estimator(y, yhat_l, yhat_u, alpha=0.1)
+    assert np.isfinite(result["estimate"])
+    assert result["se"] >= 0.0
 
 
 def test_ppi_parity_with_upstream_on_fixed_split() -> None:
@@ -153,6 +201,25 @@ def test_ppi_parity_with_upstream_on_fixed_split() -> None:
     ours = run_ppi_estimator(y_l, yhat_l, yhat_u, alpha=0.1)
     upstream_estimate = float(np.asarray(ppi_mean_pointestimate(y_l, yhat_l, yhat_u, lam=1)).reshape(-1)[0])
     upstream_ci = ppi_mean_ci(y_l, yhat_l, yhat_u, alpha=0.1, lam=1)
+
+    assert ours["estimate"] == pytest.approx(upstream_estimate)
+    assert ours["ci_lower"] == pytest.approx(float(np.asarray(upstream_ci[0]).reshape(-1)[0]))
+    assert ours["ci_upper"] == pytest.approx(float(np.asarray(upstream_ci[1]).reshape(-1)[0]))
+
+
+def test_ppi_plus_plus_parity_with_upstream_on_fixed_split() -> None:
+    rng = np.random.default_rng(1)
+    y_total = rng.normal(size=320)
+    yhat_total = y_total + rng.normal(scale=0.35, size=320)
+    idx = rng.permutation(y_total.shape[0])
+    n = 110
+    y_l = y_total[idx[:n]]
+    yhat_l = yhat_total[idx[:n]]
+    yhat_u = yhat_total[idx[n:]]
+
+    ours = run_ppi_plus_plus_estimator(y_l, yhat_l, yhat_u, alpha=0.1)
+    upstream_estimate = float(np.asarray(ppi_mean_pointestimate(y_l, yhat_l, yhat_u, lam=None)).reshape(-1)[0])
+    upstream_ci = ppi_mean_ci(y_l, yhat_l, yhat_u, alpha=0.1, lam=None)
 
     assert ours["estimate"] == pytest.approx(upstream_estimate)
     assert ours["ci_lower"] == pytest.approx(float(np.asarray(upstream_ci[0]).reshape(-1)[0]))
@@ -190,6 +257,9 @@ def test_smoke_run_writes_expected_outputs(tmp_path: Path) -> None:
         "imputation",
         "aipw",
         "ppi",
+        "ppi_plus_plus",
+        "auto_calibration",
+        "monotone_spline",
         "linear_calibration",
         "platt_calibration",
         "isotonic_calibration_min10",

@@ -10,6 +10,7 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
+from ppi_py import ppi_mean_ci, ppi_mean_pointestimate
 
 if __package__ in (None, ""):
     sys.path.append(str(Path(__file__).resolve().parents[1]))
@@ -17,7 +18,9 @@ if __package__ in (None, ""):
 from experiments.estimators import (
     TuningGrid,
     aipp_from_prediction,
+    auto_aipw_pointestimate_and_se,
     fit_linear_calibration,
+    fit_monotone_spline_calibration,
     fit_platt_calibration,
     fit_sklearn_isotonic_calibration,
     fit_venn_abers_calibration,
@@ -29,6 +32,7 @@ from experiments.estimators import (
     ppi_mean_from_prediction,
     ppi_mean_se_from_prediction,
     predict_linear,
+    predict_monotone_spline,
     predict_platt,
     predict_sklearn_isotonic,
     predict_venn_abers,
@@ -723,6 +727,20 @@ def ci_bounds(estimate: float, se: float) -> Tuple[float, float]:
     return float(estimate - 1.96 * se), float(estimate + 1.96 * se)
 
 
+def official_ppi_summary(
+    y_l: np.ndarray,
+    score_l: np.ndarray,
+    score_u: np.ndarray,
+    lam: Optional[float],
+) -> Tuple[float, float, float, float]:
+    estimate = float(np.asarray(ppi_mean_pointestimate(y_l, score_l, score_u, lam=lam)).reshape(-1)[0])
+    lower, upper = ppi_mean_ci(y_l, score_l, score_u, alpha=0.05, lam=lam)
+    lower_scalar = float(np.asarray(lower).reshape(-1)[0])
+    upper_scalar = float(np.asarray(upper).reshape(-1)[0])
+    se = float((upper_scalar - lower_scalar) / (2.0 * 1.959963984540054))
+    return estimate, se, lower_scalar, upper_scalar
+
+
 def summarize_result(
     estimator: str,
     estimate: float,
@@ -761,15 +779,44 @@ def run_one(
     lo, hi = ci_bounds(psi_label, se_label)
     results.append(summarize_result("labeled_only", psi_label, se_label, psi0, lo, hi))
 
-    psi_ppi = ppi_mean_from_prediction(score_l, score_u, y_l)
-    se_ppi = ppi_mean_se_from_prediction(score_l, score_u, y_l)
-    lo, hi = ci_bounds(psi_ppi, se_ppi)
+    psi_ppi, se_ppi, lo, hi = official_ppi_summary(y_l, score_l, score_u, lam=1)
     results.append(summarize_result("ppi", psi_ppi, se_ppi, psi0, lo, hi))
+
+    psi_ppi_plus_plus, se_ppi_plus_plus, lo, hi = official_ppi_summary(y_l, score_l, score_u, lam=None)
+    results.append(summarize_result("ppi_plus_plus", psi_ppi_plus_plus, se_ppi_plus_plus, psi0, lo, hi))
 
     psi_aipw = aipp_from_prediction(score_l, score_u, y_l)
     se_aipw = influence_se_from_prediction(psi_aipw, score_l, score_u, y_l)
     lo, hi = ci_bounds(psi_aipw, se_aipw)
     results.append(summarize_result("aipw", psi_aipw, se_aipw, psi0, lo, hi))
+
+    auto_result = auto_aipw_pointestimate_and_se(
+        y_l,
+        score_l,
+        score_u,
+        candidate_methods=("aipw", "linear", "monotone_spline", "isocal"),
+        num_folds=20,
+        random_state=rng_seed,
+    )
+    lo, hi = ci_bounds(auto_result["estimate"], auto_result["se"])
+    results.append(
+        summarize_result(
+            "auto_calibration",
+            auto_result["estimate"],
+            auto_result["se"],
+            psi0,
+            lo,
+            hi,
+        )
+    )
+
+    monotone_spline_model = fit_monotone_spline_calibration(score_l, y_l)
+    pred_spline_l = predict_monotone_spline(monotone_spline_model, score_l)
+    pred_spline_u = predict_monotone_spline(monotone_spline_model, score_u)
+    psi_spline = plugin_estimate(pred_spline_l, pred_spline_u)
+    se_spline = influence_se_from_prediction(psi_spline, pred_spline_l, pred_spline_u, y_l)
+    lo, hi = ci_bounds(psi_spline, se_spline)
+    results.append(summarize_result("monotone_spline", psi_spline, se_spline, psi0, lo, hi))
 
     linear_model = fit_linear_calibration(score_l, y_l)
     pred_lin_l = predict_linear(linear_model, score_l)
@@ -1081,6 +1128,7 @@ def build_main_table(summary: pd.DataFrame) -> pd.DataFrame:
             [
                 "labeled_only",
                 "ppi",
+                "ppi_plus_plus",
                 "aipw",
                 "affine_calibration",
                 "isotonic_calibration",

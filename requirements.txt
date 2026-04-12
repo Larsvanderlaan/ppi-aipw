@@ -7,3 +7,4 @@ ppi-python==0.2.3
 pytest==8.3.5
 scikit-learn==1.6.1
 statsmodels==0.14.4
+xgboost==2.1.4

@@ -25,15 +25,18 @@ if __package__ in (None, ""):
 
 from experiments.estimators import (
     aipp_from_prediction,
+    auto_aipw_pointestimate_and_se,
     fit_binned_isotonic_calibration,
     fit_tuned_binned_isotonic_calibration,
     fit_linear_calibration,
+    fit_monotone_spline_calibration,
     fit_platt_calibration,
     fit_venn_abers_shrinkage_calibration,
     influence_se_from_prediction,
     labeled_mean,
     predict_binned_isotonic,
     predict_linear,
+    predict_monotone_spline,
     predict_platt,
     predict_venn_abers_shrinkage,
 )
@@ -56,6 +59,9 @@ ESTIMATOR_ORDER = [
     "imputation",
     "aipw",
     "ppi",
+    "ppi_plus_plus",
+    "auto_calibration",
+    "monotone_spline",
     "linear_calibration",
     "platt_calibration",
     "isotonic_calibration_min10",
@@ -68,6 +74,9 @@ ESTIMATOR_LABELS = {
     "semisupervised": "Semisup. linear",
     "aipw": "AIPW",
     "ppi": "PPI",
+    "ppi_plus_plus": "PPI++",
+    "auto_calibration": "Auto",
+    "monotone_spline": "MonoSpline",
     "linear_calibration": "LinearCal",
     "platt_calibration": "Platt",
     "isotonic_calibration_min10": "IsoCal (min bin 10)",
@@ -80,6 +89,9 @@ ESTIMATOR_COLORS = {
     "semisupervised": "#E69F00",
     "aipw": "#8C564B",
     "ppi": "#D55E00",
+    "ppi_plus_plus": "#C44E52",
+    "auto_calibration": "#2A6F97",
+    "monotone_spline": "#0B6E4F",
     "linear_calibration": "#009E73",
     "platt_calibration": "#56B4E9",
     "isotonic_calibration_min10": "#CC79A7",
@@ -91,6 +103,9 @@ PAPER_ESTIMATOR_ORDER = [
     "imputation",
     "aipw",
     "ppi",
+    "ppi_plus_plus",
+    "auto_calibration",
+    "monotone_spline",
     "linear_calibration",
     "platt_calibration",
     "isotonic_calibration_min10",
@@ -100,22 +115,27 @@ PAPER_ESTIMATOR_ORDER = [
 MAIN_TEXT_ESTIMATOR_ORDER = [
     "aipw",
     "ppi",
+    "ppi_plus_plus",
+    "auto_calibration",
+    "monotone_spline",
     "linear_calibration",
-    "isotonic_calibration_min10",
 ]
 
 PRIMARY_ESTIMATORS = {
     "linear_calibration",
     "aipw",
+    "auto_calibration",
+    "monotone_spline",
     "ppi",
+    "ppi_plus_plus",
     "isotonic_calibration_min10",
 }
 
 
 def plot_draw_order(order: Sequence[str]) -> List[str]:
     secondary = [name for name in order if name not in PRIMARY_ESTIMATORS]
-    primary = [name for name in order if name in PRIMARY_ESTIMATORS and name not in {"ppi", "aipw"}]
-    tail = [name for name in ["ppi", "aipw"] if name in order]
+    primary = [name for name in order if name in PRIMARY_ESTIMATORS and name not in {"ppi_plus_plus", "ppi", "aipw"}]
+    tail = [name for name in ["ppi_plus_plus", "ppi", "aipw"] if name in order]
     return secondary + primary + tail
 
 
@@ -134,6 +154,12 @@ def plot_line_zorder(estimator: str) -> int:
         return 12
     if estimator == "ppi":
         return 11
+    if estimator == "ppi_plus_plus":
+        return 13
+    if estimator == "auto_calibration":
+        return 10
+    if estimator == "monotone_spline":
+        return 9
     if estimator in PRIMARY_ESTIMATORS:
         return 8
     return 3
@@ -367,6 +393,25 @@ def run_ppi_estimator(y_l: np.ndarray, yhat_l: np.ndarray, yhat_u: np.ndarray, a
     }
 
 
+def run_ppi_plus_plus_estimator(
+    y_l: np.ndarray,
+    yhat_l: np.ndarray,
+    yhat_u: np.ndarray,
+    alpha: float,
+) -> Dict[str, float]:
+    estimate = scalarize(ppi_mean_pointestimate(y_l, yhat_l, yhat_u, lam=None))
+    lower, upper = ppi_mean_ci(y_l, yhat_l, yhat_u, alpha=alpha, lam=None)
+    lower_scalar = scalarize(lower)
+    upper_scalar = scalarize(upper)
+    se = se_from_ci(lower_scalar, upper_scalar, alpha)
+    return {
+        "estimate": estimate,
+        "se": se,
+        "ci_lower": lower_scalar,
+        "ci_upper": upper_scalar,
+    }
+
+
 def run_aipw_estimator(
     y_l: np.ndarray,
     yhat_l: np.ndarray,
@@ -384,6 +429,43 @@ def run_aipw_estimator(
         "ci_lower": lower,
         "ci_upper": upper,
     }
+
+
+def run_auto_calibration_estimator(
+    y_l: np.ndarray,
+    yhat_l: np.ndarray,
+    yhat_u: np.ndarray,
+    alpha: float,
+) -> Dict[str, float]:
+    result = auto_aipw_pointestimate_and_se(
+        y_l,
+        yhat_l,
+        yhat_u,
+        candidate_methods=("aipw", "linear", "monotone_spline", "isocal"),
+        num_folds=20,
+        random_state=0,
+    )
+    lower, upper = ci_from_estimate_and_se(result["estimate"], result["se"], alpha)
+    return {
+        "estimate": result["estimate"],
+        "se": result["se"],
+        "ci_lower": lower,
+        "ci_upper": upper,
+    }
+
+
+def monotone_spline_calibrated_predictions(
+    y_l: np.ndarray,
+    yhat_l: np.ndarray,
+    yhat_u: np.ndarray,
+) -> Tuple[np.ndarray, np.ndarray]:
+    model = fit_monotone_spline_calibration(
+        np.asarray(yhat_l, dtype=float),
+        np.asarray(y_l, dtype=float),
+    )
+    pred_l = clip_to_observed_range(predict_monotone_spline(model, yhat_l), y_l)
+    pred_u = clip_to_observed_range(predict_monotone_spline(model, yhat_u), y_l)
+    return pred_l, pred_u
 
 
 def linear_calibrated_predictions(
@@ -484,6 +566,16 @@ def run_linear_calibration_estimator(
     alpha: float,
 ) -> Dict[str, float]:
     pred_l, pred_u = linear_calibrated_predictions(y_l, yhat_l, yhat_u)
+    return run_prediction_plugin_estimator(y_l, pred_l, pred_u, alpha)
+
+
+def run_monotone_spline_estimator(
+    y_l: np.ndarray,
+    yhat_l: np.ndarray,
+    yhat_u: np.ndarray,
+    alpha: float,
+) -> Dict[str, float]:
+    pred_l, pred_u = monotone_spline_calibrated_predictions(y_l, yhat_l, yhat_u)
     return run_prediction_plugin_estimator(y_l, pred_l, pred_u, alpha)
 
 
@@ -624,6 +716,9 @@ def build_trial_results(
     for estimator, runner in (
         ("aipw", run_aipw_estimator),
         ("ppi", run_ppi_estimator),
+        ("ppi_plus_plus", run_ppi_plus_plus_estimator),
+        ("auto_calibration", run_auto_calibration_estimator),
+        ("monotone_spline", run_monotone_spline_estimator),
         ("linear_calibration", run_linear_calibration_estimator),
         ("platt_calibration", run_platt_calibration_estimator),
         ("isotonic_calibration_min10", run_isotonic_min10_calibration_estimator),

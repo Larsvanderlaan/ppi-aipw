@@ -17,7 +17,10 @@ if __package__ in (None, ""):
 ESTIMATOR_LABELS = {
     "labeled_only": "Naive",
     "ppi": "PPI",
+    "ppi_plus_plus": "PPI++",
     "aipw": "AIPW",
+    "auto_calibration": "Auto",
+    "monotone_spline": "MonoSpline",
     "affine_calibration": "LinearCal",
     "platt_calibration": "Platt",
     "isotonic_calibration": "IsoCal",
@@ -27,7 +30,10 @@ ESTIMATOR_LABELS = {
 COLORS = {
     "labeled_only": "#4D4D4D",
     "ppi": "#D55E00",
+    "ppi_plus_plus": "#C44E52",
     "aipw": "#8C564B",
+    "auto_calibration": "#2A6F97",
+    "monotone_spline": "#0B6E4F",
     "affine_calibration": "#009E73",
     "platt_calibration": "#56B4E9",
     "isotonic_calibration": "#7A3E9D",
@@ -37,20 +43,33 @@ COLORS = {
 ESTIMATOR_ORDER = [
     "labeled_only",
     "ppi",
+    "ppi_plus_plus",
     "aipw",
+    "auto_calibration",
+    "monotone_spline",
     "affine_calibration",
     "platt_calibration",
     "isotonic_calibration",
     "calibrated_plugin",
 ]
 
-PRIMARY_ESTIMATORS = {"affine_calibration", "aipw", "ppi", "isotonic_calibration"}
+PRIMARY_ESTIMATORS = {
+    "affine_calibration",
+    "aipw",
+    "auto_calibration",
+    "monotone_spline",
+    "ppi",
+    "ppi_plus_plus",
+    "isotonic_calibration",
+}
 
 
 def draw_order(order: list[str]) -> list[str]:
     secondary = [name for name in order if name not in PRIMARY_ESTIMATORS]
-    primary = [name for name in order if name in PRIMARY_ESTIMATORS and name not in {"ppi", "aipw"}]
-    tail = [name for name in ["ppi", "aipw"] if name in order]
+    primary = [
+        name for name in order if name in PRIMARY_ESTIMATORS and name not in {"ppi_plus_plus", "ppi", "aipw"}
+    ]
+    tail = [name for name in ["ppi_plus_plus", "ppi", "aipw"] if name in order]
     return secondary + primary + tail
 
 
@@ -65,6 +84,12 @@ def line_zorder(estimator: str) -> int:
         return 12
     if estimator == "ppi":
         return 11
+    if estimator == "ppi_plus_plus":
+        return 13
+    if estimator == "auto_calibration":
+        return 10
+    if estimator == "monotone_spline":
+        return 9
     if estimator in PRIMARY_ESTIMATORS:
         return 8
     return 3
@@ -112,7 +137,7 @@ def plot_rmse(summary: pd.DataFrame, output_path: Path) -> None:
             ax.set_xticks(sorted(sub["unlabeled_ratio"].unique()))
             ax.get_xaxis().set_major_formatter(plt.ScalarFormatter())
     handles, labels = axes[0, 0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="upper center", ncol=7, frameon=False)
+    fig.legend(handles, labels, loc="upper center", ncol=8, frameon=False)
     fig.supxlabel("Unlabeled-to-labeled ratio N/n")
     fig.tight_layout(rect=(0, 0, 1, 0.96))
     fig.savefig(output_path, bbox_inches="tight")
@@ -157,7 +182,7 @@ def plot_bias_coverage(summary: pd.DataFrame, output_path: Path) -> None:
     axes[-1, 0].set_xlabel("Labeled sample size n")
     axes[-1, 1].set_xlabel("Labeled sample size n")
     handles, labels = axes[0, 0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="upper center", ncol=7, frameon=False)
+    fig.legend(handles, labels, loc="upper center", ncol=8, frameon=False)
     fig.tight_layout(rect=(0, 0, 1, 0.96))
     fig.savefig(output_path, bbox_inches="tight")
     plt.close(fig)
@@ -213,7 +238,16 @@ def plot_simulation_main(summary: pd.DataFrame, output_path: Path) -> None:
     )
     keep["rel_eff_vs_ppi"] = (keep["ppi_emp_sd"] / keep["emp_sd"]) ** 2
     row_keys = [("monotone", "poorly_calibrated", ratio) for ratio in ratio_keys]
-    estimators = ["labeled_only", "ppi", "aipw", "affine_calibration", "isotonic_calibration"]
+    estimators = [
+        "labeled_only",
+        "ppi",
+        "ppi_plus_plus",
+        "aipw",
+        "auto_calibration",
+        "monotone_spline",
+        "affine_calibration",
+        "isotonic_calibration",
+    ]
     metrics = [
         ("abs_mean_bias", "Absolute Bias"),
         ("emp_sd", "Empirical SD"),
@@ -261,7 +295,7 @@ def plot_simulation_main(summary: pd.DataFrame, output_path: Path) -> None:
         labels,
         loc="upper center",
         bbox_to_anchor=(0.5, 0.995),
-        ncol=6,
+        ncol=8,
         frameon=False,
         handlelength=1.8,
         columnspacing=1.0,

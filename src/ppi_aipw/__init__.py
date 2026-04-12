@@ -1,24 +1,21 @@
 """ppi_aipw: semisupervised AIPW / DML-style mean inference with easy calibration.
 
-Most users should start with these two functions:
+Most users should start with `mean_inference(...)`:
 
 ```python
-from ppi_aipw import aipw_mean_pointestimate, aipw_mean_ci
+from ppi_aipw import mean_inference
 
-estimate = aipw_mean_pointestimate(
+result = mean_inference(
     Y,
     Yhat,
     Yhat_unlabeled,
-    method="linear",
-)
-
-lower, upper = aipw_mean_ci(
-    Y,
-    Yhat,
-    Yhat_unlabeled,
-    method="linear",
+    method="monotone_spline",
     alpha=0.1,
 )
+
+estimate = result.pointestimate
+standard_error = result.se
+lower, upper = result.ci
 ```
 
 Arguments:
@@ -29,56 +26,115 @@ Arguments:
     Yhat_unlabeled:
         Model predictions for the unlabeled rows.
     method:
-        One of ``"aipw"``, ``"linear"``, ``"platt"``, or ``"isocal"``.
+        One of ``"aipw"``, ``"linear"``, ``"prognostic_linear"``, ``"sigmoid"``,
+        ``"isotonic"``, ``"monotone_spline"``, or ``"auto"``.
+    X, X_unlabeled:
+        Optional extra covariates used by ``method="prognostic_linear"``. This
+        method fits a semisupervised linear adjustment with an unpenalized
+        intercept and prognostic score, plus ridge-tuned coefficients on the
+        additional covariates.
+    efficiency_maximization:
+        Optional rescaling to ``lambda m(X)``, where ``m(X)`` is the predictor
+        after the chosen calibration step. The package estimates ``lambda`` by
+        empirical influence-function variance minimization. With
+        ``method="aipw"``, this is the unrestricted efficiency-maximized
+        raw-score correction.
+    candidate_methods:
+        Candidate methods considered when ``method="auto"``. The package
+        exposes :func:`select_mean_method_cv` if you want to inspect the CV
+        scores directly.
+    num_folds:
+        Number of folds used by ``method="auto"``. The default is ``100`` and
+        is capped at the number of labeled observations.
     inference:
         Use ``"wald"`` for fast analytic intervals or ``"bootstrap"`` for
         resampling-based intervals via :func:`aipw_mean_ci`.
 
 Rule of thumb:
-    Use ``method="linear"`` as a strong default, ``"aipw"`` as the no-calibration
-    baseline, ``"platt"`` when predictions are probability-like or bounded scores,
-    and ``"isocal"`` when you expect a monotone but nonlinear calibration curve and
-    have enough labeled data to fit it stably.
+    Use ``method="monotone_spline"`` as the package default, ``"aipw"`` as the
+    no-calibration baseline, ``"linear"`` when you want the simplest affine
+    recalibration, ``"prognostic_linear"`` when you want linear adjustment on
+    the score plus optional extra covariates, ``"sigmoid"`` when predictions are
+    probability-like or bounded scores, and ``"isotonic"`` when you want the
+    most flexible monotone calibration curve and have enough labeled data to
+    fit it stably. ``method="isotonic"`` uses a one-round monotone XGBoost
+    calibrator by default, with ``isocal_min_child_weight=10`` and an optional
+    ``isocal_backend="sklearn"`` fallback. Turn on
+    ``efficiency_maximization=True`` when you want the package to replace the
+    chosen predictor by ``lambda m(X)`` using empirical influence-function
+    variance minimization, or use ``method="auto"`` to choose among candidate
+    methods by cross-validated IF-variance minimization with ``num_folds=100``
+    by default. If ``"aipw"`` is among the candidates, ``method="auto"`` also
+    compares against an efficiency-maximized AIPW candidate. Under
+    ``method="auto"``, the foldwise objective uses an unlabeled subset of size
+    ``min(n_unlabeled, 10 * n_labeled)`` by default, the selected calibration
+    map is refit on the full labeled sample, the final point estimate uses the
+    full unlabeled sample, and any final lambda scaling is learned from
+    cross-fitted predictions plus that unlabeled subset and reused for Wald
+    inference.
+
+Causal wrapper:
+    Use ``causal_inference(...)`` when you have treatment-specific predictions
+    with one column per arm and you want arm-specific potential outcome means
+    plus control-vs-treatment ATEs. Optional covariates ``X`` are passed
+    through arm-by-arm, so ``method="prognostic_linear"`` works there too.
+    This first version is Wald-only and treats each arm-specific mean as a
+    semisupervised mean problem under the hood.
 """
 
 from ._api import (
     aipw_mean_ci,
+    aipw_mean_inference,
     aipw_mean_pointestimate,
     aipw_mean_se,
-    isocal_mean_ci,
-    isocal_mean_pointestimate,
+    isotonic_mean_ci,
+    isotonic_mean_pointestimate,
     linear_calibration_mean_ci,
     linear_calibration_mean_pointestimate,
     mean_ci,
+    mean_inference,
     mean_pointestimate,
     mean_se,
     ppi_aipw_mean_ci,
+    ppi_aipw_mean_inference,
     ppi_aipw_mean_pointestimate,
     pi_aipw_mean_ci,
+    pi_aipw_mean_inference,
     pi_aipw_mean_pointestimate,
-    platt_scaling_mean_ci,
-    platt_scaling_mean_pointestimate,
+    select_mean_method_cv,
+    sigmoid_mean_ci,
+    sigmoid_mean_pointestimate,
+    MeanInferenceResult,
 )
 from ._calibration import CalibrationModel, calibrate_predictions, fit_calibrator
+from ._causal import CausalInferenceResult, causal_inference
 
 __all__ = [
     "CalibrationModel",
+    "CausalInferenceResult",
+    "MeanInferenceResult",
     "aipw_mean_ci",
+    "aipw_mean_inference",
     "aipw_mean_pointestimate",
     "aipw_mean_se",
     "calibrate_predictions",
+    "causal_inference",
     "fit_calibrator",
-    "isocal_mean_ci",
-    "isocal_mean_pointestimate",
+    "isotonic_mean_ci",
+    "isotonic_mean_pointestimate",
     "linear_calibration_mean_ci",
     "linear_calibration_mean_pointestimate",
     "mean_ci",
+    "mean_inference",
     "mean_pointestimate",
     "mean_se",
     "ppi_aipw_mean_ci",
+    "ppi_aipw_mean_inference",
     "ppi_aipw_mean_pointestimate",
     "pi_aipw_mean_ci",
+    "pi_aipw_mean_inference",
     "pi_aipw_mean_pointestimate",
-    "platt_scaling_mean_ci",
-    "platt_scaling_mean_pointestimate",
+    "select_mean_method_cv",
+    "sigmoid_mean_ci",
+    "sigmoid_mean_pointestimate",
 ]

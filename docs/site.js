@@ -1,11 +1,11 @@
 const methodContent = {
   linear: {
-    badge: "Default",
+    badge: "Simple",
     title: "Linear calibration before AIPW",
     summary:
       "Fits a straight-line recalibration map from prediction score to outcome, then runs AIPW on the recalibrated scores.",
     good: [
-      "You want the safest first choice.",
+      "You want the simplest affine recalibration.",
       "Predictions seem useful but shifted or stretched.",
       "Your labeled calibration sample is modest rather than huge."
     ],
@@ -15,13 +15,31 @@ const methodContent = {
       "Cannot capture strongly nonlinear calibration error."
     ],
     recommendation:
-      "Start here unless you have a specific reason not to. This is the package’s recommended default."
+      "Use when you want the simplest affine recalibration and a very easy-to-explain baseline."
+  },
+  prognostic_linear: {
+    badge: "Score + X",
+    title: "Prognostic linear adjustment",
+    summary:
+      "Uses the prediction score plus optional covariates X in a semisupervised linear adjustment before AIPW. The intercept and score stay unpenalized; extra covariates are ridge-tuned on the labeled sample.",
+    good: [
+      "You want the score to stay in the model no matter what.",
+      "You have extra covariates X that may explain residual outcome variation.",
+      "You want a linear adjustment rather than a nonlinear calibration curve."
+    ],
+    tradeoffs: [
+      "Clear, regression-style interpretation.",
+      "More flexible than score-only linear recalibration when X matters.",
+      "Needs X and X_unlabeled to realize its full benefit."
+    ],
+    recommendation:
+      "Use when you want a simple regression-style adjustment built around the score, with optional extra covariates."
   },
   aipw: {
     badge: "Baseline",
     title: "Raw-score AIPW",
     summary:
-      "Uses the original prediction scores directly and applies the standard AIPW augmentation step with no calibration layer.",
+      "Uses the original prediction scores directly and applies AIPW with no calibration layer. Add `efficiency_maximization=True` if you want the package to rescale the predictor to `lambda m(X)` using empirical efficiency maximization.",
     good: [
       "You trust the original score scale.",
       "You want a direct uncalibrated baseline.",
@@ -30,14 +48,14 @@ const methodContent = {
     tradeoffs: [
       "Simple and stable.",
       "Best when the original model is already well calibrated.",
-      "Can miss efficiency gains when the score is systematically mis-scaled."
+      "Can miss efficiency gains when the score is systematically mis-scaled unless you turn on efficiency maximization."
     ],
     recommendation:
-      "Use as a baseline and sanity check, even if you expect calibrated methods to do better."
+      "Use as a baseline and sanity check. Turn on efficiency maximization when you want the package to rescale the raw score for lower variance."
   },
-  platt: {
+  sigmoid: {
     badge: "Bounded scores",
-    title: "Platt scaling before AIPW",
+    title: "Sigmoid calibration before AIPW",
     summary:
       "Fits a sigmoid-shaped calibration map. For nonbinary outcomes, the package rescales outcomes into the observed labeled range, fits the sigmoid map there, and rescales back.",
     good: [
@@ -53,11 +71,30 @@ const methodContent = {
     recommendation:
       "Good robustness check for bounded scores, especially classification-style workflows."
   },
-  isocal: {
+  monotone_spline: {
+    badge: "Default",
+    title: "Smooth monotone spline before AIPW",
+    summary:
+      "Fits a smooth monotone spline calibration curve, then plugs the calibrated predictions into the AIPW estimator. This is the package's smooth monotone alternative to a stepwise isotonic fit.",
+    good: [
+      "You want a strong smooth monotone default.",
+      "You expect monotone nonlinear miscalibration.",
+      "You want something smoother than isotonic calibration.",
+      "You want a middle ground between linear and isotonic recalibration."
+    ],
+    tradeoffs: [
+      "More flexible than linear calibration.",
+      "Smoother and often easier to read than isotonic calibration.",
+      "Still more complex than linear calibration when the labeled sample is very small."
+    ],
+    recommendation:
+      "Start here unless you have a specific reason not to. This is the package’s recommended default."
+  },
+  isotonic: {
     badge: "Flexible",
     title: "Isotonic calibration before AIPW",
     summary:
-      "Fits a monotone isotonic calibration curve, then plugs the calibrated predictions into the AIPW estimator.",
+      "Fits a monotone isotonic calibration curve, then plugs the calibrated predictions into the AIPW estimator. The default backend is a one-round monotone XGBoost calibrator with `min_child_weight=10`; switch to `isocal_backend=\"sklearn\"` if you want scikit-learn isotonic regression instead.",
     good: [
       "You expect monotone but nonlinear miscalibration.",
       "Ordering is trustworthy but the numeric scale is not.",
@@ -65,7 +102,7 @@ const methodContent = {
     ],
     tradeoffs: [
       "Most flexible option in the package.",
-      "Can capture nonlinear score distortions that linear or Platt miss.",
+      "Can capture nonlinear score distortions that linear or sigmoid calibration miss.",
       "Less stable than simpler methods when the labeled sample is very small."
     ],
     recommendation:
@@ -154,5 +191,5 @@ document
   .querySelectorAll(".section, .panel-card, .timeline-card, .history-callout")
   .forEach((node) => observer.observe(node));
 
-updateMethod("linear");
+updateMethod("monotone_spline");
 updateInference("wald");

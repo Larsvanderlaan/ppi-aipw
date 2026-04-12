@@ -24,6 +24,7 @@
           <div class="toplinks">
             <a href="#quickstart">Quickstart</a>
             <a href="#methods">Methods</a>
+            <a href="./causal.html">Causal Inference</a>
             <a href="#history">History of PPI</a>
             <a href="#references">References</a>
           </div>
@@ -37,18 +38,19 @@
               <code>ppi_aipw</code> is a practitioner-friendly package for
               semisupervised mean estimation with labeled outcomes, a larger
               unlabeled pool, and predictions from a fixed model. It combines
-              AIPW with post-hoc calibration and practical uncertainty
-              quantification, while reflecting the perspective that recent
-              prediction-powered inference methods fit naturally within a broader
-              semiparametric and debiased machine learning toolkit.
+              AIPW, post-hoc calibration, and practical uncertainty
+              quantification within the broader semiparametric and debiased
+              machine learning toolkit.
             </p>
             <div class="hero-actions">
               <a class="button button-primary" href="#quickstart">Start In 30 Seconds</a>
-              <a class="button button-secondary" href="https://github.com/Larsvanderlaan/calibrated-ppi/blob/main/examples/ppi_aipw_quickstart.ipynb">Open Notebook</a>
+              <a class="button button-secondary" href="https://github.com/Larsvanderlaan/ppi-aipw/blob/main/examples/ppi_aipw_quickstart.ipynb">Open Notebook</a>
             </div>
             <ul class="hero-pills">
               <li>AIPW baseline</li>
-              <li>Linear, Platt, and IsoCal</li>
+              <li>Monotone spline, linear, prognostic linear, sigmoid, and isotonic</li>
+              <li>Isotonic defaults to XGBoost</li>
+              <li>Optional efficiency maximization</li>
               <li>Wald and bootstrap intervals</li>
               <li>GitHub Pages ready</li>
             </ul>
@@ -60,7 +62,7 @@
               <div class="default-stack">
                 <div>
                   <span class="stack-name">Estimator</span>
-                  <strong><code>method="linear"</code></strong>
+                  <strong><code>method="monotone_spline"</code></strong>
                 </div>
                 <div>
                   <span class="stack-name">Uncertainty</span>
@@ -68,26 +70,29 @@
                 </div>
               </div>
               <p class="panel-note">
-                Recommended starting point for many applied workflows: interpretable,
-                stable with modest labeled data, and supported by the package’s
-                quick empirical checks.
+                A strong default for many workflows: smooth, monotone, and less
+                stepwise than isotonic calibration.
               </p>
             </div>
             <div class="panel-card code-card">
-              <p class="panel-label">Plain API</p>
-              <pre><code>from ppi_aipw import mean_pointestimate, mean_ci
+              <p class="panel-label">Recommended API</p>
+              <pre><code>from ppi_aipw import mean_inference
 
-estimate = mean_pointestimate(
+result = mean_inference(
     Y, Yhat, Yhat_unlabeled,
-    method="linear",
-)
-
-lower, upper = mean_ci(
-    Y, Yhat, Yhat_unlabeled,
-    method="linear",
+    method="monotone_spline",
     alpha=0.1,
     inference="wald",
-)</code></pre>
+)
+
+estimate = result.pointestimate
+standard_error = result.se
+lower, upper = result.ci</code></pre>
+              <p class="panel-note">
+                The narrower wrappers <code>mean_pointestimate</code>,
+                <code>mean_se</code>, and <code>mean_ci</code> are still
+                available when you only want one output at a time.
+              </p>
             </div>
           </aside>
         </div>
@@ -98,12 +103,24 @@ lower, upper = mean_ci(
           <div class="section-heading">
             <p class="eyebrow">Quickstart</p>
             <h2>What the arguments mean</h2>
-            <p>
-              The main API is intentionally small. You provide labeled outcomes,
-              labeled predictions, unlabeled predictions, and your choices for
-              calibration and interval construction.
-            </p>
-          </div>
+              <p>
+                The main API is small. You provide labeled outcomes, labeled
+                predictions, unlabeled predictions, and your choices for
+                calibration and interval construction. The recommended entrypoint
+                is <code>mean_inference(...)</code>, which returns the point
+                estimate, standard error, confidence interval, calibrator, and
+                method-selection diagnostics together.
+              </p>
+              <p>
+                If you want a data-adaptive choice among a few methods, set
+                <code>method="auto"</code> and pass
+                <code>candidate_methods=("aipw", "linear", "isotonic")</code>.
+                By default it uses <code>num_folds=100</code> and
+                <code>min(n_unlabeled, 10 * n_labeled)</code> unlabeled rows in
+                the foldwise objective, while the final point estimate still
+                uses the full unlabeled sample.
+              </p>
+            </div>
 
           <div class="argument-grid">
             <article class="argument-card">
@@ -120,15 +137,39 @@ lower, upper = mean_ci(
             </article>
             <article class="argument-card">
               <h3><code>method</code></h3>
-              <p>Choose <code>"aipw"</code>, <code>"linear"</code>, <code>"platt"</code>, or <code>"isocal"</code>.</p>
+              <p>Choose <code>"aipw"</code>, <code>"linear"</code>, <code>"prognostic_linear"</code>, <code>"sigmoid"</code>, <code>"monotone_spline"</code>, <code>"isotonic"</code>, or <code>"auto"</code>.</p>
+            </article>
+            <article class="argument-card">
+              <h3><code>candidate_methods</code></h3>
+              <p>Candidate methods considered when <code>method="auto"</code> minimizes cross-validated influence-function variance. If <code>"aipw"</code> is included, the selector also compares an efficiency-maximized AIPW candidate.</p>
+            </article>
+            <article class="argument-card">
+              <h3><code>num_folds</code></h3>
+              <p>Number of folds used by <code>method="auto"</code>. The default is <code>100</code> and it is capped at the labeled sample size.</p>
+            </article>
+            <article class="argument-card">
+              <h3><code>auto_unlabeled_subsample_size</code></h3>
+              <p>Unlabeled subset size used by <code>method="auto"</code> during foldwise selection and cross-fitted lambda estimation. The default is <code>min(n_unlabeled, 10 * n_labeled)</code>.</p>
             </article>
             <article class="argument-card">
               <h3><code>inference</code></h3>
-              <p>Choose <code>"wald"</code> for speed or <code>"bootstrap"</code> for a refit-everything interval.</p>
+              <p>Choose <code>"wald"</code> for speed or <code>"bootstrap"</code> for a resampling-based interval that refits calibration inside each replicate.</p>
+            </article>
+            <article class="argument-card">
+              <h3><code>efficiency_maximization</code></h3>
+              <p>Optional rescaling to <code>lambda m(X)</code>, where <code>m(X)</code> is the raw score for <code>method="aipw"</code> and the calibrated score otherwise. The package chooses <code>lambda</code> by empirical efficiency maximization.</p>
+            </article>
+            <article class="argument-card">
+              <h3><code>isocal_backend</code></h3>
+              <p>Backend for <code>method="isotonic"</code>. The default is a one-round monotone XGBoost fit with <code>isocal_min_child_weight=10</code>; use <code>"sklearn"</code> for scikit-learn isotonic regression.</p>
             </article>
             <article class="argument-card">
               <h3><code>w</code>, <code>w_unlabeled</code></h3>
               <p>Optional observation weights for labeled and unlabeled samples.</p>
+            </article>
+            <article class="argument-card">
+              <h3><code>X</code>, <code>X_unlabeled</code></h3>
+              <p>Optional extra covariates used by <code>method="prognostic_linear"</code>. The score and intercept stay unpenalized, while the extra covariates get ridge tuning on the labeled sample.</p>
             </article>
           </div>
         </section>
@@ -147,20 +188,22 @@ lower, upper = mean_ci(
 
           <div class="method-explorer" data-module="method-explorer">
             <div class="method-tabs" role="tablist" aria-label="Calibration methods">
-              <button class="tab-button is-active" data-method="linear">Linear</button>
+              <button class="tab-button" data-method="linear">Linear</button>
+              <button class="tab-button" data-method="prognostic_linear">Prognostic Linear</button>
               <button class="tab-button" data-method="aipw">AIPW</button>
-              <button class="tab-button" data-method="platt">Platt</button>
-              <button class="tab-button" data-method="isocal">IsoCal</button>
+              <button class="tab-button" data-method="sigmoid">Sigmoid</button>
+              <button class="tab-button is-active" data-method="monotone_spline">Monotone Spline</button>
+              <button class="tab-button" data-method="isotonic">Isotonic</button>
             </div>
 
             <div class="method-panel">
               <div class="panel-banner">
                 <span class="badge" data-method-badge>Default</span>
-                <h3 data-method-title>Linear calibration before AIPW</h3>
+                <h3 data-method-title>Smooth monotone spline before AIPW</h3>
               </div>
               <p class="method-summary" data-method-summary>
-                Fits a straight-line recalibration map from prediction score to
-                outcome, then runs AIPW on the recalibrated scores.
+                Fits a smooth monotone spline calibration curve, then plugs the
+                calibrated predictions into the AIPW estimator.
               </p>
 
               <div class="method-columns">
@@ -319,15 +362,15 @@ lower, upper = mean_ci(
           <div class="takeaway-grid">
             <article class="takeaway-card">
               <h3>Default workflow</h3>
-              <p>Start with linear calibration and Wald intervals.</p>
+              <p>Start with monotone spline calibration and Wald intervals.</p>
             </article>
             <article class="takeaway-card">
               <h3>Binary or bounded scores</h3>
-              <p>Platt is a sensible robustness check when a smooth sigmoid recalibration is plausible.</p>
+              <p>Sigmoid calibration is a sensible robustness check when a smooth sigmoid recalibration is plausible.</p>
             </article>
             <article class="takeaway-card">
               <h3>Nonlinear miscalibration</h3>
-              <p>IsoCal is attractive when monotonicity is believable and labeled data are large enough to fit a stable curve.</p>
+              <p>Isotonic calibration is attractive when monotonicity is believable and labeled data are large enough to fit a stable curve.</p>
             </article>
             <article class="takeaway-card">
               <h3>Where PPI fits</h3>
@@ -354,13 +397,14 @@ lower, upper = mean_ci(
               <li>PPI and PPI++ can be understood within the AIPW, semiparametric-efficiency, and debiased machine learning framework.</li>
               <li>In the one-score setting, PPI++ aligns algebraically with linear calibration and prognostic-score regression adjustment.</li>
               <li>Calibration is stronger than mean-bias correction alone and can improve semisupervised inference when the score is miscalibrated.</li>
-              <li>Linear calibration is a strong practical default, while isotonic calibration is a useful nonlinear upgrade when labeled data support it.</li>
+              <li>Monotone spline calibration is the package's practical default, while linear remains the simplest affine alternative and isotonic calibration is a useful more flexible monotone upgrade when labeled data support it.</li>
               <li>Bootstrap intervals are a practical complement to Wald intervals.</li>
             </ul>
             <div class="reference-links">
-              <a href="https://github.com/Larsvanderlaan/calibrated-ppi/blob/main/paper/main.tex">Open <code>paper/main.tex</code></a>
-              <a href="https://github.com/Larsvanderlaan/calibrated-ppi/tree/main/paper/assets">Open paper assets</a>
-              <a href="https://github.com/Larsvanderlaan/calibrated-ppi/blob/main/docs/ppi_aipw_vignette.md">Open package vignette</a>
+              <a href="./paper.pdf">Open paper PDF</a>
+              <a href="https://github.com/Larsvanderlaan/ppi-aipw/blob/main/paper/main.tex">Open <code>paper/main.tex</code></a>
+              <a href="https://github.com/Larsvanderlaan/ppi-aipw/tree/main/paper/assets">Open paper assets</a>
+              <a href="https://github.com/Larsvanderlaan/ppi-aipw/blob/main/docs/ppi_aipw_vignette.md">Open package vignette</a>
             </div>
           </div>
         </section>

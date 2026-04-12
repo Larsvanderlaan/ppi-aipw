@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ppi_aipw causal inference</title>
+    <meta
+      name="description"
+      content="Causal inference wrapper for arm-specific potential outcome means and Wald ATEs in ppi_aipw."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./site.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <nav class="topbar">
+          <div class="brand">ppi_aipw</div>
+          <div class="toplinks">
+            <a href="./index.html#quickstart">Mean API</a>
+            <a href="#quickstart">Causal Quickstart</a>
+            <a href="#inputs">Inputs</a>
+            <a href="#outputs">Outputs</a>
+          </div>
+        </nav>
+
+        <div class="hero-grid">
+          <section class="hero-copy">
+            <p class="eyebrow">Causal Inference Wrapper</p>
+            <h1>Potential outcome means and control-vs-treatment ATEs with a user-friendly Wald interface.</h1>
+            <p class="lede">
+              <code>causal_inference(...)</code> wraps the package's
+              semisupervised mean engine. For each treatment arm, it uses the
+              corresponding column of <code>Yhat_potential</code>, treats units
+              in that arm as labeled, and treats units outside that arm as
+              unlabeled.
+            </p>
+            <div class="hero-actions">
+              <a class="button button-primary" href="#quickstart">See Example</a>
+              <a class="button button-secondary" href="./index.html">Back To Main Site</a>
+            </div>
+            <ul class="hero-pills">
+              <li>Binary, discrete, and categorical treatments</li>
+              <li>One prediction column per arm</li>
+              <li>Control-vs-treatment ATEs</li>
+              <li>Wald-only in this version</li>
+            </ul>
+          </section>
+
+          <aside class="hero-panel">
+            <div class="panel-card gradient-card">
+              <p class="panel-label">Recommended Call</p>
+              <div class="default-stack">
+                <div>
+                  <span class="stack-name">Function</span>
+                  <strong><code>causal_inference(...)</code></strong>
+                </div>
+                <div>
+                  <span class="stack-name">Uncertainty</span>
+                  <strong><code>inference="wald"</code></strong>
+                </div>
+              </div>
+              <p class="panel-note">
+                Returns arm means, arm-level intervals, and all
+                control-vs-treatment ATEs in one call.
+              </p>
+            </div>
+          </aside>
+        </div>
+      </header>
+
+      <main>
+        <section class="section" id="quickstart">
+          <div class="section-heading">
+            <p class="eyebrow">Quickstart</p>
+            <h2>One column per arm, one result object back</h2>
+          </div>
+
+          <div class="panel-card code-card">
+            <pre><code>from ppi_aipw import causal_inference
+
+result = causal_inference(
+    Y,
+    A,
+    Yhat_potential,
+    X=X,
+    treatment_levels=("control", "treated"),
+    method="prognostic_linear",
+    alpha=0.1,
+)
+
+mu_control = result.arm_means["control"]
+mu_treated = result.arm_means["treated"]
+ate = result.ate["treated"]
+lower, upper = result.ate_cis["treated"]</code></pre>
+          </div>
+        </section>
+
+        <section class="section" id="inputs">
+          <div class="section-heading">
+            <p class="eyebrow">Inputs</p>
+            <h2>What the wrapper expects</h2>
+          </div>
+
+          <div class="argument-grid">
+            <article class="argument-card">
+              <h3><code>Y</code></h3>
+              <p>Observed scalar outcomes for all units.</p>
+            </article>
+            <article class="argument-card">
+              <h3><code>A</code></h3>
+              <p>Observed treatment assignments. Binary, discrete, and categorical labels are supported.</p>
+            </article>
+            <article class="argument-card">
+              <h3><code>Yhat_potential</code></h3>
+              <p>A matrix or DataFrame with one column per treatment arm and one row per unit.</p>
+            </article>
+            <article class="argument-card">
+              <h3><code>treatment_levels</code></h3>
+              <p>Optional arm labels matching the columns of <code>Yhat_potential</code>. If omitted, DataFrame columns are used; otherwise the wrapper falls back to the sorted unique values in <code>A</code>.</p>
+            </article>
+            <article class="argument-card">
+              <h3><code>control_arm</code></h3>
+              <p>Optional control arm used for ATE comparisons. The default is the minimum resolved treatment level.</p>
+            </article>
+            <article class="argument-card">
+              <h3><code>method</code></h3>
+              <p>Any mean-API calibration method, including <code>"aipw"</code>, <code>"linear"</code>, <code>"prognostic_linear"</code>, <code>"sigmoid"</code>, <code>"monotone_spline"</code>, <code>"isotonic"</code>, and <code>"auto"</code>.</p>
+            </article>
+            <article class="argument-card">
+              <h3><code>X</code></h3>
+              <p>Optional extra covariates passed through arm-by-arm. This is especially useful with <code>method="prognostic_linear"</code>, which uses the arm-specific score plus <code>X</code> in a linear adjustment.</p>
+              
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="outputs">
+          <div class="section-heading">
+            <p class="eyebrow">Outputs</p>
+            <h2>Arm means, ATEs, and diagnostics</h2>
+          </div>
+
+          <div class="takeaway-grid">
+            <article class="takeaway-card">
+              <h3><code>arm_means</code></h3>
+              <p>Estimated mean potential outcome for every resolved treatment arm.</p>
+            </article>
+            <article class="takeaway-card">
+              <h3><code>arm_cis</code></h3>
+              <p>Wald confidence intervals for each arm-specific mean.</p>
+            </article>
+            <article class="takeaway-card">
+              <h3><code>ate</code></h3>
+              <p>All non-control-vs-control treatment effects by default.</p>
+            </article>
+            <article class="takeaway-card">
+              <h3><code>arm_results</code></h3>
+              <p>The underlying arm-by-arm <code>MeanInferenceResult</code> objects, exposed for inspection.</p>
+            </article>
+          </div>
+
+          <div class="history-callout">
+            <h3>What this wrapper is and is not</h3>
+            <p>
+              This API is a convenience wrapper over the package's existing
+              semisupervised mean machinery. It does not fit a propensity model
+              or estimate nuisance functions for you.
+            </p>
+            <p>
+              In this first version, uncertainty is Wald-only. The wrapper uses
+              arm-specific Wald contributions from the semisupervised mean
+              engine to build both arm-level and ATE-level standard errors.
+            </p>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
