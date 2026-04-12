@@ -346,6 +346,10 @@ function updateMethod(method) {
   document.querySelector("[data-method-summary]").textContent = content.summary;
   document.querySelector("[data-method-recommendation]").textContent = content.recommendation;
   document.querySelector("[data-method-visual-note]").textContent = content.visualNote;
+  const visualCard = document.querySelector(".method-visual-card");
+  if (visualCard) {
+    visualCard.classList.toggle("is-hidden", method === "auto");
+  }
 
   const goodList = document.querySelector("[data-method-good]");
   const tradeoffsList = document.querySelector("[data-method-tradeoffs]");

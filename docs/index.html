@@ -28,6 +28,10 @@
             <a href="./causal.html">Causal Inference</a>
             <a href="#references">References</a>
           </div>
+          <a class="paper-link" href="./paper.pdf">
+            <span class="paper-link-icon" aria-hidden="true"></span>
+            <span>Paper PDF</span>
+          </a>
         </nav>
 
         <div class="hero-grid">
@@ -38,19 +42,13 @@
               <code>ppi_aipw</code> estimates a population mean from a labeled
               sample, a larger unlabeled sample, and predictions from a fixed
               model. It provides AIPW, calibration methods, and uncertainty
-              quantification in one API.
+              quantification in one API, including optional efficiency
+              maximization plus Wald, jackknife, and bootstrap inference.
             </p>
             <div class="hero-actions">
               <a class="button button-primary" href="#quickstart">Quickstart</a>
               <a class="button button-secondary" href="https://github.com/Larsvanderlaan/ppi-aipw/blob/main/examples/ppi_aipw_quickstart.ipynb">Notebook: Mean + Causal</a>
             </div>
-            <ul class="hero-pills">
-              <li>AIPW baseline</li>
-              <li>Monotone spline, linear, prognostic linear, sigmoid, and isotonic</li>
-              <li>Isotonic defaults to XGBoost</li>
-              <li>Optional efficiency maximization</li>
-              <li>Wald, jackknife, and bootstrap intervals</li>
-            </ul>
           </section>
 
           <aside class="hero-panel">
@@ -115,16 +113,6 @@ lower, upper = result.ci</code></pre>
               <h3>Local editable install</h3>
               <pre><code>python -m pip install -e .</code></pre>
             </article>
-            <article class="argument-card">
-              <h3>Source</h3>
-              <p>
-                Browse the
-                <a href="https://github.com/Larsvanderlaan/ppi-aipw">repository</a>,
-                the
-                <a href="https://github.com/Larsvanderlaan/ppi-aipw/blob/main/examples/ppi_aipw_quickstart.ipynb">quickstart notebook</a>,
-                and the <a href="./paper.pdf">paper PDF</a>.
-              </p>
-            </article>
           </div>
         </section>
 
@@ -178,20 +166,12 @@ lower, upper = result.ci</code></pre>
               <p>Number of folds used by <code>method="auto"</code>. The default is <code>100</code> and it is capped at the labeled sample size.</p>
             </article>
             <article class="argument-card">
-              <h3><code>auto_unlabeled_subsample_size</code></h3>
-              <p>Unlabeled subset size used by <code>method="auto"</code> during foldwise selection and cross-fitted lambda estimation. The default is <code>min(n_unlabeled, 10 * n_labeled)</code>.</p>
-            </article>
-            <article class="argument-card">
               <h3><code>inference</code></h3>
               <p>Choose <code>"wald"</code> for a fast analytic interval, <code>"jackknife"</code> for the recommended resampling-style normal interval, or <code>"bootstrap"</code> for percentile bootstrap intervals.</p>
             </article>
             <article class="argument-card">
               <h3><code>efficiency_maximization</code></h3>
               <p>Optional rescaling to <code>lambda m(X)</code>, where <code>m(X)</code> is the raw score for <code>method="aipw"</code> and the calibrated score otherwise. The scaling factor <code>lambda</code> is chosen by empirical efficiency maximization.</p>
-            </article>
-            <article class="argument-card">
-              <h3><code>isocal_backend</code></h3>
-              <p>Backend for <code>method="isotonic"</code>. The default is a one-round monotone XGBoost fit with <code>isocal_min_child_weight=10</code>; use <code>"sklearn"</code> for scikit-learn isotonic regression.</p>
             </article>
             <article class="argument-card">
               <h3><code>w</code>, <code>w_unlabeled</code></h3>
@@ -340,8 +320,7 @@ lower, upper = result.ci</code></pre>
           <div class="reference-card">
             <div class="reference-links">
               <a href="./paper.pdf">Open paper PDF</a>
-              <a href="https://github.com/Larsvanderlaan/ppi-aipw/blob/main/paper/main.tex">Open <code>paper/main.tex</code></a>
-              <a href="https://github.com/Larsvanderlaan/ppi-aipw/blob/main/docs/ppi_aipw_vignette.md">Open package vignette</a>
+              <a href="https://github.com/Larsvanderlaan/ppi-aipw">Open GitHub repo</a>
             </div>
             <p>
               Main paper themes reflected here:
