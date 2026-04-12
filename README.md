@@ -263,4 +263,5 @@ The real-data reproduction uses the official `ppi_py` dataset bundle. If the cac
 ## References
 
 - Robins, J. M., Rotnitzky, A., and Zhao, L. P. (1994). "Estimation of regression coefficients when some regressors are not always observed." *Journal of the American Statistical Association* 89(427): 846-866.
+- Rubin, D. B. and van der Laan, M. J. (2008). "Empirical efficiency maximization: improved locally efficient covariate adjustment in randomized experiments and survival analysis." *The International Journal of Biostatistics* 4(1).
 - van der Laan, L. and van der Laan, M. (2024). "Prediction-Powered Inference via Calibration." [arXiv:2411.02771](https://arxiv.org/pdf/2411.02771).
