@@ -81,7 +81,7 @@ const methodContent = {
   },
   monotone_spline: {
     badge: "Default",
-    title: "Smooth monotone spline before AIPW",
+    title: "Smooth monotone calibration map before AIPW",
     summary:
       "Fits a smooth monotone spline calibration curve, then plugs the calibrated predictions into the AIPW estimator. This is the package's smooth monotone alternative to a stepwise isotonic fit.",
     good: [
