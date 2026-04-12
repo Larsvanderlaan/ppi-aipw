@@ -88,6 +88,7 @@ result = causal_inference(
     A,
     Yhat_potential,
     X=X,
+    w=w,
     treatment_levels=("control", "treated"),
     method="prognostic_linear",
     alpha=0.1,
@@ -136,6 +137,10 @@ lower, upper = result.ate_cis["treated"]</code></pre>
               <p>Optional extra covariates passed through arm by arm. This is most useful with <code>method="prognostic_linear"</code>, which uses the arm-specific score plus <code>X</code> in a linear adjustment.</p>
               
             </article>
+            <article class="argument-card">
+              <h3><code>w</code></h3>
+              <p>Optional full-sample observation weights. These can also be balancing weights if you want to reweight the arm-specific mean target; uniform weights reproduce the unweighted behavior.</p>
+            </article>
           </div>
         </section>
 
@@ -170,6 +175,11 @@ lower, upper = result.ate_cis["treated"]</code></pre>
               This API reuses the package's semisupervised mean machinery. It
               does not fit a propensity model or other nuisance functions for
               you.
+            </p>
+            <p>
+              Optional full-sample weights are supported, but this package does
+              not currently provide a causal-arm-specific weight-construction
+              helper.
             </p>
             <p>
               In this version, uncertainty is Wald-only. The API uses
