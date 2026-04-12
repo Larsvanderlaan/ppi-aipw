@@ -70,7 +70,7 @@
 
 \maketitle
 \begin{abstract}
-We study semisupervised mean estimation with one labeled sample and one unlabeled sample, where a black-box prediction model is available and may be biased. This setting arises, for example, in modern randomized trials, where machine-learning predictors trained on auxiliary data are used to improve precision, and in recent machine-learning applications with abundant unlabeled data. A standard approach in this setting is augmented inverse-probability weighting (AIPW) \citep{robins1994estimation}, which leverages the prediction model to improve inference while remaining valid even when that model is inaccurate. In this work, we propose a class of two-step regression-based estimators that first calibrate the prediction model on the labeled sample and then average the calibrated predictions over the pooled covariate sample. The resulting estimator retains a simple imputation-based plug-in form while also admitting an AIPW representation in which calibration removes the augmentation term; in particular, it is a targeted minimum loss estimator \citep{van2006targeted}. We implement calibration using isotonic regression, a lightweight, tuning-free method that learns the best monotone transformation of the prediction score. We show that the resulting estimator is root-\(n\) consistent and asymptotically normal under weak conditions. It is statistically efficient among estimators based on the calibrated score, and fully efficient when the calibrated limit equals the true regression function. We also clarify its relationship with recent prediction-powered inference (PPI) methods: PPI is typically less efficient than AIPW, while PPI++ is AIPW with empirical-efficiency maximization \citep{rubin2008empirical} and is first-order equivalent to linear calibration \citep{mincer1969evaluation} and classical prognostic-score regression adjustment \citep{hansen2008prognostic}.
+We study semisupervised mean estimation with one labeled sample and one unlabeled sample, where a black-box prediction model is available and may be biased. This setting arises, for example, in modern randomized trials, where machine-learning predictors trained on auxiliary data are used to improve precision, and in recent machine-learning applications with abundant unlabeled data. A standard approach in this setting is augmented inverse-probability weighting (AIPW) \citep{robins1994estimation}, which leverages the prediction model to improve inference while remaining valid even when that model is inaccurate. In this work, we propose a class of two-step regression-based estimators that first calibrate the prediction model on the labeled sample and then average the calibrated predictions over the pooled covariate sample. The resulting estimator retains a simple imputation-based plug-in form while also admitting an AIPW representation in which calibration removes the augmentation term; in particular, it is a targeted minimum loss estimator \citep{van2006targeted}. We implement calibration using isotonic regression, a lightweight, tuning-free method that learns the best monotone transformation of the prediction score. We show that the resulting estimator is root-\(n\) consistent and asymptotically normal under weak conditions. It is statistically efficient among estimators based on the calibrated score, and fully efficient when the calibrated limit equals the true regression function. We also clarify its relationship with recent prediction-powered inference (PPI) methods: PPI is typically less efficient than AIPW, while PPI++ is AIPW with empirical-efficiency maximization \citep{rubin2008empirical} and is first-order equivalent to linear calibration \citep{mincer1969evaluation} and classical prognostic-score regression adjustment \citep{hansen2008prognostic}. We implement the proposed methods in an accompanying \texttt{Python} package, \texttt{ppi\_aipw}.
 \end{abstract}
 
 \section{Introduction}
@@ -95,6 +95,13 @@ Second, in Section~\ref{sec:calppi}, we show that calibration enforces empirical
 
 Third, in Section~\ref{sec:theory}, we establish asymptotic normality, valid inference, and efficiency results for the isotonic-calibrated plug-in estimator under the joint two-sample model. We show that it is efficient in the reduced model defined by the best monotone transformation of the prediction score and is therefore more efficient than AIPW based on the uncalibrated score. When this monotone transformation coincides with the true outcome regression, the estimator is nonparametrically efficient. We review the two-sample semisupervised model and its efficiency theory in Section~\ref{sec:setup}, and we provide synthetic and real-data experiments in Section~\ref{sec:exp}, along with \texttt{Python} code in Appendix~\ref{appendix:code}.
  
+
+\textbf{Code.} The accompanying \texttt{Python} package, reproduction code, and documentation are publicly available at
+\href{https://github.com/Larsvanderlaan/ppi-aipw}{github.com/Larsvanderlaan/ppi-aipw};
+an interactive package website with examples and API documentation is available at
+\href{https://larsvanderlaan.github.io/ppi-aipw/}{larsvanderlaan.github.io/ppi-aipw/}.
+Additional implementation details are summarized in Appendix~\ref{appendix:code}.
+
 
 
 \subsection{Related work}
@@ -2249,10 +2256,16 @@ For the calibration-based plug-in estimators, we fit the calibrator on the label
 
 
 
-
 \section{\texttt{Python} Code}
 \label{appendix:code}
 
+\paragraph{Code availability.}
+A public repository containing the \texttt{ppi\_aipw} package, experiment scripts, and paper assets is available at
+\href{https://github.com/Larsvanderlaan/ppi-aipw}{github.com/Larsvanderlaan/ppi-aipw}.
+Package documentation and worked examples are hosted at
+\href{https://larsvanderlaan.github.io/ppi-aipw/}{larsvanderlaan.github.io/ppi-aipw/}.
+
+Below, we provide a minimal, self-contained implementation of the method introduced in this paper.
 \subsection{Isotonic regression via XGBoost}
 \begin{codeblock}
 import numpy as np
@@ -2307,37 +2320,22 @@ def isoreg_with_xgboost(x, y, max_depth=15, min_child_weight=20, weights=None):
 
     return predict_fn
 \end{codeblock}
-
 \subsection{Isotonic-calibrated plug-in}
 \begin{codeblock}
 import numpy as np
-
 from statistics import NormalDist
 
 
-def _as_1d_array(x, name):
-    x = np.asarray(x).reshape(-1)
-    if x.size == 0:
-        raise ValueError(f"{name} must be non-empty.")
-    return x
-
-
 def _resolve_scores(
+    Y_labeled,
     X_labeled=None,
-    Y_labeled=None,
     X_unlabeled=None,
     score_fn=None,
     score_labeled=None,
     score_unlabeled=None,
 ):
-    """
-    Resolve the initial score m(X) on the labeled and unlabeled samples.
+    Y_labeled = np.asarray(Y_labeled).reshape(-1)
 
-    Users may either supply:
-    1. a scoring function `score_fn`, together with `X_labeled` and
-       `X_unlabeled`, or
-    2. precomputed scores `score_labeled` and `score_unlabeled`.
-    """
     if score_fn is not None:
         if X_labeled is None or X_unlabeled is None:
             raise ValueError(
@@ -2348,87 +2346,32 @@ def _resolve_scores(
         score_unlabeled = score_fn(X_unlabeled)
     elif score_labeled is None or score_unlabeled is None:
         raise ValueError(
-            "Provide either score_fn with X_labeled/X_unlabeled, or provide "
-            "both score_labeled and score_unlabeled."
+            "Provide either score_fn together with X_labeled/X_unlabeled, "
+            "or provide score_labeled and score_unlabeled."
         )
 
-    score_labeled = _as_1d_array(score_labeled, "score_labeled")
-    score_unlabeled = _as_1d_array(score_unlabeled, "score_unlabeled")
+    score_labeled = np.asarray(score_labeled).reshape(-1)
+    score_unlabeled = np.asarray(score_unlabeled).reshape(-1)
 
-    if Y_labeled is not None and len(score_labeled) != len(Y_labeled):
-        raise ValueError("score_labeled and Y_labeled must have the same length.")
+    if len(score_labeled) != len(Y_labeled):
+        raise ValueError("Y_labeled and score_labeled must have the same length.")
 
-    return score_labeled, score_unlabeled
+    return Y_labeled, score_labeled, score_unlabeled
 
 
-def calibrated_plugin_ppi(
+def isotonic_calibrated_plugin(
     Y_labeled,
     X_labeled=None,
     X_unlabeled=None,
     score_fn=None,
     score_labeled=None,
     score_unlabeled=None,
-    min_obs=20,
     alpha=0.05,
-    inference="wald",
-    jackknife_folds=20,
-    n_bootstrap=999,
-    random_state=None,
-    max_depth=15,
+    min_obs=20,
 ):
-    """
-    Calibrated plug-in PPI estimator for psi = E[Y].
-
-    The estimator first calibrates the initial score m(X) on the labeled data,
-    then averages the calibrated score over the pooled labeled and unlabeled
-    covariate sample.
-
-    Parameters
-    ----------
-    Y_labeled : array-like, shape (n,)
-        Outcomes in the labeled sample.
-    X_labeled : array-like, optional
-        Covariates in the labeled sample. Needed only when score_fn is used.
-    X_unlabeled : array-like, optional
-        Covariates in the unlabeled sample. Needed only when score_fn is used.
-    score_fn : callable, optional
-        Function returning the initial score m(X).
-    score_labeled : array-like, optional
-        Precomputed values m(X) on the labeled sample.
-    score_unlabeled : array-like, optional
-        Precomputed values m(Xtilde) on the unlabeled sample.
-    min_obs : int, default=20
-        Minimum node size used in the one-round monotone XGBoost calibrator.
-    alpha : float, default=0.05
-        Miscoverage level for confidence intervals.
-    inference : {"wald", "jackknife", "bootstrap"}, default="wald"
-        Type of confidence interval to report.
-    jackknife_folds : int, default=20
-        Number of folds used when inference="jackknife" in the package API.
-    n_bootstrap : int, default=999
-        Number of bootstrap draws when inference="bootstrap".
-    random_state : int, optional
-        Seed for the bootstrap or jackknife fold assignment.
-    max_depth : int, default=15
-        Maximum depth for the calibration fit.
-
-    Returns
-    -------
-    result : dict
-        Dictionary containing the estimate, standard error, confidence
-        interval, and the calibrated scores on both samples.
-
-    Notes
-    -----
-    This implementation treats the initial score m(X) as fixed. If the score
-    is itself estimated on the labeled data, cross-fitting should be used. The
-    current package API also offers V-fold jackknife inference; the appendix
-    code below writes out the bootstrap branch explicitly for brevity.
-    """
-    Y_labeled = _as_1d_array(Y_labeled, "Y_labeled")
-    score_labeled, score_unlabeled = _resolve_scores(
-        X_labeled=X_labeled,
+    Y_labeled, score_labeled, score_unlabeled = _resolve_scores(
         Y_labeled=Y_labeled,
+        X_labeled=X_labeled,
         X_unlabeled=X_unlabeled,
         score_fn=score_fn,
         score_labeled=score_labeled,
@@ -2438,131 +2381,62 @@ def calibrated_plugin_ppi(
     n = len(Y_labeled)
     N = len(score_unlabeled)
     M = n + N
-    rho_hat = n / M
+    rho = n / M
 
     calibrator = isoreg_with_xgboost(
         x=score_labeled,
         y=Y_labeled,
-        max_depth=max_depth,
         min_child_weight=min_obs,
     )
 
-    calibrated_labeled = calibrator(score_labeled)
-    calibrated_unlabeled = calibrator(score_unlabeled)
+    m_labeled = calibrator(score_labeled)
+    m_unlabeled = calibrator(score_unlabeled)
 
-    psi_hat = (
-        n * calibrated_labeled.mean() + N * calibrated_unlabeled.mean()
-    ) / M
+    psi_hat = (n * m_labeled.mean() + N * m_unlabeled.mean()) / M
 
-    # Estimated influence-function contributions for Wald inference.
-    if_labeled = calibrated_labeled - psi_hat + (Y_labeled - calibrated_labeled) / rho_hat
-    if_unlabeled = calibrated_unlabeled - psi_hat
-    asymptotic_var = rho_hat * np.var(if_labeled, ddof=1) + (1 - rho_hat) * np.var(
-        if_unlabeled, ddof=1
+    if_labeled = m_labeled - psi_hat + (Y_labeled - m_labeled) / rho
+    if_unlabeled = m_unlabeled - psi_hat
+    var_hat = (
+        rho * np.var(if_labeled, ddof=1)
+        + (1 - rho) * np.var(if_unlabeled, ddof=1)
     )
-    se_wald = np.sqrt(asymptotic_var / M)
+    se_hat = np.sqrt(var_hat / M)
 
     z = NormalDist().inv_cdf(1 - alpha / 2)
-    ci_wald = (psi_hat - z * se_wald, psi_hat + z * se_wald)
+    ci = (psi_hat - z * se_hat, psi_hat + z * se_hat)
 
-    result = {
+    return {
         "estimate": psi_hat,
-        "standard_error": se_wald,
-        "confidence_interval": ci_wald,
-        "inference": "wald",
-        "alpha": alpha,
-        "rho_hat": rho_hat,
-        "calibrator": calibrator,
-        "score_labeled": score_labeled,
-        "score_unlabeled": score_unlabeled,
-        "calibrated_labeled": calibrated_labeled,
-        "calibrated_unlabeled": calibrated_unlabeled,
+        "standard_error": se_hat,
+        "confidence_interval": ci,
     }
 
-    if inference == "wald":
-        return result
 
-    if inference != "bootstrap":
-        raise ValueError("inference must be either 'wald' or 'bootstrap'.")
-
-    rng = np.random.default_rng(random_state)
-    bootstrap_estimates = np.empty(n_bootstrap)
-
-    for b in range(n_bootstrap):
-        idx_l = rng.integers(0, n, size=n)
-        idx_u = rng.integers(0, N, size=N)
-
-        calibrator_b = isoreg_with_xgboost(
-            x=score_labeled[idx_l],
-            y=Y_labeled[idx_l],
-            max_depth=max_depth,
-            min_child_weight=min_obs,
-        )
-        calibrated_labeled_b = calibrator_b(score_labeled[idx_l])
-        calibrated_unlabeled_b = calibrator_b(score_unlabeled[idx_u])
-
-        bootstrap_estimates[b] = (
-            n * calibrated_labeled_b.mean() + N * calibrated_unlabeled_b.mean()
-        ) / M
-
-    ci_boot = tuple(
-        np.quantile(bootstrap_estimates, [alpha / 2, 1 - alpha / 2])
-    )
-    result.update(
-        {
-            "standard_error": np.std(bootstrap_estimates, ddof=1),
-            "confidence_interval": ci_boot,
-            "inference": "bootstrap",
-            "bootstrap_estimates": bootstrap_estimates,
-        }
-    )
-    return result
-
-
-# Example 1: supply a score function m(X)
-# fit = calibrated_plugin_ppi(
+# Example:
+# fit = isotonic_calibrated_plugin(
 #     Y_labeled=Y,
 #     X_labeled=X,
 #     X_unlabeled=X_tilde,
 #     score_fn=m,
-#     min_obs=20,
-#     inference="wald",
-# )
-
-# Example 2: supply precomputed scores m(X) and m(Xtilde)
-# fit = calibrated_plugin_ppi(
-#     Y_labeled=Y,
-#     score_labeled=mX,
-#     score_unlabeled=mX_tilde,
-#     min_obs=20,
-#     inference="bootstrap",
-#     n_bootstrap=999,
-#     random_state=1,
 # )
 \end{codeblock}
 
 \subsection{Linear calibration}
 \begin{codeblock}
 import numpy as np
-
 from statistics import NormalDist
 
 
-def _as_1d_array(x, name):
-    x = np.asarray(x).reshape(-1)
-    if x.size == 0:
-        raise ValueError(f"{name} must be non-empty.")
-    return x
-
-
 def _resolve_scores(
+    Y_labeled,
     X_labeled=None,
-    Y_labeled=None,
     X_unlabeled=None,
     score_fn=None,
     score_labeled=None,
     score_unlabeled=None,
 ):
+    Y_labeled = np.asarray(Y_labeled).reshape(-1)
+
     if score_fn is not None:
         if X_labeled is None or X_unlabeled is None:
             raise ValueError(
@@ -2573,20 +2447,20 @@ def _resolve_scores(
         score_unlabeled = score_fn(X_unlabeled)
     elif score_labeled is None or score_unlabeled is None:
         raise ValueError(
-            "Provide either score_fn with X_labeled/X_unlabeled, or provide "
-            "both score_labeled and score_unlabeled."
+            "Provide either score_fn together with X_labeled/X_unlabeled, "
+            "or provide score_labeled and score_unlabeled."
         )
 
-    score_labeled = _as_1d_array(score_labeled, "score_labeled")
-    score_unlabeled = _as_1d_array(score_unlabeled, "score_unlabeled")
+    score_labeled = np.asarray(score_labeled).reshape(-1)
+    score_unlabeled = np.asarray(score_unlabeled).reshape(-1)
 
-    if Y_labeled is not None and len(score_labeled) != len(Y_labeled):
-        raise ValueError("score_labeled and Y_labeled must have the same length.")
+    if len(score_labeled) != len(Y_labeled):
+        raise ValueError("Y_labeled and score_labeled must have the same length.")
 
-    return score_labeled, score_unlabeled
+    return Y_labeled, score_labeled, score_unlabeled
 
 
-def linear_calibrated_plugin_ppi(
+def linear_calibrated_plugin(
     Y_labeled,
     X_labeled=None,
     X_unlabeled=None,
@@ -2595,19 +2469,9 @@ def linear_calibrated_plugin_ppi(
     score_unlabeled=None,
     alpha=0.05,
 ):
-    """
-    Linear-calibrated plug-in PPI estimator for psi = E[Y].
-
-    The calibration model is
-        E[Y | m(X)] approx beta_0 + beta_1 m(X),
-    estimated by least squares on the labeled sample. To avoid extrapolation,
-    scores are clipped to the labeled score range before applying the
-    calibrator to either sample.
-    """
-    Y_labeled = _as_1d_array(Y_labeled, "Y_labeled")
-    score_labeled, score_unlabeled = _resolve_scores(
-        X_labeled=X_labeled,
+    Y_labeled, score_labeled, score_unlabeled = _resolve_scores(
         Y_labeled=Y_labeled,
+        X_labeled=X_labeled,
         X_unlabeled=X_unlabeled,
         score_fn=score_fn,
         score_labeled=score_labeled,
@@ -2617,58 +2481,43 @@ def linear_calibrated_plugin_ppi(
     n = len(Y_labeled)
     N = len(score_unlabeled)
     M = n + N
-    rho_hat = n / M
+    rho = n / M
 
-    design = np.column_stack([np.ones(n), score_labeled])
-    beta_hat, _, _, _ = np.linalg.lstsq(design, Y_labeled, rcond=None)
-    score_range = (score_labeled.min(), score_labeled.max())
+    X_design = np.column_stack([np.ones(n), score_labeled])
+    beta_hat, _, _, _ = np.linalg.lstsq(X_design, Y_labeled, rcond=None)
 
     def calibrator(score):
         score = np.asarray(score).reshape(-1)
-        score = np.clip(score, score_range[0], score_range[1])
         return beta_hat[0] + beta_hat[1] * score
 
-    calibrated_labeled = calibrator(score_labeled)
-    calibrated_unlabeled = calibrator(score_unlabeled)
+    m_labeled = calibrator(score_labeled)
+    m_unlabeled = calibrator(score_unlabeled)
 
-    psi_hat = (
-        n * calibrated_labeled.mean() + N * calibrated_unlabeled.mean()
-    ) / M
+    psi_hat = (n * m_labeled.mean() + N * m_unlabeled.mean()) / M
 
-    if_labeled = calibrated_labeled - psi_hat + (Y_labeled - calibrated_labeled) / rho_hat
-    if_unlabeled = calibrated_unlabeled - psi_hat
-    asymptotic_var = rho_hat * np.var(if_labeled, ddof=1) + (1 - rho_hat) * np.var(
-        if_unlabeled, ddof=1
+    if_labeled = m_labeled - psi_hat + (Y_labeled - m_labeled) / rho
+    if_unlabeled = m_unlabeled - psi_hat
+    var_hat = (
+        rho * np.var(if_labeled, ddof=1)
+        + (1 - rho) * np.var(if_unlabeled, ddof=1)
     )
-    standard_error = np.sqrt(asymptotic_var / M)
+    se_hat = np.sqrt(var_hat / M)
 
     z = NormalDist().inv_cdf(1 - alpha / 2)
-    confidence_interval = (
-        psi_hat - z * standard_error,
-        psi_hat + z * standard_error,
-    )
+    ci = (psi_hat - z * se_hat, psi_hat + z * se_hat)
 
     return {
         "estimate": psi_hat,
-        "standard_error": standard_error,
-        "confidence_interval": confidence_interval,
-        "alpha": alpha,
-        "rho_hat": rho_hat,
-        "beta_hat": beta_hat,
-        "score_range": score_range,
-        "score_labeled": score_labeled,
-        "score_unlabeled": score_unlabeled,
-        "calibrated_labeled": calibrated_labeled,
-        "calibrated_unlabeled": calibrated_unlabeled,
+        "standard_error": se_hat,
+        "confidence_interval": ci,
     }
 
 
-# Example: linear calibration with a score function m(X)
-# fit = linear_calibrated_plugin_ppi(
+# Example:
+# fit = linear_calibrated_plugin(
 #     Y_labeled=Y,
-#     X_labeled=X,
-#     X_unlabeled=X_tilde,
-#     score_fn=m,
+#     score_labeled=mX,
+#     score_unlabeled=mX_tilde,
 # )
 \end{codeblock}
 
