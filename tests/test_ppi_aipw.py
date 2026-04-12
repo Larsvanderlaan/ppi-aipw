@@ -4,9 +4,11 @@ import numpy as np
 import pytest
 
 from ppi_aipw._api import (
+    _predict_prognostic_linear_from_coef,
     _prepare_auto_variance_inputs,
     _prepare_mean_estimation_inputs,
     _select_mean_method_cv_internal,
+    _solve_prognostic_linear_system,
 )
 from ppi_aipw import (
     MeanInferenceResult,
@@ -15,6 +17,7 @@ from ppi_aipw import (
     aipw_mean_pointestimate,
     aipw_mean_se,
     calibrate_predictions,
+    compute_two_sample_balancing_weights,
     fit_calibrator,
     isotonic_mean_pointestimate,
     linear_calibration_mean_pointestimate,
@@ -52,6 +55,120 @@ def test_aipw_matches_manual_augmented_estimator() -> None:
     expected = rho * yhat.mean() + (1.0 - rho) * yhat_unlabeled.mean() + np.mean(y - yhat)
 
     np.testing.assert_allclose(estimate, expected, rtol=0, atol=1e-12)
+
+
+def test_weighted_aipw_matches_manual_augmented_estimator() -> None:
+    y = np.array([0.0, 1.0, 0.0, 1.0], dtype=float)
+    yhat = np.array([0.1, 0.4, 0.6, 0.8], dtype=float)
+    yhat_unlabeled = np.array([0.2, 0.3, 0.7], dtype=float)
+    w = np.array([1.0, 2.0, 1.5, 0.5], dtype=float)
+    w_unlabeled = np.array([2.0, 1.0, 3.0], dtype=float)
+
+    estimate = aipw_mean_pointestimate(
+        y,
+        yhat,
+        yhat_unlabeled,
+        method="aipw",
+        w=w,
+        w_unlabeled=w_unlabeled,
+    )
+
+    w_norm = w / w.sum() * len(w)
+    w_unlabeled_norm = w_unlabeled / w_unlabeled.sum() * len(w_unlabeled)
+    rho = len(y) / (len(y) + len(yhat_unlabeled))
+    c = 1.0 - rho
+    expected = np.mean(w_norm * (y - c * yhat)) + np.mean(w_unlabeled_norm * (c * yhat_unlabeled))
+
+    np.testing.assert_allclose(estimate, expected, rtol=0, atol=1e-12)
+
+
+def test_compute_two_sample_balancing_weights_matches_pooled_target_moments() -> None:
+    x_labeled = np.array([[0.0], [1.0], [2.0], [3.0]], dtype=float)
+    x_unlabeled = np.array([[1.0], [2.0]], dtype=float)
+
+    weights, diagnostics = compute_two_sample_balancing_weights(
+        x_labeled,
+        x_unlabeled,
+        target="pooled",
+        return_diagnostics=True,
+    )
+
+    rho = x_labeled.shape[0] / float(x_labeled.shape[0] + x_unlabeled.shape[0])
+    pooled_mean = rho * np.mean(x_labeled[:, 0]) + (1.0 - rho) * np.mean(x_unlabeled[:, 0])
+    np.testing.assert_allclose(np.mean(weights), 1.0, atol=1e-8)
+    np.testing.assert_allclose(np.mean(weights * x_labeled[:, 0]), pooled_mean, atol=1e-8)
+    assert diagnostics["target"] == "pooled"
+    assert diagnostics["max_abs_balance_error"] <= 1e-8
+    assert np.all(weights >= 0.0)
+
+
+def test_compute_two_sample_balancing_weights_matches_unlabeled_target_moments() -> None:
+    x_labeled = np.array([[0.0], [1.0], [2.0], [3.0]], dtype=float)
+    x_unlabeled = np.array([[1.5], [2.5]], dtype=float)
+
+    weights = compute_two_sample_balancing_weights(
+        x_labeled,
+        x_unlabeled,
+        target="unlabeled",
+    )
+
+    np.testing.assert_allclose(np.mean(weights), 1.0, atol=1e-8)
+    np.testing.assert_allclose(
+        np.mean(weights * x_labeled[:, 0]),
+        np.mean(x_unlabeled[:, 0]),
+        atol=1e-8,
+    )
+    assert np.all(weights >= 0.0)
+
+
+def test_compute_two_sample_balancing_weights_returns_ones_when_already_balanced() -> None:
+    x_labeled = np.array([[0.0], [1.0], [2.0]], dtype=float)
+    x_unlabeled = np.array([[0.0], [1.0], [2.0]], dtype=float)
+
+    weights = compute_two_sample_balancing_weights(
+        x_labeled,
+        x_unlabeled,
+        target="unlabeled",
+    )
+
+    np.testing.assert_allclose(weights, np.ones(x_labeled.shape[0]), atol=1e-8)
+
+
+def test_compute_two_sample_balancing_weights_raises_when_nonnegative_balance_is_infeasible() -> None:
+    x_labeled = np.array([[0.0], [1.0]], dtype=float)
+    x_unlabeled = np.array([[10.0]], dtype=float)
+
+    with pytest.raises(ValueError, match="Could not compute nonnegative balancing weights|Could not achieve"):
+        compute_two_sample_balancing_weights(
+            x_labeled,
+            x_unlabeled,
+            target="unlabeled",
+        )
+
+
+def test_two_sample_balancing_weights_can_be_supplied_to_mean_fit() -> None:
+    y = np.array([0.2, 0.7, 1.0, 1.3], dtype=float)
+    yhat = np.array([0.1, 0.8, 0.9, 1.1], dtype=float)
+    yhat_unlabeled = np.array([0.3, 0.6, 1.0], dtype=float)
+    x_labeled = np.array([[0.0], [0.5], [1.0], [1.5]], dtype=float)
+    x_unlabeled = np.array([[0.4], [0.8], [1.2]], dtype=float)
+
+    weights = compute_two_sample_balancing_weights(
+        x_labeled,
+        x_unlabeled,
+        target="pooled",
+    )
+    result = mean_inference(
+        y,
+        yhat,
+        yhat_unlabeled,
+        method="linear",
+        w=weights,
+    )
+
+    assert np.isfinite(float(result.pointestimate))
+    assert np.isfinite(float(result.se))
+    assert np.all(weights >= 0.0)
 
 
 def test_default_method_is_monotone_spline() -> None:
@@ -226,6 +343,98 @@ def test_prognostic_linear_uses_covariates_and_auto_can_select_it() -> None:
     assert selected_method == "prognostic_linear"
 
 
+def test_uniform_weights_reproduce_unweighted_mean_inference() -> None:
+    rng = np.random.default_rng(219)
+    y = rng.normal(size=40)
+    yhat = y + rng.normal(scale=0.3, size=40)
+    yhat_unlabeled = rng.normal(size=70)
+
+    unweighted = mean_inference(
+        y,
+        yhat,
+        yhat_unlabeled,
+        method="linear",
+        inference="wald",
+    )
+    weighted = mean_inference(
+        y,
+        yhat,
+        yhat_unlabeled,
+        method="linear",
+        inference="wald",
+        w=np.full(y.shape[0], 5.0),
+        w_unlabeled=np.full(yhat_unlabeled.shape[0], 7.0),
+    )
+
+    np.testing.assert_allclose(weighted.pointestimate, unweighted.pointestimate)
+    np.testing.assert_allclose(weighted.se, unweighted.se)
+    np.testing.assert_allclose(weighted.ci[0], unweighted.ci[0])
+    np.testing.assert_allclose(weighted.ci[1], unweighted.ci[1])
+
+
+def test_weighted_linear_calibration_matches_row_duplication() -> None:
+    y = np.array([0.2, 1.0, -0.3, 0.8], dtype=float)
+    yhat = np.array([0.1, 0.7, -0.1, 0.6], dtype=float)
+    yhat_unlabeled = np.array([0.0, 0.4, 0.9], dtype=float)
+    w = np.array([1, 2, 3, 1], dtype=int)
+
+    weighted_model = fit_calibrator(
+        y,
+        yhat,
+        method="linear",
+        w=w,
+    )
+    duplicated_model = fit_calibrator(
+        np.repeat(y, w),
+        np.repeat(yhat, w),
+        method="linear",
+    )
+
+    np.testing.assert_allclose(weighted_model.predict(yhat), duplicated_model.predict(yhat))
+    np.testing.assert_allclose(
+        weighted_model.predict(yhat_unlabeled),
+        duplicated_model.predict(yhat_unlabeled),
+    )
+
+
+def test_weighted_prognostic_linear_regression_matches_row_duplication() -> None:
+    y = np.array([0.5, 1.2, -0.2, 0.9], dtype=float)
+    yhat = np.array([0.4, 0.8, -0.1, 0.5], dtype=float)
+    x = np.array(
+        [
+            [0.0, 1.0],
+            [1.0, 0.5],
+            [0.3, -0.2],
+            [1.2, 0.7],
+        ],
+        dtype=float,
+    )
+    w = np.array([1, 3, 2, 1], dtype=int)
+    normalized_weight = w / w.sum() * len(w)
+    alpha = 1.5
+    duplicated_alpha = alpha * (w.sum() / len(w))
+
+    weighted_coef = _solve_prognostic_linear_system(
+        yhat,
+        x,
+        y,
+        normalized_weight,
+        alpha=alpha,
+    )
+    duplicated_coef = _solve_prognostic_linear_system(
+        np.repeat(yhat, w),
+        np.repeat(x, w, axis=0),
+        np.repeat(y, w),
+        np.repeat(np.ones_like(y), w),
+        alpha=duplicated_alpha,
+    )
+
+    np.testing.assert_allclose(
+        _predict_prognostic_linear_from_coef(weighted_coef, yhat, x),
+        _predict_prognostic_linear_from_coef(duplicated_coef, yhat, x),
+    )
+
+
 def test_auto_method_bootstrap_path_is_reproducible() -> None:
     rng = np.random.default_rng(22)
     yhat = np.linspace(-1.0, 1.0, 50)
@@ -254,6 +463,42 @@ def test_auto_method_bootstrap_path_is_reproducible() -> None:
         selection_random_state=0,
         inference="bootstrap",
         n_resamples=30,
+        random_state=5,
+    )
+
+    np.testing.assert_allclose(ci_one[0], ci_two[0])
+    np.testing.assert_allclose(ci_one[1], ci_two[1])
+    assert ci_one[0] <= ci_one[1]
+
+
+def test_auto_method_jackknife_path_is_reproducible() -> None:
+    rng = np.random.default_rng(122)
+    yhat = np.linspace(-1.0, 1.0, 50)
+    y = 1.0 + 1.8 * yhat + rng.normal(scale=0.07, size=yhat.shape[0])
+    yhat_unlabeled = np.linspace(-1.1, 1.1, 100)
+
+    ci_one = aipw_mean_ci(
+        y,
+        yhat,
+        yhat_unlabeled,
+        method="auto",
+        candidate_methods=("aipw", "linear", "isotonic"),
+        num_folds=5,
+        selection_random_state=0,
+        inference="jackknife",
+        jackknife_folds=5,
+        random_state=5,
+    )
+    ci_two = aipw_mean_ci(
+        y,
+        yhat,
+        yhat_unlabeled,
+        method="auto",
+        candidate_methods=("aipw", "linear", "isotonic"),
+        num_folds=5,
+        selection_random_state=0,
+        inference="jackknife",
+        jackknife_folds=5,
         random_state=5,
     )
 
@@ -319,6 +564,71 @@ def test_auto_bootstrap_reuses_selected_method_instead_of_rerunning_cv() -> None
         efficiency_maximization=diagnostics["selected_efficiency_maximization"],
         inference="bootstrap",
         n_resamples=30,
+        random_state=7,
+    )
+
+    np.testing.assert_allclose(auto_ci[0], explicit_ci[0])
+    np.testing.assert_allclose(auto_ci[1], explicit_ci[1])
+    np.testing.assert_allclose(auto_se, explicit_se)
+
+
+def test_auto_jackknife_reuses_selected_method_instead_of_rerunning_cv() -> None:
+    rng = np.random.default_rng(124)
+    yhat = np.linspace(-1.0, 1.0, 50)
+    y = 0.9 + 2.0 * yhat + rng.normal(scale=0.06, size=yhat.shape[0])
+    yhat_unlabeled = np.linspace(-1.1, 1.1, 100)
+
+    selected_method, diagnostics = select_mean_method_cv(
+        y,
+        yhat,
+        yhat_unlabeled,
+        candidate_methods=("aipw", "linear", "isotonic"),
+        num_folds=5,
+        selection_random_state=0,
+    )
+
+    auto_ci = aipw_mean_ci(
+        y,
+        yhat,
+        yhat_unlabeled,
+        method="auto",
+        candidate_methods=("aipw", "linear", "isotonic"),
+        num_folds=5,
+        selection_random_state=0,
+        inference="jackknife",
+        jackknife_folds=5,
+        random_state=7,
+    )
+    explicit_ci = aipw_mean_ci(
+        y,
+        yhat,
+        yhat_unlabeled,
+        method=selected_method,
+        efficiency_maximization=diagnostics["selected_efficiency_maximization"],
+        inference="jackknife",
+        jackknife_folds=5,
+        random_state=7,
+    )
+    auto_se = aipw_mean_se(
+        y,
+        yhat,
+        yhat_unlabeled,
+        method="auto",
+        candidate_methods=("aipw", "linear", "isotonic"),
+        num_folds=5,
+        selection_random_state=0,
+        inference="jackknife",
+        jackknife_folds=5,
+        random_state=7,
+    )
+    explicit_se = aipw_mean_se(
+        y,
+        yhat,
+        yhat_unlabeled,
+        method=selected_method,
+        efficiency_maximization=diagnostics["selected_efficiency_maximization"],
+        inference="jackknife",
+        jackknife_folds=5,
         random_state=7,
     )
 
@@ -696,6 +1006,74 @@ def test_mean_inference_auto_bootstrap_matches_selected_method_semantics() -> No
     assert result.diagnostics["bootstrap_selected_once"] is True
 
 
+def test_mean_inference_auto_jackknife_matches_selected_method_semantics() -> None:
+    rng = np.random.default_rng(134)
+    yhat = np.linspace(-1.0, 1.0, 50)
+    y = 0.9 + 2.0 * yhat + rng.normal(scale=0.06, size=50)
+    yhat_unlabeled = np.linspace(-1.1, 1.1, 100)
+
+    result = aipw_mean_inference(
+        y,
+        yhat,
+        yhat_unlabeled,
+        method="auto",
+        candidate_methods=("aipw", "linear", "isotonic"),
+        num_folds=5,
+        selection_random_state=0,
+        inference="jackknife",
+        jackknife_folds=5,
+        random_state=7,
+    )
+    selected_method, diagnostics = select_mean_method_cv(
+        y,
+        yhat,
+        yhat_unlabeled,
+        candidate_methods=("aipw", "linear", "isotonic"),
+        num_folds=5,
+        selection_random_state=0,
+    )
+
+    explicit_pointestimate = aipw_mean_pointestimate(
+        y,
+        yhat,
+        yhat_unlabeled,
+        method=selected_method,
+        efficiency_maximization=diagnostics["selected_efficiency_maximization"],
+    )
+    explicit_se = aipw_mean_se(
+        y,
+        yhat,
+        yhat_unlabeled,
+        method=selected_method,
+        efficiency_maximization=diagnostics["selected_efficiency_maximization"],
+        inference="jackknife",
+        jackknife_folds=5,
+        random_state=7,
+    )
+    explicit_ci = aipw_mean_ci(
+        y,
+        yhat,
+        yhat_unlabeled,
+        method=selected_method,
+        efficiency_maximization=diagnostics["selected_efficiency_maximization"],
+        inference="jackknife",
+        jackknife_folds=5,
+        random_state=7,
+    )
+
+    np.testing.assert_allclose(result.pointestimate, explicit_pointestimate)
+    np.testing.assert_allclose(result.se, explicit_se)
+    np.testing.assert_allclose(result.ci[0], explicit_ci[0])
+    np.testing.assert_allclose(result.ci[1], explicit_ci[1])
+    assert result.method == selected_method
+    assert result.selected_candidate == diagnostics["selected_candidate"]
+    assert result.selected_efficiency_maximization == diagnostics["selected_efficiency_maximization"]
+    assert result.diagnostics["jackknife_selected_once"] is True
+    assert result.diagnostics["jackknife_method"] == selected_method
+    assert result.diagnostics["jackknife_efficiency_maximization"] == diagnostics["selected_efficiency_maximization"]
+    assert result.diagnostics["jackknife_folds"] == 5
+
+
 def test_mean_inference_reports_efficiency_lambda_when_applicable() -> None:
     rng = np.random.default_rng(35)
     y = rng.normal(size=40)
@@ -987,6 +1365,36 @@ def test_bootstrap_ci_is_reproducible() -> None:
     assert ci_one[0] <= ci_one[1]
 
 
+def test_jackknife_ci_is_reproducible() -> None:
+    rng = np.random.default_rng(103)
+    y = rng.normal(size=30)
+    yhat = y + rng.normal(scale=0.4, size=30)
+    yhat_unlabeled = rng.normal(size=80)
+
+    ci_one = aipw_mean_ci(
+        y,
+        yhat,
+        yhat_unlabeled,
+        method="linear",
+        inference="jackknife",
+        jackknife_folds=10,
+        random_state=0,
+    )
+    ci_two = aipw_mean_ci(
+        y,
+        yhat,
+        yhat_unlabeled,
+        method="linear",
+        inference="jackknife",
+        jackknife_folds=10,
+        random_state=0,
+    )
+
+    np.testing.assert_allclose(ci_one[0], ci_two[0])
+    np.testing.assert_allclose(ci_one[1], ci_two[1])
+    assert ci_one[0] <= ci_one[1]
+
+
 def test_bootstrap_refits_isocal_and_returns_positive_se() -> None:
     y = np.array([0.0, 0.0, 0.0, 1.0, 1.0, 1.0], dtype=float)
     yhat = np.array([0.05, 0.15, 0.45, 0.55, 0.85, 0.95], dtype=float)
@@ -1008,6 +1416,34 @@ def test_bootstrap_refits_isocal_and_returns_positive_se() -> None:
         method="isotonic",
         inference="bootstrap",
         n_resamples=50,
+        random_state=1,
+    )
+
+    assert lower <= upper
+    assert se > 0.0
+
+
+def test_jackknife_refits_isocal_and_returns_positive_se() -> None:
+    y = np.array([0.0, 0.0, 0.0, 1.0, 1.0, 1.0], dtype=float)
+    yhat = np.array([0.05, 0.15, 0.45, 0.55, 0.85, 0.95], dtype=float)
+    yhat_unlabeled = np.array([0.1, 0.2, 0.8, 0.9, 0.6, 0.7], dtype=float)
+
+    lower, upper = aipw_mean_ci(
+        y,
+        yhat,
+        yhat_unlabeled,
+        method="isotonic",
+        inference="jackknife",
+        jackknife_folds=3,
+        random_state=1,
+    )
+    se = aipw_mean_se(
+        y,
+        yhat,
+        yhat_unlabeled,
+        method="isotonic",
+        inference="jackknife",
+        jackknife_folds=3,
         random_state=1,
     )
 
@@ -1053,3 +1489,75 @@ def test_efficiency_maximization_bootstrap_is_reproducible() -> None:
     np.testing.assert_allclose(ci_one[1], ci_two[1])
     assert ci_one[0] <= ci_one[1]
     assert se > 0.0
+
+
+def test_efficiency_maximization_jackknife_is_reproducible() -> None:
+    rng = np.random.default_rng(107)
+    y = rng.normal(size=35)
+    yhat = y + rng.normal(scale=0.5, size=35)
+    yhat_unlabeled = rng.normal(size=90)
+
+    ci_one = aipw_mean_ci(
+        y,
+        yhat,
+        yhat_unlabeled,
+        method="aipw",
+        efficiency_maximization=True,
+        inference="jackknife",
+        jackknife_folds=10,
+        random_state=3,
+    )
+    ci_two = aipw_mean_ci(
+        y,
+        yhat,
+        yhat_unlabeled,
+        method="aipw",
+        efficiency_maximization=True,
+        inference="jackknife",
+        jackknife_folds=10,
+        random_state=3,
+    )
+    se = aipw_mean_se(
+        y,
+        yhat,
+        yhat_unlabeled,
+        method="aipw",
+        efficiency_maximization=True,
+        inference="jackknife",
+        jackknife_folds=10,
+        random_state=3,
+    )
+
+    np.testing.assert_allclose(ci_one[0], ci_two[0])
+    np.testing.assert_allclose(ci_one[1], ci_two[1])
+    assert ci_one[0] <= ci_one[1]
+    assert se > 0.0
+
+
+def test_invalid_inference_and_jackknife_validation_raise_clear_errors() -> None:
+    rng = np.random.default_rng(111)
+    y = rng.normal(size=6)
+    yhat = y + rng.normal(scale=0.2, size=6)
+    yhat_unlabeled = rng.normal(size=8)
+
+    with pytest.raises(ValueError, match="'wald', 'jackknife', or 'bootstrap'"):
+        aipw_mean_ci(y, yhat, yhat_unlabeled, inference="sandwich")
+
+    with pytest.raises(ValueError, match="jackknife_folds must be at least 2"):
+        aipw_mean_ci(
+            y,
+            yhat,
+            yhat_unlabeled,
+            inference="jackknife",
+            jackknife_folds=1,
+        )
+
+    with pytest.raises(ValueError, match="Try fewer jackknife_folds or inference='wald'"):
+        aipw_mean_ci(
+            y[:2],
+            yhat[:2],
+            yhat_unlabeled[:2],
+            inference="jackknife",
+            jackknife_folds=2,
+            random_state=0,
+        )

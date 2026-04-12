@@ -208,7 +208,10 @@ def causal_inference(
     method
         Calibration method passed to the underlying semisupervised mean engine.
     w
-        Optional observation weights for the full sample.
+        Optional observation weights for the full sample. These may also be
+        balancing weights if you want to reweight the arm-specific mean targets
+        toward a covariate-adjusted population. Uniform weights reproduce the
+        unweighted behavior.
     X
         Optional extra covariates for the full sample. These are passed
         arm-by-arm to the underlying semisupervised mean engine and are

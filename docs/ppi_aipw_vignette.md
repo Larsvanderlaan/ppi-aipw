@@ -237,6 +237,8 @@ What it does:
   selected method's cross-fitted labeled predictions and unlabeled-subset
   predictions, then reuses that cross-fitted lambda for the point
   estimate and Wald variance
+- for jackknife inference, selects the method once on the original sample and
+  then refits only that chosen method in each leave-fold-out refit
 - for bootstrap inference, selects the method once on the original sample and
   then bootstraps only that chosen method
 
@@ -244,6 +246,7 @@ This means `mean_inference(..., method="auto")` returns:
 
 - the full-sample point estimate for the selected method
 - a Wald SE that reuses the same cross-fitted layer used to learn `lambda`
+- jackknife SEs and intervals that select once, then refit only the chosen method
 - bootstrap SEs and intervals that select once, then refit only the chosen method
 - `result.diagnostics` with the selected candidate, unlabeled subset size, and related metadata
 
@@ -381,14 +384,15 @@ Why this is the default recommendation:
 
 - `monotone_spline` keeps the monotonicity structure many score problems suggest, while staying smoother and less stepwise than isotonic calibration
 - it performed well in the package’s quick simulation and benchmark checks
-- `wald` is much faster than bootstrap and is a good first-pass interval in routine workflows
+- `wald` is much faster than jackknife or bootstrap and is a good first-pass interval in routine workflows
 
 When to switch away from the defaults:
 
 - switch to `method="sigmoid"` when your predictions are probability-like, bounded, or naturally interpreted through a smooth sigmoid recalibration
 - switch to `method="monotone_spline"` when you want a smooth monotone nonlinear recalibration instead of a stepwise isotonic curve
 - switch to `method="isotonic"` when you believe calibration is monotone but clearly nonlinear, and you have enough labeled data to fit it stably
-- switch to `inference="bootstrap"` when you want a more empirical uncertainty check and can afford the extra computation
+- switch to `inference="jackknife"` when you want the recommended resampling-style uncertainty check with moderate extra computation
+- switch to `inference="bootstrap"` when you specifically want percentile bootstrap intervals and can afford the extra computation
 
 Short version:
 
@@ -397,7 +401,7 @@ Short version:
 - bounded or probability-like scores: try `method="sigmoid"`
 - smooth monotone nonlinear recalibration: try `method="monotone_spline"`
 - more flexible monotone recalibration: try `method="isotonic"`
-- extra uncertainty robustness check: try `inference="bootstrap"`
+- extra uncertainty robustness check: try `inference="jackknife", jackknife_folds=20`
 
 ## Confidence Intervals
 
@@ -424,7 +428,30 @@ Interpretation:
 Available interval types:
 
 - `inference="wald"`: faster and usually a good default when you want something simple
-- `inference="bootstrap"`: more computationally expensive, but often easier to explain to applied users because it directly resamples the data and refits calibration each time
+- `inference="jackknife"`: the recommended resampling-style option; it drops one fold of labeled and unlabeled rows at a time, refits calibration, and uses the resulting jackknife standard error in a normal interval
+- `inference="bootstrap"`: more computationally expensive, but still available when you specifically want percentile bootstrap intervals
+
+Jackknife behavior in this package:
+
+- `jackknife_folds` controls the number of leave-fold-out refits and defaults to `20`
+- the labeled rows are partitioned into folds and one fold is removed in each refit
+- the unlabeled rows are partitioned separately into the same number of folds and one fold is removed in each refit
+- the calibration step is refit inside each jackknife refit
+- the final interval is centered at the full-sample point estimate and uses the jackknife SE in a normal approximation
+
+Example jackknife interval:
+
+```python
+lower, upper = aipw_mean_ci(
+    Y,
+    Yhat,
+    Yhat_unlabeled,
+    method="isotonic",
+    inference="jackknife",
+    jackknife_folds=20,
+    random_state=0,
+)
+```
 
 Bootstrap behavior in this package:
 
@@ -537,6 +564,40 @@ estimate = aipw_mean_pointestimate(
 ```
 
 The weights should be 1D arrays matching the number of rows in the corresponding sample.
+
+They are used throughout the weighted mean, calibration/regression, method-selection,
+and standard-error calculations. They can also be balancing weights if you want
+to target a covariate-adjusted population rather than the raw empirical sample.
+Uniform weights reproduce the unweighted behavior.
+
+If you want a simple two-sample balancing-weight construction for the mean
+problem, the package also provides:
+
+```python
+from ppi_aipw import compute_two_sample_balancing_weights
+
+labeled_weights = compute_two_sample_balancing_weights(
+    X_labeled,
+    X_unlabeled,
+    target="pooled",
+)
+```
+
+This helper returns nonnegative labeled-sample weights only. It is intended for
+the semisupervised mean setting and does not try to define arm-specific causal
+weights.
+
+For the causal API, pass a single full-sample weight vector:
+
+```python
+result = causal_inference(
+    Y,
+    A,
+    Yhat_potential,
+    method="linear",
+    w=trial_weights,
+)
+```
 
 ## Advanced Controls
 

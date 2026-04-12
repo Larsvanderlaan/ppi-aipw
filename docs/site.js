@@ -10,7 +10,7 @@ const methodContent = {
       "Your labeled sample is modest rather than large."
     ],
     tradeoffs: [
-      "Easy to explain and debug.",
+      "Simple and fast.",
       "Usually more stable than flexible nonlinear calibration.",
       "Cannot capture strongly nonlinear calibration error."
     ],
@@ -24,7 +24,7 @@ const methodContent = {
       "Uses the prediction score together with optional covariates X in a semisupervised linear adjustment before AIPW. The intercept and score are unpenalized; extra covariates are ridge-regularized with tuning on the labeled sample.",
     good: [
       "You have extra covariates X that may explain residual outcome variation after conditioning on the score.",
-      "You want a score-centered linear adjustment rather than a nonlinear calibration curve.",
+      "You want to perform linear calibration with linear covariate adjustment.",
       "You have enough labeled data to support adjustment for X."
     ],
     tradeoffs: [
@@ -83,9 +83,9 @@ const methodContent = {
       "You want a middle ground between linear and isotonic recalibration."
     ],
     tradeoffs: [
-      "More flexible than linear calibration.",
-      "Smoother and often easier to read than isotonic calibration.",
-      "Still more complex than linear calibration when the labeled sample is very small."
+  "More flexible than linear calibration and sigmoid calibration.",
+  "Produces smoother calibration curves than isotonic calibration.",
+  "Retains much of the flexibility of isotonic calibration while often being more stable when the labeled sample is very small."
     ],
     recommendation:
       "Use as the default monotone calibrator when you want a smooth nonlinear adjustment."
@@ -119,13 +119,21 @@ const inferenceContent = {
     cost: "Low compute",
     when: "You want a fast interval based on the Wald approximation"
   },
+  jackknife: {
+    title: "Jackknife intervals",
+    summary:
+      "V-fold delete-a-group intervals that refit calibration after dropping one labeled and one unlabeled fold at a time, then use the jackknife SE in a normal approximation.",
+    best: "Recommended resampling check",
+    cost: "Moderate compute",
+    when: "You want the package's main resampling-style uncertainty check without running a large bootstrap"
+  },
   bootstrap: {
     title: "Bootstrap intervals",
     summary:
-      "Resampling-based intervals that treat the prediction model as fixed, resample rows, and refit the calibration step inside each replicate.",
-    best: "Robustness checks and final reporting",
+      "Percentile bootstrap intervals that treat the prediction model as fixed, resample rows, and refit the calibration step inside each replicate.",
+    best: "Percentile interval checks",
     cost: "Higher compute",
-    when: "You want a resampling-based uncertainty check and can afford the extra runtime"
+    when: "You specifically want percentile bootstrap intervals and can afford the extra runtime"
   }
 };
 

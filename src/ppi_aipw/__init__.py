@@ -33,6 +33,15 @@ Arguments:
         method fits a semisupervised linear adjustment with an unpenalized
         intercept and prognostic score, plus ridge-tuned coefficients on the
         additional covariates.
+    w, w_unlabeled:
+        Optional observation weights for the labeled and unlabeled samples.
+        These can also be balancing weights if you want the mean target to be
+        reweighted toward a covariate-adjusted population. Uniform weights
+        reproduce the unweighted behavior.
+        The package also exposes
+        :func:`compute_two_sample_balancing_weights` for constructing
+        nonnegative labeled-sample balancing weights in the two-sample mean
+        setting.
     efficiency_maximization:
         Optional rescaling to ``lambda m(X)``, where ``m(X)`` is the predictor
         after the chosen calibration step. The package estimates ``lambda`` by
@@ -47,8 +56,10 @@ Arguments:
         Number of folds used by ``method="auto"``. The default is ``100`` and
         is capped at the number of labeled observations.
     inference:
-        Use ``"wald"`` for fast analytic intervals or ``"bootstrap"`` for
-        resampling-based intervals via :func:`aipw_mean_ci`.
+        Use ``"wald"`` for fast analytic intervals, ``"jackknife"`` for the
+        recommended V-fold resampling-based normal interval, or
+        ``"bootstrap"`` for percentile bootstrap intervals via
+        :func:`aipw_mean_ci`.
 
 Rule of thumb:
     Use ``method="monotone_spline"`` as the package default, ``"aipw"`` for
@@ -72,13 +83,17 @@ Rule of thumb:
     map is refit on the full labeled sample, the final point estimate uses the
     full unlabeled sample, and any final lambda scaling is learned from
     cross-fitted predictions plus that unlabeled subset and reused for Wald
-    inference.
+    inference. For resampling-style inference, ``inference="jackknife"`` uses
+    a V-fold delete-a-group jackknife with ``jackknife_folds=20`` by default,
+    while ``inference="bootstrap"`` remains available as a slower alternative.
 
 Causal API:
     Use ``causal_inference(...)`` when you have treatment-specific predictions
     with one column per arm and you want arm-specific potential outcome means
     plus control-vs-treatment ATEs. Optional covariates ``X`` are passed
     through arm-by-arm, so ``method="prognostic_linear"`` works there too.
+    Optional full-sample weights ``w`` are also supported there, including
+    balancing weights if you want to reweight the arm-specific mean targets.
     This first version is Wald-only and treats each arm-specific mean as a
     semisupervised mean problem under the hood.
 """
@@ -109,6 +124,7 @@ from ._api import (
 )
 from ._calibration import CalibrationModel, calibrate_predictions, fit_calibrator
 from ._causal import CausalInferenceResult, causal_inference
+from ._weights import compute_two_sample_balancing_weights
 
 __all__ = [
     "CalibrationModel",
@@ -120,6 +136,7 @@ __all__ = [
     "aipw_mean_se",
     "calibrate_predictions",
     "causal_inference",
+    "compute_two_sample_balancing_weights",
     "fit_calibrator",
     "isotonic_mean_ci",
     "isotonic_mean_pointestimate",

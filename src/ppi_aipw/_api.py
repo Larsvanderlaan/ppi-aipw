@@ -339,6 +339,16 @@ def _coerce_generator(random_state: int | np.random.Generator | None) -> np.rand
     return np.random.default_rng(random_state)
 
 
+def _resolve_jackknife_seed(
+    random_state: int | np.random.Generator | None,
+) -> int:
+    if isinstance(random_state, np.random.Generator):
+        return int(random_state.integers(0, np.iinfo(np.int32).max))
+    if random_state is None:
+        return int(np.random.default_rng().integers(0, np.iinfo(np.int32).max))
+    return int(random_state)
+
+
 def _bootstrap_pointestimates(
     Y: np.ndarray,
     Yhat: np.ndarray,
@@ -409,6 +419,121 @@ def _bootstrap_pointestimates(
         bootstrap_estimates.append(estimate)
 
     return np.concatenate(bootstrap_estimates, axis=0)
+
+
+def _resolve_jackknife_effective_folds(
+    jackknife_folds: int,
+    *,
+    n_labeled: int,
+    n_unlabeled: int,
+) -> int:
+    if jackknife_folds < 2:
+        raise ValueError("jackknife_folds must be at least 2 when inference='jackknife'.")
+
+    effective_folds = min(int(jackknife_folds), n_labeled, n_unlabeled)
+    if effective_folds < 2:
+        raise ValueError(
+            "jackknife requires at least two labeled and two unlabeled observations. "
+            "Try fewer jackknife_folds or inference='wald'."
+        )
+
+    max_labeled_fold_size = int(np.ceil(n_labeled / float(effective_folds)))
+    max_unlabeled_fold_size = int(np.ceil(n_unlabeled / float(effective_folds)))
+    if n_labeled - max_labeled_fold_size < 2 or n_unlabeled - max_unlabeled_fold_size < 1:
+        raise ValueError(
+            "jackknife leaves too little data in at least one refit. "
+            "Try fewer jackknife_folds or inference='wald'."
+        )
+    return effective_folds
+
+
+def _jackknife_pointestimates(
+    Y: np.ndarray,
+    Yhat: np.ndarray,
+    Yhat_unlabeled: np.ndarray,
+    *,
+    method: str,
+    w: np.ndarray | None,
+    w_unlabeled: np.ndarray | None,
+    X: np.ndarray | None = None,
+    X_unlabeled: np.ndarray | None = None,
+    efficiency_maximization: bool,
+    candidate_methods: tuple[str, ...],
+    num_folds: int,
+    auto_unlabeled_subsample_size: int | None,
+    selection_random_state: int | np.random.Generator | None,
+    isocal_backend: str,
+    isocal_max_depth: int,
+    isocal_min_child_weight: float,
+    jackknife_folds: int,
+    random_state: int | np.random.Generator | None,
+) -> tuple[np.ndarray, int]:
+    Y_arr = np.asarray(Y)
+    Yhat_arr = np.asarray(Yhat)
+    Yhat_unlabeled_arr = np.asarray(Yhat_unlabeled)
+    X_arr = None if X is None else np.asarray(X, dtype=float)
+    X_unlabeled_arr = None if X_unlabeled is None else np.asarray(X_unlabeled, dtype=float)
+    if w is not None:
+        w = np.asarray(w, dtype=float)
+    if w_unlabeled is not None:
+        w_unlabeled = np.asarray(w_unlabeled, dtype=float)
+
+    n_labeled = Y_arr.shape[0]
+    n_unlabeled = Yhat_unlabeled_arr.shape[0]
+    effective_folds = _resolve_jackknife_effective_folds(
+        jackknife_folds,
+        n_labeled=n_labeled,
+        n_unlabeled=n_unlabeled,
+    )
+    seed = _resolve_jackknife_seed(random_state)
+
+    labeled_splitter = KFold(n_splits=effective_folds, shuffle=True, random_state=seed)
+    unlabeled_splitter = KFold(n_splits=effective_folds, shuffle=True, random_state=seed)
+    labeled_splits = list(labeled_splitter.split(np.arange(n_labeled)))
+    unlabeled_splits = list(unlabeled_splitter.split(np.arange(n_unlabeled)))
+
+    jackknife_estimates = []
+    for (labeled_train_idx, _), (unlabeled_train_idx, _) in zip(labeled_splits, unlabeled_splits):
+        prepared = _prepare_inference_inputs(
+            Y_arr[labeled_train_idx],
+            Yhat_arr[labeled_train_idx],
+            Yhat_unlabeled_arr[unlabeled_train_idx],
+            method=method,
+            w=None if w is None else w[labeled_train_idx],
+            w_unlabeled=None if w_unlabeled is None else w_unlabeled[unlabeled_train_idx],
+            X=None if X_arr is None else X_arr[labeled_train_idx],
+            X_unlabeled=None if X_unlabeled_arr is None else X_unlabeled_arr[unlabeled_train_idx],
+            efficiency_maximization=efficiency_maximization,
+            candidate_methods=candidate_methods,
+            num_folds=num_folds,
+            auto_unlabeled_subsample_size=auto_unlabeled_subsample_size,
+            selection_random_state=selection_random_state,
+            isocal_backend=isocal_backend,
+            isocal_max_depth=isocal_max_depth,
+            isocal_min_child_weight=isocal_min_child_weight,
+        )
+        estimate = _aipw_mean_pointestimate_from_predictions(
+            prepared.Y_2d,
+            prepared.pred_labeled_point,
+            prepared.pred_unlabeled_point,
+            w=prepared.weights,
+            w_unlabeled=prepared.weights_unlabeled_point,
+        ).reshape(1, -1)
+        jackknife_estimates.append(estimate)
+
+    return np.concatenate(jackknife_estimates, axis=0), effective_folds
+
+
+def _jackknife_standard_error(
+    jackknife_estimates: np.ndarray,
+) -> np.ndarray:
+    n_estimates = jackknife_estimates.shape[0]
+    mean_estimate = np.mean(jackknife_estimates, axis=0)
+    variance = ((n_estimates - 1.0) / n_estimates) * np.sum(
+        (jackknife_estimates - mean_estimate) ** 2,
+        axis=0,
+    )
+    return np.sqrt(np.maximum(variance, 0.0))
 
 
 def _aipw_mean_pointestimate_from_predictions(
@@ -1264,13 +1389,14 @@ def _fit_mean_inference(
     isocal_min_child_weight: float = 10.0,
     inference: str = "wald",
     n_resamples: int = 1000,
+    jackknife_folds: int = 20,
     random_state: int | np.random.Generator | None = None,
     compute_se: bool = True,
     compute_ci: bool = True,
 ) -> _MeanInferenceState:
     inference = inference.lower()
-    if inference not in {"wald", "bootstrap"}:
-        raise ValueError("inference must be either 'wald' or 'bootstrap'.")
+    if inference not in {"wald", "jackknife", "bootstrap"}:
+        raise ValueError("inference must be 'wald', 'jackknife', or 'bootstrap'.")
     if compute_ci:
         compute_se = True
 
@@ -1311,7 +1437,7 @@ def _fit_mean_inference(
             standard_error = _wald_standard_error(prepared)
         if compute_ci and standard_error is not None:
             ci = z_interval(pointestimate, standard_error, alpha, alternative)
-    else:
+    elif inference == "bootstrap":
         if method.lower() == "auto":
             diagnostics["bootstrap_selected_once"] = True
             diagnostics["bootstrap_method"] = prepared.method
@@ -1340,6 +1466,36 @@ def _fit_mean_inference(
             standard_error = np.std(bootstrap_estimates, axis=0, ddof=1)
             if compute_ci:
                 ci = _bootstrap_interval(bootstrap_estimates, alpha=alpha, alternative=alternative)
+    else:
+        if method.lower() == "auto":
+            diagnostics["jackknife_selected_once"] = True
+            diagnostics["jackknife_method"] = prepared.method
+            diagnostics["jackknife_efficiency_maximization"] = prepared.final_efficiency_maximization
+        if compute_se:
+            jackknife_estimates, effective_folds = _jackknife_pointestimates(
+                Y,
+                Yhat,
+                Yhat_unlabeled,
+                method=prepared.method,
+                w=w,
+                w_unlabeled=w_unlabeled,
+                X=X,
+                X_unlabeled=X_unlabeled,
+                efficiency_maximization=prepared.final_efficiency_maximization,
+                candidate_methods=candidate_methods,
+                num_folds=resolved_num_folds,
+                auto_unlabeled_subsample_size=auto_unlabeled_subsample_size,
+                selection_random_state=selection_random_state,
+                isocal_backend=isocal_backend,
+                isocal_max_depth=isocal_max_depth,
+                isocal_min_child_weight=isocal_min_child_weight,
+                jackknife_folds=jackknife_folds,
+                random_state=random_state,
+            )
+            diagnostics["jackknife_folds"] = effective_folds
+            standard_error = _jackknife_standard_error(jackknife_estimates)
+            if compute_ci:
+                ci = z_interval(pointestimate, standard_error, alpha, alternative)
 
     return _MeanInferenceState(
         pointestimate=pointestimate,
@@ -1378,6 +1534,7 @@ def aipw_mean_inference(
     isocal_min_child_weight: float = 10.0,
     inference: str = "wald",
     n_resamples: int = 1000,
+    jackknife_folds: int = 20,
     random_state: int | np.random.Generator | None = None,
 ) -> MeanInferenceResult:
     """Computes mean estimation and uncertainty in one shared pass.
@@ -1385,7 +1542,11 @@ def aipw_mean_inference(
     This is the recommended one-call API when you want the point estimate,
     standard error, confidence interval, fitted calibrator, and any automatic
     method-selection diagnostics together. Optional ``X`` and
-    ``X_unlabeled`` are used by ``method="prognostic_linear"``.
+    ``X_unlabeled`` are used by ``method="prognostic_linear"``. Use
+    ``inference="jackknife"`` with ``jackknife_folds=20`` when you want the
+    package's recommended resampling-style normal interval, or
+    ``inference="bootstrap"`` when you specifically want percentile bootstrap
+    intervals.
     """
     state = _fit_mean_inference(
         Y,
@@ -1408,6 +1569,7 @@ def aipw_mean_inference(
         isocal_min_child_weight=isocal_min_child_weight,
         inference=inference,
         n_resamples=n_resamples,
+        jackknife_folds=jackknife_folds,
         random_state=random_state,
         compute_se=True,
         compute_ci=True,
@@ -1488,10 +1650,14 @@ def aipw_mean_pointestimate(
               efficiency-maximized AIPW candidate when ``"aipw"`` is included.
         w:
             Optional sample weights for labeled data. If provided, must have
-            length ``n_labeled``.
+            length ``n_labeled``. These may also be balancing weights if you
+            want to reweight the target mean toward a covariate-adjusted
+            population. Uniform weights reproduce the unweighted behavior.
         w_unlabeled:
             Optional sample weights for unlabeled data. If provided, must have
-            length ``n_unlabeled``.
+            length ``n_unlabeled``. These may likewise be balancing weights for
+            the unlabeled sample. Uniform weights reproduce the unweighted
+            behavior.
         X:
             Optional extra covariates for the labeled sample. These are used by
             ``method="prognostic_linear"``.
@@ -1614,6 +1780,7 @@ def aipw_mean_se(
     isocal_min_child_weight: float = 10.0,
     inference: str = "wald",
     n_resamples: int = 1000,
+    jackknife_folds: int = 20,
     random_state: int | np.random.Generator | None = None,
 ) -> float | np.ndarray:
     """Computes a standard error for :func:`aipw_mean_pointestimate`.
@@ -1621,15 +1788,17 @@ def aipw_mean_se(
     This uses the same arguments as :func:`aipw_mean_pointestimate` and returns a
     scalar or vector standard error matching the shape of ``Y``.
 
-    Use ``inference="wald"`` for the analytic standard error or
-    ``inference="bootstrap"`` to estimate the standard error from bootstrap
-    resamples. When ``method="auto"`` and ``inference="wald"``, the point
-    estimate uses the selected method refit on the full labeled sample, while
-    any final lambda scaling is learned from the selected method's cross-fitted
-    labeled predictions and unlabeled-subsample predictions and then reused
-    for the Wald variance. When ``method="auto"`` and
-    ``inference="bootstrap"``, the method is selected once on the original
-    sample and bootstrap resamples refit only that chosen method.
+    Use ``inference="wald"`` for the analytic standard error,
+    ``inference="jackknife"`` for a V-fold delete-a-group jackknife standard
+    error, or ``inference="bootstrap"`` to estimate the standard error from
+    bootstrap resamples. When ``method="auto"`` and ``inference="wald"``, the
+    point estimate uses the selected method refit on the full labeled sample,
+    while any final lambda scaling is learned from the selected method's
+    cross-fitted labeled predictions and unlabeled-subsample predictions and
+    then reused for the Wald variance. When ``method="auto"`` and
+    ``inference`` is ``"jackknife"`` or ``"bootstrap"``, the method is
+    selected once on the original sample and the resampling refits only that
+    chosen method.
     """
 
     state = _fit_mean_inference(
@@ -1651,6 +1820,7 @@ def aipw_mean_se(
         isocal_min_child_weight=isocal_min_child_weight,
         inference=inference,
         n_resamples=n_resamples,
+        jackknife_folds=jackknife_folds,
         random_state=random_state,
         compute_se=True,
         compute_ci=False,
@@ -1682,6 +1852,7 @@ def aipw_mean_ci(
     isocal_min_child_weight: float = 10.0,
     inference: str = "wald",
     n_resamples: int = 1000,
+    jackknife_folds: int = 20,
     random_state: int | np.random.Generator | None = None,
 ) -> tuple[float | np.ndarray, float | np.ndarray]:
     """Computes a confidence interval for the mean.
@@ -1705,9 +1876,11 @@ def aipw_mean_ci(
             while also comparing against an efficiency-maximized AIPW candidate
             when ``"aipw"`` is included.
         w:
-            Optional labeled-sample weights.
+            Optional labeled-sample weights. These may also be balancing
+            weights. Uniform weights reproduce the unweighted behavior.
         w_unlabeled:
-            Optional unlabeled-sample weights.
+            Optional unlabeled-sample weights. These may also be balancing
+            weights. Uniform weights reproduce the unweighted behavior.
         efficiency_maximization:
             If ``True``, rescales the predictor used by the estimator to
             ``lambda m(X)``, where ``m(X)`` is the raw score for
@@ -1741,15 +1914,21 @@ def aipw_mean_ci(
             ``min_child_weight`` used by the monotone XGBoost fit when
             ``isocal_backend="xgboost"``.
         inference:
-            ``"wald"`` for the analytic normal-approximation interval or
+            ``"wald"`` for the analytic normal-approximation interval,
+            ``"jackknife"`` for a normal-approximation interval using a
+            V-fold jackknife standard error, or
             ``"bootstrap"`` for a percentile bootstrap interval that resamples
             labeled and unlabeled rows and refits the calibration step in each
             resample while holding the prediction model fixed.
         n_resamples:
             Number of bootstrap resamples when ``inference="bootstrap"``.
+        jackknife_folds:
+            Number of folds used by ``inference="jackknife"``. This controls
+            the inference-layer delete-a-group refits and is separate from
+            ``num_folds``, which is used only for ``method="auto"`` selection.
         random_state:
-            Optional random seed or ``numpy.random.Generator`` for bootstrap
-            reproducibility.
+            Optional random seed or ``numpy.random.Generator`` controlling
+            bootstrap resamples or jackknife fold assignments.
 
     Returns:
         A pair ``(lower, upper)`` with the same scalar or vector shape as ``Y``.
@@ -1761,6 +1940,11 @@ def aipw_mean_ci(
         is learned from the selected method's cross-fitted labeled predictions
         and unlabeled-subsample predictions and reused for the standard
         error.
+        ``inference="jackknife"`` returns a normal-approximation interval
+        centered at the full-sample point estimate with a V-fold jackknife
+        standard error. When ``method="auto"``, jackknife selects the method
+        once on the original sample and then refits only that chosen method in
+        each leave-fold-out refit.
         ``inference="bootstrap"`` returns a percentile bootstrap interval.
         When ``method="auto"``, bootstrap selects the method once on the
         original sample and then bootstraps only that chosen method.
@@ -1787,6 +1971,7 @@ def aipw_mean_ci(
         isocal_min_child_weight=isocal_min_child_weight,
         inference=inference,
         n_resamples=n_resamples,
+        jackknife_folds=jackknife_folds,
         random_state=random_state,
         compute_se=True,
         compute_ci=True,

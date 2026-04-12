@@ -88,6 +88,35 @@ def test_causal_multiarms_returns_all_noncontrol_vs_control_ates() -> None:
         assert result.ate_cis[arm][0] <= result.ate_cis[arm][1]
 
 
+def test_uniform_weights_reproduce_unweighted_causal_inference() -> None:
+    Y, A, Yhat_potential = _make_causal_data(seed=22, n=120, treatment_levels=(0, 1, 2))
+
+    unweighted = causal_inference(
+        Y,
+        A,
+        Yhat_potential,
+        method="linear",
+        alpha=0.1,
+    )
+    weighted = causal_inference(
+        Y,
+        A,
+        Yhat_potential,
+        method="linear",
+        alpha=0.1,
+        w=np.full(Y.shape[0], 4.0),
+    )
+
+    for arm in unweighted.treatment_levels:
+        np.testing.assert_allclose(weighted.arm_means[arm], unweighted.arm_means[arm])
+        np.testing.assert_allclose(weighted.arm_ses[arm], unweighted.arm_ses[arm])
+        np.testing.assert_allclose(weighted.arm_cis[arm], unweighted.arm_cis[arm])
+    for arm in unweighted.ate:
+        np.testing.assert_allclose(weighted.ate[arm], unweighted.ate[arm])
+        np.testing.assert_allclose(weighted.ate_ses[arm], unweighted.ate_ses[arm])
+        np.testing.assert_allclose(weighted.ate_cis[arm], unweighted.ate_cis[arm])
+
+
 def test_causal_supports_categorical_treatments_with_explicit_levels_and_control() -> None:
     Y, A, Yhat_potential = _make_causal_data(
         seed=3,
@@ -157,6 +186,35 @@ def test_causal_prognostic_linear_passes_covariates_armwise() -> None:
         np.testing.assert_allclose(result.arm_means[arm], direct.pointestimate)
         np.testing.assert_allclose(result.arm_ses[arm], direct.se)
         assert result.arm_results[arm].calibrator.metadata["uses_covariates"] is True
+
+
+def test_causal_weights_match_direct_armwise_weighted_mean_inference() -> None:
+    Y, A, Yhat_potential = _make_causal_data(seed=29, n=120, treatment_levels=(0, 1))
+    rng = np.random.default_rng(29)
+    weights = rng.uniform(0.5, 2.0, size=Y.shape[0])
+
+    result = causal_inference(
+        Y,
+        A,
+        Yhat_potential,
+        w=weights,
+        method="linear",
+    )
+
+    for arm_idx, arm in enumerate((0, 1)):
+        mask = A == arm
+        direct = mean_inference(
+            Y[mask],
+            Yhat_potential[mask, arm_idx],
+            Yhat_potential[~mask, arm_idx],
+            method="linear",
+            inference="wald",
+            w=weights[mask],
+            w_unlabeled=weights[~mask],
+        )
+        np.testing.assert_allclose(result.arm_means[arm], direct.pointestimate)
+        np.testing.assert_allclose(result.arm_ses[arm], direct.se)
+        np.testing.assert_allclose(result.arm_cis[arm], direct.ci)
 
 
 def test_causal_invalid_inputs_raise_clear_errors() -> None:

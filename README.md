@@ -120,6 +120,9 @@ Available methods:
   final lambda scaling is learned from pooled out-of-fold labeled predictions
   plus unlabeled-subset predictions for the selected method and then reused for
   the point estimate and Wald SE
+- for `method="auto"` with jackknife inference, the package selects the method
+  once on the original sample and then refits only that chosen method in each
+  leave-fold-out refit
 - for `method="auto"` with bootstrap inference, the package selects the method
   once on the original sample and then bootstraps only that chosen method
 
@@ -137,10 +140,20 @@ Optional score rescaling:
   only says whether the finally selected method also gets a cross-fitted lambda
   after selection
 
+Optional weights:
+
+- `w` and `w_unlabeled` are available throughout the mean API
+- weights are used in the weighted means, calibration/regression fits, method selection, and standard errors
+- these can be ordinary observation weights or balancing weights if you want to reweight toward a covariate-adjusted target population
+- uniform weights reproduce the unweighted behavior
+- `compute_two_sample_balancing_weights(X_labeled, X_unlabeled, ...)` computes nonnegative labeled-sample balancing weights for the two-sample mean problem
+- this utility is intended for the semisupervised mean setup and does not construct causal-arm-specific weights
+
 Available interval types:
 
 - `inference="wald"`: fast analytic interval
-- `inference="bootstrap"`: resampling-based interval that refits calibration in each resample
+- `inference="jackknife"`: recommended resampling-style interval using a V-fold delete-a-group jackknife with `jackknife_folds=20` by default
+- `inference="bootstrap"`: percentile bootstrap interval that refits calibration in each resample
 
 Recommended defaults:
 
@@ -154,7 +167,8 @@ Recommended defaults:
 - use `efficiency_maximization=True` when you want the package to empirically rescale the score for lower variance, especially for raw-score `method="aipw"`
 - use `method="auto"` when you want a data-adaptive choice among `aipw`, `linear`, and `isotonic`, while also letting the selector compare against an efficiency-maximized AIPW candidate
 - use `num_folds=100` as the default auto-selection setting unless you have a reason to make it smaller
-- use `inference="bootstrap"` as a robustness check when you can afford extra compute
+- use `inference="jackknife", jackknife_folds=20` as the default resampling-style uncertainty check
+- use `inference="bootstrap"` when you specifically want percentile bootstrap intervals and can afford extra compute
 
 Result object:
 
@@ -173,6 +187,8 @@ Causal API:
 - `Yhat_potential` should have one column per treatment arm and one row per unit
 - optional `X` is passed through arm-by-arm, so `method="prognostic_linear"`
   gives the same score-plus-covariate linear adjustment inside each arm
+- optional full-sample weights `w` are also supported and can be ordinary
+  observation weights or balancing weights
 - `control_arm=None` defaults to the minimum resolved treatment level
 - this API is a convenience layer over the semisupervised mean engine, not a
   full observational causal pipeline

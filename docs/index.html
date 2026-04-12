@@ -48,7 +48,7 @@
               <li>Monotone spline, linear, prognostic linear, sigmoid, and isotonic</li>
               <li>Isotonic defaults to XGBoost</li>
               <li>Optional efficiency maximization</li>
-              <li>Wald and bootstrap intervals</li>
+              <li>Wald, jackknife, and bootstrap intervals</li>
             </ul>
           </section>
 
@@ -143,7 +143,7 @@ lower, upper = result.ci</code></pre>
             </article>
             <article class="argument-card">
               <h3><code>inference</code></h3>
-              <p>Choose <code>"wald"</code> for a fast analytic interval or <code>"bootstrap"</code> to refit calibration inside each replicate.</p>
+              <p>Choose <code>"wald"</code> for a fast analytic interval, <code>"jackknife"</code> for the recommended resampling-style normal interval, or <code>"bootstrap"</code> for percentile bootstrap intervals.</p>
             </article>
             <article class="argument-card">
               <h3><code>efficiency_maximization</code></h3>
@@ -155,7 +155,7 @@ lower, upper = result.ci</code></pre>
             </article>
             <article class="argument-card">
               <h3><code>w</code>, <code>w_unlabeled</code></h3>
-              <p>Optional observation weights for labeled and unlabeled samples.</p>
+              <p>Optional observation weights for labeled and unlabeled samples. These can also be balancing weights; uniform weights reproduce the unweighted behavior.</p>
             </article>
             <article class="argument-card">
               <h3><code>X</code>, <code>X_unlabeled</code></h3>
@@ -218,17 +218,19 @@ lower, upper = result.ci</code></pre>
           <div class="section-heading split">
             <div>
               <p class="eyebrow">Intervals</p>
-              <h2>Wald for speed, bootstrap for a full refit check</h2>
+              <h2>Wald for speed, jackknife for the main resampling check</h2>
             </div>
             <p class="section-side-note">
-              The bootstrap holds the prediction model fixed, resamples labeled
-              and unlabeled rows, and refits calibration within each replicate.
+              The jackknife drops one fold of labeled and unlabeled rows at a
+              time, refits calibration, and uses the resulting SE in a normal
+              interval.
             </p>
           </div>
 
           <div class="inference-toggle" data-module="inference-toggle">
             <div class="toggle-row" role="tablist" aria-label="Interval methods">
               <button class="tab-button is-active" data-inference="wald">Wald</button>
+              <button class="tab-button" data-inference="jackknife">Jackknife</button>
               <button class="tab-button" data-inference="bootstrap">Bootstrap</button>
             </div>
             <article class="toggle-card">
@@ -276,10 +278,10 @@ lower, upper = result.ci</code></pre>
             <ul>
               <li>PPI and PPI++ can be understood within the AIPW, semiparametric-efficiency, and debiased machine learning framework.</li>
               <li>In the one-score setting, <code>efficiency_maximization=True</code> for <code>method="aipw"</code> is equivalent to PPI++; plain PPI is not implemented because raw-score AIPW is typically at least as efficient.</li>
-              <li>In the one-score setting, PPI++ is asymptotically equivalent to linear calibration and prognostic-score regression adjustment.</li>
+              <li>In the one-score setting, AIPW with empirical efficiency maximization (PPI++) is asymptotically equivalent to linear calibration and prognostic-score regression adjustment.</li>
               <li>Calibration is stronger than mean-bias correction alone and can improve semisupervised inference when the score is miscalibrated. Linear calibration is the less flexible parametric option, while isotonic calibration is a nonparametric calibrator.</li>
-              <li>Monotone spline calibration is the package default, while linear remains the simplest affine alternative and isotonic calibration is a more flexible monotone option when labeled data support it.</li>
-              <li>Bootstrap intervals are a practical complement to Wald intervals.</li>
+              <li>Monotone spline calibration implements a smoothed version of isotonic calibration and is the package default, while linear calibration remains the simplest affine alternative and isotonic calibration provides a more flexible monotone option when the labeled sample is large enough.</li>
+              <li>Jackknife and bootstrap intervals are practical complements to Wald intervals, with jackknife serving as the main resampling-style option in the package docs.</li>
             </ul>
           </div>
         </section>
