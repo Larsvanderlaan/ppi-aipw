@@ -212,7 +212,7 @@ Causal API:
   full observational causal pipeline
 
 The full user guide is in [docs/ppi_aipw_vignette.md](docs/ppi_aipw_vignette.md).
-There is also a compact runnable notebook covering both the mean and causal APIs in [examples/ppi_aipw_quickstart.ipynb](examples/ppi_aipw_quickstart.ipynb).
+There is also a compact runnable notebook covering both the mean and causal APIs in [examples/ppi_aipw_quickstart.ipynb](examples/ppi_aipw_quickstart.ipynb), and it can be opened directly in Colab at [colab.research.google.com/github/Larsvanderlaan/ppi-aipw/blob/main/examples/ppi_aipw_quickstart.ipynb](https://colab.research.google.com/github/Larsvanderlaan/ppi-aipw/blob/main/examples/ppi_aipw_quickstart.ipynb).
 The package website lives at [docs/index.html](docs/index.html), with a
 dedicated causal page at [docs/causal.html](docs/causal.html).
 

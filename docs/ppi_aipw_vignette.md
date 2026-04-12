@@ -71,7 +71,8 @@ lower, upper = mean_ci(
 If you only remember one pattern, remember `result = mean_inference(...)`.
 
 A compact notebook covering both the mean and causal APIs is in
-`examples/ppi_aipw_quickstart.ipynb`.
+`examples/ppi_aipw_quickstart.ipynb`, and it can be opened directly in Colab:
+<https://colab.research.google.com/github/Larsvanderlaan/ppi-aipw/blob/main/examples/ppi_aipw_quickstart.ipynb>.
 
 ## What The Arguments Mean
 
