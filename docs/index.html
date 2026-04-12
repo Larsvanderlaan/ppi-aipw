@@ -185,6 +185,42 @@ lower, upper = result.ci</code></pre>
           </div>
         </section>
 
+        <section class="section" id="what-is-calibration">
+          <div class="section-heading split">
+            <div>
+              <p class="eyebrow">Calibration</p>
+              <h2>What calibration is, and why we care</h2>
+            </div>
+            <p class="section-side-note">
+              Calibration is about getting the prediction scale right, not just
+              the ranking.
+            </p>
+          </div>
+
+          <div class="argument-grid">
+            <article class="argument-card">
+              <h3>From The ML Perspective</h3>
+              <p>
+                A score is calibrated when its numeric values mean what they say.
+                If a model outputs values near <code>0.8</code>, we want outcomes
+                near <code>0.8</code> on average for examples scored around
+                <code>0.8</code>. A model can rank well and still be poorly
+                calibrated on its original scale.
+              </p>
+            </article>
+            <article class="argument-card">
+              <h3>From The Inference Perspective</h3>
+              <p>
+                Here we do not just rank units; we average predictions and use
+                them inside AIPW-style estimators. That means miscalibration can
+                directly affect bias correction and efficiency, while
+                recalibration can improve semisupervised mean inference without
+                retraining the original model.
+              </p>
+            </article>
+          </div>
+        </section>
+
         <section class="section" id="methods">
           <div class="section-heading split">
             <div>
