@@ -379,6 +379,119 @@ pre {
   line-height: 1.75;
 }
 
+.method-visual-card {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.7fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+  margin: 0 0 22px;
+  padding: 18px;
+  border-radius: 24px;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(215, 242, 235, 0.45)),
+    rgba(255, 255, 255, 0.72);
+}
+
+.curve-kicker {
+  display: inline-block;
+  margin-bottom: 10px;
+  font-size: 0.8rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.method-visual-copy p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.curve-stage {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  gap: 10px 12px;
+  align-items: center;
+}
+
+.curve-y-label {
+  grid-row: 1 / span 2;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 0.88rem;
+  color: var(--muted);
+  letter-spacing: 0.01em;
+}
+
+.curve-canvas {
+  width: 100%;
+  min-height: 250px;
+  display: block;
+}
+
+.curve-x-label {
+  grid-column: 2;
+  justify-self: center;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.curve-legend {
+  grid-column: 2;
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.curve-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.92rem;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 12px;
+}
+
+.curve-legend-swatch {
+  width: 30px;
+  border-top: 3px solid var(--swatch-color);
+  border-top-style: solid;
+  flex: 0 0 auto;
+}
+
+.curve-legend-swatch[data-dashed="true"] {
+  border-top-style: dashed;
+}
+
+.curve-backdrop {
+  fill: rgba(255, 253, 249, 0.92);
+  stroke: rgba(22, 50, 61, 0.08);
+}
+
+.curve-grid-line {
+  stroke: rgba(22, 50, 61, 0.08);
+  stroke-width: 1;
+}
+
+.curve-axis {
+  stroke: rgba(22, 50, 61, 0.42);
+  stroke-width: 1.6;
+}
+
+.curve-reference {
+  fill: none;
+  stroke: rgba(22, 50, 61, 0.18);
+  stroke-width: 2.5;
+  stroke-dasharray: 6 8;
+  stroke-linecap: round;
+}
+
 .method-columns,
 .mini-grid,
 .reference-links {
@@ -497,6 +610,7 @@ pre {
 @media (max-width: 960px) {
   .hero-grid,
   .split,
+  .method-visual-card,
   .method-columns,
   .argument-grid,
   .takeaway-grid,
@@ -507,6 +621,10 @@ pre {
 
   .default-stack {
     grid-template-columns: 1fr;
+  }
+
+  .curve-legend {
+    grid-column: 1;
   }
 }
 
@@ -531,5 +649,22 @@ pre {
   .toggle-card,
   .timeline-card {
     padding: 20px;
+  }
+
+  .curve-stage {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+  }
+
+  .curve-y-label {
+    grid-row: auto;
+    writing-mode: horizontal-tb;
+    transform: none;
+    justify-self: center;
+  }
+
+  .curve-canvas,
+  .curve-x-label {
+    grid-column: 1;
   }
 }

@@ -155,7 +155,7 @@ lower, upper = result.ci</code></pre>
             </article>
             <article class="argument-card">
               <h3><code>w</code>, <code>w_unlabeled</code></h3>
-              <p>Optional observation weights for labeled and unlabeled samples. These can also be balancing weights; uniform weights reproduce the unweighted behavior.</p>
+              <p>Optional observation weights for labeled and unlabeled samples. These can be inverse probability of missingness weights to adjust for informative missingness, or balancing weights if you want to reweight toward a covariate-adjusted target population. Uniform weights reproduce the unweighted behavior.</p>
             </article>
             <article class="argument-card">
               <h3><code>X</code>, <code>X_unlabeled</code></h3>
@@ -195,6 +195,28 @@ lower, upper = result.ci</code></pre>
                 Fits a smooth monotone spline calibration curve, then plugs the
                 calibrated predictions into the AIPW estimator.
               </p>
+
+              <div class="method-visual-card">
+                <div class="method-visual-copy">
+                  <span class="curve-kicker">Calibration Map</span>
+                  <p data-method-visual-note>
+                    Schematic view of how the original score <code>m(X)</code>
+                    is transformed before the semisupervised mean step.
+                  </p>
+                </div>
+                <div class="curve-stage">
+                  <div class="curve-y-label">Calibrated score <em>m_n^*(X)</em></div>
+                  <svg
+                    class="curve-canvas"
+                    data-method-curve
+                    viewBox="0 0 420 280"
+                    role="img"
+                    aria-label="Calibration curve schematic"
+                  ></svg>
+                  <div class="curve-x-label">Original score <em>m(X)</em></div>
+                </div>
+                <div class="curve-legend" data-method-legend></div>
+              </div>
 
               <div class="method-columns">
                 <div class="info-box">
