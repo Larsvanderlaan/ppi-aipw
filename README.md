@@ -1,10 +1,10 @@
 # Prediction-Powered Inference via Calibration
 
-Many modern applications have a small labeled dataset, a much larger unlabeled dataset, and predictions from a fixed model for far more units than those with observed outcomes. A common example is a small randomized trial paired with a larger observational study or registry: you want to use the predictions to improve power and precision, but outcome labels are scarce and the prediction model may be imperfect.
+Many modern applications involve a small labeled dataset, a much larger unlabeled dataset, and model predictions for far more units than those with observed outcomes. A common example is a small randomized trial paired with a larger observational study or registry: predictions may improve power and precision, but outcome labels are scarce and the prediction model may be imperfect.
 
-`ppi_aipw` is built for that setting. It uses AIPW as the safe baseline for semisupervised mean inference because AIPW remains valid even when the prediction model is wrong and is doubly robust in the standard missing-outcome formulation. The package then goes beyond mean-bias correction by adding calibration methods that improve the reliability of the score itself, which can yield stronger semisupervised inference when the raw predictions are miscalibrated.
+`ppi_aipw` is designed for this setting. It uses AIPW as a safe baseline for semisupervised mean inference when outcomes are missing completely at random. AIPW remains valid even when the prediction model is misspecified because it is doubly robust. The package then goes beyond mean-bias correction by adding calibration methods that improve the reliability of the prediction score itself, which can yield more efficient semisupervised inference when the raw predictions are miscalibrated.
 
-This repository contains the code and manuscript assets for the paper on calibration-based semisupervised mean inference. The repo is organized around two experiment pipelines: the synthetic simulation study and the real-data reproduction of the original PPI mean benchmarks, together with a user-facing Python package for semisupervised mean estimation with AIPW, calibration, and practical uncertainty quantification.
+This repository contains the code and manuscript assets for our paper on calibration-based semisupervised mean inference. The repository is organized around two experiment pipelines: a synthetic simulation study and a real-data reproduction of the original PPI mean benchmarks, together with a user-facing Python package for semisupervised mean estimation with AIPW, calibration, and practical uncertainty quantification.
 
 ## Repo layout
 
