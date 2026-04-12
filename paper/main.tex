@@ -89,18 +89,20 @@ Calibration provides a stronger and widely studied notion of predictive reliabil
 Our proposal is therefore simple: fit a black-box regression model, calibrate it on the labeled sample, and then average the calibrated predictions over the pooled covariate sample. The resulting estimator remains a ``predict, calibrate, and average'' procedure, yet our main result shows that it is exactly equal to an AIPW estimator built from the calibrated scores, with calibration eliminating the augmentation term. It is therefore a targeted minimum loss estimator \citep{van2006targeted,vanderLaanRose2011}, in which calibration plays the role of the targeting step, and a special case of calibrated debiased machine learning \citep{van2024automatic}. Calibration thus gives this simple plug-in rule a debiased interpretation with strong efficiency guarantees.
 
 \paragraph{Contributions.}
-We make three main contributions. First, in Section~\ref{sec:calppi}, we introduce a general calibration-based framework for semisupervised mean estimation under the joint two-sample model. The framework accommodates classical post-hoc calibration methods, including linear calibration, histogram binning, and isotonic regression; see, in particular, Sections~\ref{sec:iso} and \ref{sec:linear}. Among these, isotonic calibration is especially appealing because it is lightweight, tuning-free, and learns the best monotone transformation of a prediction score.  
+We make three main contributions.
 
-Second, in Section~\ref{sec:calppi}, we show that calibration enforces empirical score equations that yield an exact AIPW representation of the resulting estimator, placing the method directly within the semiparametric framework for debiased estimation. In Section~\ref{sec:linear}, we further study linear calibration and relate PPI and PPI++ to linear regression adjustment with \(m(X)\) as a prognostic score, thereby clarifying their connection to classical covariate-adjustment methods in randomized trials and missing-at-random settings.
+First, in Section~\ref{sec:calppi}, we introduce a general calibration-based framework for semisupervised mean estimation under the joint two-sample model. The framework accommodates classical post-hoc calibration methods, including linear calibration, histogram binning, and isotonic regression; see, in particular, Sections~\ref{sec:iso} and \ref{sec:linear}. Among these, isotonic calibration is especially appealing because it is lightweight, tuning-free, and learns the best monotone transformation of a prediction score.
 
-Third, in Section~\ref{sec:theory}, we establish asymptotic normality, valid inference, and efficiency results for the isotonic-calibrated plug-in estimator under the joint two-sample model. We show that it is efficient in the reduced model defined by the best monotone transformation of the prediction score and is therefore more efficient than AIPW based on the uncalibrated score. When this monotone transformation coincides with the true outcome regression, the estimator is nonparametrically efficient. We review the two-sample semisupervised model and its efficiency theory in Section~\ref{sec:setup}, and we provide synthetic and real-data experiments in Section~\ref{sec:exp}, along with \texttt{Python} code in Appendix~\ref{appendix:code}.
+Second, in Section~\ref{sec:calppi}, we show that calibration enforces empirical score equations that yield an exact AIPW representation of the resulting estimator, placing the method directly within the semiparametric framework for debiased estimation. In Section~\ref{sec:linear}, we further study linear calibration and relate PPI and PPI++ to linear regression adjustment using \(m(X)\) as a prognostic score, thereby clarifying their connection to classical covariate-adjustment methods in randomized trials and missing-at-random settings.
+
+Third, in Section~\ref{sec:theory}, we establish asymptotic normality, valid inference, and efficiency results for the isotonic-calibrated plug-in estimator under the joint two-sample model. We show that it is efficient in the reduced model defined by the best monotone transformation of the prediction score and therefore more efficient than AIPW based on the uncalibrated score. When this monotone transformation coincides with the true outcome regression, the estimator is nonparametrically efficient.
+
+Section~\ref{sec:setup} reviews the two-sample semisupervised model, AIPW, PPI, PPI++, and the relevant efficiency theory, and Section~\ref{sec:exp} presents synthetic and real-data experiments.
  
 
 \textbf{Code.} The accompanying \texttt{Python} package, reproduction code, and documentation are publicly available at
-\href{https://github.com/Larsvanderlaan/ppi-aipw}{github.com/Larsvanderlaan/ppi-aipw};
-an interactive package website with examples and API documentation is available at
-\href{https://larsvanderlaan.github.io/ppi-aipw/}{larsvanderlaan.github.io/ppi-aipw/}.
-Additional implementation details are summarized in Appendix~\ref{appendix:code}.
+\href{https://github.com/Larsvanderlaan/ppi-aipw}{github.com/Larsvanderlaan/ppi-aipw}. An interactive package website with examples and API documentation is available at
+\href{https://larsvanderlaan.github.io/ppi-aipw/}{larsvanderlaan.github.io/ppi-aipw/}. Self-contained code is provided in Appendix~\ref{appendix:code}.
 
 
 
