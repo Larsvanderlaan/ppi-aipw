@@ -132,17 +132,9 @@ print(result.summary())</code></pre>
             <p class="eyebrow">Quickstart</p>
             <h2>Core inputs and defaults</h2>
               <p>
-                The main API is <code>mean_inference(...)</code>. It returns the
-                point estimate, standard error, confidence interval,
-                calibrator, and method-selection diagnostics in one call.
-              </p>
-              <p>
-                For data-adaptive selection, set <code>method="auto"</code> and
-                pass <code>candidate_methods=("aipw", "linear", "monotone_spline", "isotonic")</code>.
-                By default, selection uses <code>num_folds=100</code> and
-                <code>min(n_unlabeled, 10 * n_labeled)</code> unlabeled rows in
-                the foldwise objective, while the final estimate uses the full
-                unlabeled sample.
+                <code>mean_inference(...)</code> is the main entry point. It
+                returns the point estimate, standard error, confidence
+                interval, fitted calibrator, and diagnostics in one call.
               </p>
               <p>
                 Prefer a runnable walkthrough? The
@@ -150,12 +142,16 @@ print(result.summary())</code></pre>
                 and covers both the mean API and the causal API in one compact example.
               </p>
               <p>
-                The returned result object also supports <code>result.summary()</code>
-                for a human-readable Wald summary, and
-                <code>calibration_diagnostics(result, Y, Yhat)</code> for a
-                labeled-sample calibration check. If you want a quick plot on
-                top of those diagnostics, use <code>plot_calibration(...)</code>
-                with an optional matplotlib install.
+                For data-adaptive selection, set <code>method="auto"</code> and
+                pass <code>candidate_methods=("aipw", "linear", "monotone_spline", "isotonic")</code>.
+                By default, selection uses <code>num_folds=100</code>.
+              </p>
+              <p>
+                For a quick human-readable Wald summary, use
+                <code>result.summary()</code>. For labeled-sample calibration
+                checks, use <code>calibration_diagnostics(result, Y, Yhat)</code>,
+                and optionally <code>plot_calibration(...)</code> if
+                <code>matplotlib</code> is installed.
               </p>
             </div>
 
