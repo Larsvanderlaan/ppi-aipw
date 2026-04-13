@@ -28,11 +28,35 @@
 
 \AtBeginDocument{%
   \renewcommand{\maketitle}{%
-    \begin{center}
-      {\LARGE \bfseries \@title \par}
-      \vspace{1em}
-      {\large \@author \par}
-      \vspace{1em}
-    \end{center}
+    \par
+    \begingroup
+      \renewcommand\thefootnote{\@fnsymbol\c@footnote}%
+      \def\@makefnmark{\rlap{\@textsuperscript{\normalfont\@thefnmark}}}%
+      \long\def\@makefntext##1{\parindent 1em\noindent
+        \hb@xt@1.8em{\hss\@textsuperscript{\normalfont\@thefnmark}}##1}%
+      \begin{center}
+        \let\footnote\thanks
+        {\LARGE \bfseries \@title \par}
+        \vspace{1em}
+        {\large
+          \lineskip .5em%
+          \begin{tabular}[t]{c}%
+            \@author
+          \end{tabular}\par}%
+        \ifx\@date\@empty\else
+          \vspace{1em}
+          {\normalsize \@date \par}
+        \fi
+        \vspace{1em}
+      \end{center}
+      \thispagestyle{plain}\@thanks
+    \endgroup
+    \setcounter{footnote}{0}%
+    \global\let\thanks\relax
+    \global\let\maketitle\relax
+    \global\let\@thanks\@empty
+    \global\let\@author\@empty
+    \global\let\@date\@empty
+    \global\let\@title\@empty
   }%
 }
