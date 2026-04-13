@@ -1,0 +1,24 @@
+use strict;
+use warnings;
+
+use File::Copy qw(copy);
+
+END {
+    my $src = 'main.pdf';
+    my $dst = '../docs/paper.pdf';
+
+    return unless -e $src;
+
+    my $src_stat = [ stat($src) ];
+    my $dst_exists = -e $dst;
+    my $dst_stat = $dst_exists ? [ stat($dst) ] : undef;
+
+    my $needs_sync = !$dst_exists
+        || $src_stat->[7] != $dst_stat->[7]
+        || $src_stat->[9] != $dst_stat->[9];
+
+    return unless $needs_sync;
+
+    copy($src, $dst) or die "Failed to sync $src to $dst: $!";
+    print "latexmkrc: synced $src to $dst\n";
+}
