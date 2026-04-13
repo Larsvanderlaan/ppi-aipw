@@ -900,16 +900,15 @@ z_{1-\alpha/2}\,\widehat{\sigma}_{\mathrm{boot}}.
 
 The key implementation detail is that the isotonic regression step must be refit within each bootstrap replicate rather than held fixed. Otherwise, the resulting interval does not reflect uncertainty from estimation of the calibration map.
 
-
 \subsection{Efficiency considerations}
 
-In this section, we clarify the efficiency properties of the isotonic-calibrated plug-in estimator \(\widehat{\psi}_{\mathrm{iso}}\). The asymptotic linearity result of Theorem~\ref{thm:al} yields the influence pair
+We now study the efficiency of the isotonic-calibrated plug-in estimator \(\widehat{\psi}_{\mathrm{iso}}\). By Theorem~\ref{thm:al}, its influence pair is
 \[
 D_{m_0}^L(X,Y)=m_0(X)-\psi_0+\rhozero^{-1}\{Y-m_0(X)\},
 \qquad
 D_{m_0}^U(\widetilde X)=m_0(\widetilde X)-\psi_0.
 \]
-The key point is that \(\widehat{\psi}_{\mathrm{iso}}\) uses the covariates only through the one-dimensional score \(m_0(X)\). It is therefore natural to assess its efficiency relative to a model in which \(m_0(X)\), rather than the full covariate \(X\), is observed. In that reduced two-sample model, calibration implies \(\E[m_0(X)]=\E[Y]=\psi_0\), and the pair above is the efficient influence pair for \(\psi_0\). We then compare this reduced-model benchmark with the full-model benchmark and identify conditions under which they coincide. Our semiparametric efficiency results for the two-sample setting are straightforward applications of more general data-fusion results in \citet{li2023efficient,graham2024towards}.
+The key point is that \(\widehat{\psi}_{\mathrm{iso}}\) is asymptotically based on the covariates only through the one-dimensional calibrated score \(m_0(X)\). Its natural efficiency benchmark is therefore the reduced two-sample model in which \(X\) is replaced by \(m_0(X)\). In that reduced model, the influence pair above is efficient for \(\psi_0\). We then compare this reduced-model efficiency bound with the full-model bound and characterize when the two coincide. Our results are straightforward applications of the more general data-fusion theory of \citet{li2023efficient,graham2024towards}.
 
 \begin{proposition}[Efficient influence pair in the reduced model indexed by \(m_0\)]
 \label{prop:eif-red}
@@ -922,11 +921,7 @@ Consider the reduced two-sample experiment
 \{m_0(\widetilde X_j)\}_{j=1}^N
 \Bigr),
 \]
-obtained by replacing the full covariate \(X\) with the scalar summary \(m_0(X)\). On the submodel satisfying
-\[
-\E_P[Y]=\E_P[m_0(X)],
-\]
-the efficient influence pair for \(\psi(P)=\E_P[Y]\) is
+obtained by replacing the full covariate \(X\) with the scalar summary \(m_0(X)\). The efficient influence pair for \(\psi(P)=\E_{P}[Y]\) in $\mathcal E_{m_0}$ under sampling from $P_0$ is
 \begin{align}
 \label{eq:eif-red-L}
 D_{m_0}^L(X,Y)
@@ -945,23 +940,17 @@ Under the conditions of \cref{thm:al}, the following hold.
 \begin{enumerate}[leftmargin=6mm,label=(\roman*)]
 \item The influence pair in \cref{thm:al} coincides with the efficient influence pair in \cref{prop:eif-red}. Hence \(\widehat{\psi}_{\mathrm{iso}}\) is efficient for \(\psi_0\) in the coarsened experiment \(\mathcal E_{m_0}\).
 \item If \(m_0=\muzero\) almost surely, then the influence pair in \cref{thm:al} coincides with the efficient influence pair in \cref{prop:eif-full}. Hence \(\widehat{\psi}_{\mathrm{iso}}\) is efficient for \(\psi_0\) in the full two-sample experiment.
-\item If \(\E[Y\mid m(X)]\) is monotone in \(m(X)\), then \(m_0(X)=\E[Y\mid m(X)]\) almost surely. Hence \(\widehat{\psi}_{\mathrm{iso}}\) is efficient for \(\psi_0\) in the coarsened experiment \(\mathcal E_m\).
+\item If \(\E[Y\mid m(X)]\) is monotone increasing in \(m(X)\), then \(m_0(X)=\E[Y\mid m(X)]\) almost surely. Hence \(\widehat{\psi}_{\mathrm{iso}}\) is efficient for \(\psi_0\) in the coarsened experiment \(\mathcal E_m\).
 \end{enumerate}
 \end{corollary}
 
-
-
 \begin{remark}[Practical takeaway]
-From a practical perspective, isotonic calibration can improve efficiency whenever the original prediction score is informative but miscalibrated. The estimator remains a simple plug-in estimator, but it behaves as if one had replaced the original score by its best monotone calibration.
+From a practical perspective, isotonic calibration can improve efficiency whenever the original prediction score is informative but miscalibrated. The estimator remains a simple plug-in estimator, but behaves as if the original score \(m(X)\) were replaced by its best monotone calibration \(m_0(X)\). When \(\mathbb{E}[Y \mid m(X)]\) is monotone, no regular estimator based only on the original score \(m(X)\) can improve on the isotonic-calibrated estimator. In particular, it is at least as efficient as AIPW, PPI, PPI++, and linear calibration when those estimators are based on the same score.
 \end{remark}
 
 \begin{remark}[When full efficiency is attained]
 Full efficiency requires that the calibrated target recover all relevant regression information. This holds if \(m_0=\mu_0\) almost surely, and more generally fails when the one-dimensional score \(m(X)\) omits predictive information in \(X\) that cannot be recovered through monotone calibration.
 \end{remark}
-
-
-
- 
 
  
  
@@ -2294,9 +2283,12 @@ in empirical \(L^2\), which yields \(\widehat\sigma^2\to_p \sigma_0^2\). The Wal
 \label{app:eff}
 
 \begin{proof}[Proof of \cref{cor:efficiency}]
-Part (i) follows because, under the conditions of \cref{thm:al}, the influence pair in \cref{thm:al} is exactly the pair in \cref{prop:eif-red}. Part (ii) follows because if \(m_0=\muzero\) almost surely, then the same influence pair also coincides with the efficient influence pair in \cref{prop:eif-full}. Part (iii) follows because monotonicity of \(\E[Y\mid m(X)]\) in \(m(X)\) identifies the score-based regression with the isotonic target \(m_0\), so the reduced model indexed by \(m_0\) is the same as the model indexed by the original score \(m(X)\).
+Part (i) follows because, under the conditions of \cref{thm:al}, the influence pair in \cref{thm:al} is exactly the pair in \cref{prop:eif-red}, noting that
+\[
+\psi_0 = \mathbb{E}_{P_0}[Y] = \mathbb{E}_{P_0}[m_0(X)],
+\]
+since \(m_0\) is the population mean calibration. Part (ii) follows because, if \(m_0 = \muzero\) almost surely, then the same influence pair also coincides with the efficient influence pair in \cref{prop:eif-full}. Part (iii) follows because monotonicity of \(\E[Y \mid m(X)]\) in \(m(X)\) identifies the score-based regression with the isotonic target \(m_0\), so the reduced model indexed by \(m_0\) is the same as the model indexed by the original score \(m(X)\).
 \end{proof}
- 
 
 \section{Pooled i.i.d.\ Missing-Data Formulation}
 \label{app:iid}
