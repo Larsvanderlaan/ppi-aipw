@@ -7,7 +7,7 @@ const methodContent = {
     good: [
       "You want the simplest affine recalibration.",
       "Predictions seem useful but shifted or stretched.",
-      "Your labeled sample is modest rather than large."
+      "Your labeled sample is small and you are worried more flexible methods may overfit."
     ],
     tradeoffs: [
       "Simple and fast.",
@@ -93,7 +93,7 @@ const methodContent = {
     tradeoffs: [
   "More flexible than linear calibration and sigmoid calibration.",
   "Produces smoother calibration curves than isotonic calibration.",
-  "Retains much of the flexibility of isotonic calibration while often being more stable when the labeled sample is very small."
+  "Retains much of the flexibility of isotonic calibration while often being more stable when the labeled sample is small."
     ],
     recommendation:
       "Use as the default monotone calibrator when you want a smooth nonlinear adjustment.",
