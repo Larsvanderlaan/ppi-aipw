@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">ppi_aipw circular badge</title>
+  <desc id="desc">Circular badge with a boxed calibration plot and plain ppi_aipw text beneath it.</desc>
+  <defs>
+    <clipPath id="plot-window-live">
+      <rect x="336" y="344" width="352" height="172" rx="30"/>
+    </clipPath>
+  </defs>
+  <g fill="none" fill-rule="evenodd">
+    <circle cx="512" cy="512" r="336" fill="#FFF8F0" stroke="#16323D" stroke-width="24"/>
+    <circle cx="512" cy="512" r="292" fill="none" stroke="#0D8A7A" stroke-opacity="0.14" stroke-width="10"/>
+
+    <rect x="310" y="318" width="404" height="224" rx="42" fill="#FFFDF9" stroke="#16323D" stroke-width="18"/>
+    <path d="M364 490h296" stroke="#16323D" stroke-opacity="0.14" stroke-linecap="round" stroke-width="8"/>
+    <path d="M364 436h296" stroke="#16323D" stroke-opacity="0.1" stroke-linecap="round" stroke-width="8"/>
+    <path d="M364 382h296" stroke="#16323D" stroke-opacity="0.1" stroke-linecap="round" stroke-width="8"/>
+    <g clip-path="url(#plot-window-live)">
+      <path d="M370 472C410 466 444 446 470 426C504 400 536 376 560 370C584 362 602 356 624 356" stroke="#0D8A7A" stroke-linecap="round" stroke-linejoin="round" stroke-width="20"/>
+      <circle cx="370" cy="472" r="13" fill="#FFB562" stroke="#16323D" stroke-width="8"/>
+      <circle cx="466" cy="430" r="13" fill="#FFB562" stroke="#16323D" stroke-width="8"/>
+      <circle cx="554" cy="370" r="13" fill="#FFB562" stroke="#16323D" stroke-width="8"/>
+      <circle cx="624" cy="356" r="13" fill="#FFB562" stroke="#16323D" stroke-width="8"/>
+    </g>
+
+    <text x="512" y="668" fill="#16323D" font-family="'Avenir Next', 'Helvetica Neue', Arial, sans-serif" font-size="72" font-weight="700" text-anchor="middle">ppi_aipw</text>
+  </g>
+</svg>

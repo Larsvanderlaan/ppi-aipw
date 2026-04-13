@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">ppi_aipw badge option 1</title>
+  <desc id="desc">Circular badge with a floating calibration plot and a text pill for ppi_aipw.</desc>
+  <g fill="none" fill-rule="evenodd">
+    <circle cx="512" cy="512" r="336" fill="#FFF8F0" stroke="#16323D" stroke-width="24"/>
+    <circle cx="512" cy="512" r="292" fill="none" stroke="#0D8A7A" stroke-opacity="0.14" stroke-width="10"/>
+
+    <path d="M336 456h352" stroke="#16323D" stroke-opacity="0.12" stroke-linecap="round" stroke-width="8"/>
+    <path d="M336 392h352" stroke="#16323D" stroke-opacity="0.08" stroke-linecap="round" stroke-width="8"/>
+    <path d="M336 520h352" stroke="#16323D" stroke-opacity="0.08" stroke-linecap="round" stroke-width="8"/>
+    <path d="M336 552c60-12 112-40 156-78 46-38 88-88 130-116 18-12 38-22 58-28" stroke="#0D8A7A" stroke-linecap="round" stroke-linejoin="round" stroke-width="22"/>
+    <circle cx="338" cy="552" r="14" fill="#FFB562" stroke="#16323D" stroke-width="8"/>
+    <circle cx="456" cy="482" r="14" fill="#FFB562" stroke="#16323D" stroke-width="8"/>
+    <circle cx="560" cy="384" r="14" fill="#FFB562" stroke="#16323D" stroke-width="8"/>
+    <circle cx="648" cy="358" r="14" fill="#FFB562" stroke="#16323D" stroke-width="8"/>
+
+    <rect x="286" y="628" width="452" height="106" rx="53" fill="#D7F2EB" stroke="#16323D" stroke-width="18"/>
+    <text x="512" y="695" fill="#16323D" font-family="'Avenir Next', 'Helvetica Neue', Arial, sans-serif" font-size="56" font-weight="700" text-anchor="middle">ppi_aipw</text>
+  </g>
+</svg>

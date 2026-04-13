@@ -181,6 +181,12 @@ pre {
   max-width: 15ch;
 }
 
+.hero-copy {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
 .lede {
   font-size: 1.09rem;
   line-height: 1.7;
@@ -193,6 +199,20 @@ pre {
   gap: 14px;
   flex-wrap: wrap;
   margin: 24px 0 20px;
+}
+
+.hero-art {
+  margin-top: auto;
+  padding-top: clamp(24px, 5vw, 56px);
+  width: min(100%, 380px);
+}
+
+.hero-art img {
+  display: block;
+  width: clamp(220px, 35vw, 360px);
+  max-width: 100%;
+  height: auto;
+  filter: drop-shadow(0 16px 30px rgba(41, 65, 73, 0.12));
 }
 
 .button {
@@ -695,6 +715,14 @@ pre {
   .curve-legend {
     grid-column: 1;
   }
+
+  .hero-copy {
+    min-height: auto;
+  }
+
+  .hero-art {
+    margin-top: 16px;
+  }
 }
 
 @media (max-width: 720px) {
@@ -715,6 +743,17 @@ pre {
 
   .hero h1 {
     max-width: 100%;
+  }
+
+  .hero-art {
+    align-self: center;
+    width: min(100%, 300px);
+    padding-top: 12px;
+  }
+
+  .hero-art img {
+    width: min(100%, 280px);
+    margin: 0 auto;
   }
 
   .section,
