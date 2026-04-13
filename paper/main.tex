@@ -960,15 +960,17 @@ Full efficiency requires that the calibrated target recover all relevant regress
 \subsection{Simulation study}
 \label{sec:simulation}
 
-We begin with a controlled binary-outcome simulation designed to isolate the effect of score miscalibration. Let \(S\sim N(0,1)\), define
+We begin with a controlled binary-outcome simulation designed to isolate score miscalibration. Let \(S\sim N(0,1)\), define
 \[
 \mu_0(S)=\{1+\exp(-5S)\}^{-1},
 \]
-and draw \(Y\mid S\sim \mathrm{Bernoulli}\{\mu_0(S)\}\). To induce substantial miscalibration, we apply a stronger affine-biased monotone logit distortion,
+and draw \(Y\mid S\sim \mathrm{Bernoulli}\{\mu_0(S)\}\). To induce substantial miscalibration, we apply an affine-biased monotone distortion on the logit scale,
 \[
 m(X)=\mathrm{clip}\left[-0.15+0.75\,\sigma\bigl\{0.8\,z(S)+0.1\,z(S)^3-1\bigr\},\,0.01,\,0.99\right],
 \]
-where \(z(S):=\mathrm{logit}\{\mu_0(S)\}\). This transformation preserves ranking information while introducing nonlinear distortion on the probability scale. We report the labeled-only mean (\textsc{Naive}), PPI, PPI++, AIPW, linear calibration (\textsc{LinearCal}), monotone spline calibration (\textsc{MonoSpline}), isotonic calibration (\textsc{IsoCal}), and an adaptive selector (\textsc{Auto}) that chooses among AIPW and the main calibration rules by cross-validated empirical efficiency. The labeled sample size ranges over \(n\in\{50,100,200,400,800,1200,2400\}\), with \(N/n=1\) and \(N/n=16\). All summaries are based on 5000 Monte Carlo repetitions.
+where \(z(S):=\mathrm{logit}\{\mu_0(S)\}\). This transformation preserves ranking information while introducing nonlinear distortion on the probability scale. We compare the labeled-only mean (\textsc{Naive}), PPI, PPI++, AIPW, linear calibration (\textsc{LinearCal}), monotone spline calibration (\textsc{MonoSpline}) \citep{ramsay1988monotone,jiang2011smooth}, isotonic calibration (\textsc{IsoCal}), and an adaptive selector (\textsc{Auto}) that chooses among AIPW and the main calibration rules by cross-validated empirical efficiency maximization. The labeled sample size ranges over \(n\in\{50,100,200,400,800,1200,2400\}\), with \(N/n=1\) and \(N/n=16\). All figures and summaries are based on 500 Monte Carlo repetitions.
+
+ 
 
 \begin{figure}[htb]
 \centering
@@ -977,7 +979,9 @@ where \(z(S):=\mathrm{logit}\{\mu_0(S)\}\). This transformation preserves rankin
 \label{fig:simulation-rmse}
 \end{figure}
 
-\cref{fig:simulation-rmse} reports the four diagnostics most directly connected to the theory in two representative unlabeled-sample regimes, \(N/n=1\) and \(N/n=16\): absolute bias, empirical Monte Carlo standard deviation, coverage, and relative efficiency versus PPI. Calibration improves efficiency by reducing the residual variance of the score-based estimator, most clearly in the variability and relative-efficiency panels. In the balanced regime \(N/n=1\), AIPW is slightly more efficient than PPI in small samples and comparable in larger samples. In the large-unlabeled regime \(N/n=16\), the two become much closer, and AIPW can be slightly less efficient under substantial misspecification of \(m\). The added benchmarks reinforce the same regime story: PPI++ nearly overlays linear calibration, \textsc{Auto} largely tracks the strongest fixed score-based competitor, and \textsc{MonoSpline} behaves as a smoother monotone alternative to stepwise isotonic calibration. In very small labeled samples the simpler affine corrections remain safest, whereas richer monotone corrections become more attractive once \(n\) is moderately large, especially when unlabeled data are abundant. Coverage remains broadly reasonable throughout, although the more aggressive nonlinear calibration methods mildly undercover at smaller sample sizes.
+\cref{fig:simulation-rmse} reports four diagnostics most directly tied to the theory in two representative unlabeled-sample regimes, \(N/n=1\) and \(N/n=16\): absolute bias, empirical Monte Carlo standard deviation, coverage, and relative efficiency versus PPI. All score-based AIPW-type estimators are essentially unbiased. When the original score is already well calibrated, the main practical difference is efficiency: PPI is less efficient than AIPW and the calibration-based estimators. Under meaningful miscalibration, the gains from calibration are most visible when the unlabeled sample is large. For example, at \(n=400\) and \(N/n=16\), the calibrated methods reduce RMSE from about \(0.0172\) for PPI to about \(0.0164\), and by \(n=1200\) in the same regime, RMSE is about \(0.0087\) for \textsc{Auto}, \textsc{MonoSpline}, and \textsc{IsoCal}, compared with \(0.0092\) for PPI.
+
+The additional benchmarks reinforce this same regime-dependent pattern. In the more balanced regime, PPI++ often tracks \textsc{LinearCal} closely, consistent with the first-order equivalence developed in Section~\ref{sec:linear}. In the large-unlabeled regime, however, PPI++ is nearly indistinguishable from PPI and remains clearly worse than \textsc{LinearCal} in this simulation. A plausible explanation is implementation-specific: we benchmark PPI++ using the official \texttt{ppi\_py} routine, which clips the optimized power-tuning coefficient \(\lambda\) to \([0,1]\). If the variance-optimal scaling in this regime exceeds \(1\), this clipping pulls PPI++ back toward plain PPI. \textsc{Auto} stays close to the best fixed score-based option and usually avoids large errors. \textsc{MonoSpline} behaves as intended as a smooth monotone compromise: it is typically close to isotonic calibration in RMSE, with slightly more stable coverage in some smaller-sample settings. Coverage is broadly reasonable overall, although the more aggressive nonlinear monotone fits can show mild undercoverage when \(n\) is small. Overall, the results support the paper's main qualitative message: little changes when the score is already well calibrated, whereas under genuine miscalibration, even simple post-hoc calibration can yield noticeable semisupervised efficiency gains.
 
 
 \subsection{Empirical Illustration}
