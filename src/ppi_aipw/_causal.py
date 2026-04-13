@@ -7,8 +7,11 @@ import numpy as np
 
 from ._api import (
     MeanInferenceResult,
+    _compute_wald_statistics,
     _mean_inference_result_from_prepared,
     _prepare_inference_inputs,
+    _preview_value,
+    _summary_value,
     _wald_influence_components,
 )
 from ._utils import construct_weight_vector, z_interval
@@ -26,6 +29,135 @@ class CausalInferenceResult:
     treatment_levels: tuple[Any, ...]
     arm_results: dict[Any, MeanInferenceResult]
     diagnostics: dict[str, Any]
+
+    def __repr__(self) -> str:
+        ate_preview = {arm: _summary_value(float(self.ate[arm])) for arm in self.ate}
+        parts = [
+            f"control_arm={self.control_arm!r}",
+            f"treatment_levels={self.treatment_levels!r}",
+            f"inference={self.diagnostics.get('inference', 'wald')!r}",
+            f"ate={ate_preview!r}",
+        ]
+        return f"CausalInferenceResult({', '.join(parts)})"
+
+    def summary(
+        self,
+        *,
+        null: float = 0.0,
+        alternative: str = "two-sided",
+    ) -> str:
+        null_arr = np.asarray(null, dtype=float)
+        null_preview: float | np.ndarray
+        if null_arr.ndim == 0:
+            null_preview = float(null_arr)
+        else:
+            null_preview = null_arr.reshape(-1).copy()
+
+        ordered_arms = list(self.treatment_levels)
+        arm_estimates = np.array([self.arm_means[arm] for arm in ordered_arms], dtype=float)
+        arm_ses = np.array([self.arm_ses[arm] for arm in ordered_arms], dtype=float)
+        arm_ci_lower = np.array([self.arm_cis[arm][0] for arm in ordered_arms], dtype=float)
+        arm_ci_upper = np.array([self.arm_cis[arm][1] for arm in ordered_arms], dtype=float)
+        arm_null, arm_t_stat, arm_p_value = _compute_wald_statistics(
+            arm_estimates,
+            arm_ses,
+            null=null,
+            alternative=alternative,
+        )
+
+        comparison_arms = [arm for arm in ordered_arms if arm != self.control_arm]
+        ate_estimates = np.array([self.ate[arm] for arm in comparison_arms], dtype=float)
+        ate_ses = np.array([self.ate_ses[arm] for arm in comparison_arms], dtype=float)
+        ate_ci_lower = np.array([self.ate_cis[arm][0] for arm in comparison_arms], dtype=float)
+        ate_ci_upper = np.array([self.ate_cis[arm][1] for arm in comparison_arms], dtype=float)
+        ate_null, ate_t_stat, ate_p_value = _compute_wald_statistics(
+            ate_estimates,
+            ate_ses,
+            null=null,
+            alternative=alternative,
+        )
+
+        self.diagnostics["arm_wald_null"] = null_preview
+        self.diagnostics["arm_wald_alternative"] = alternative
+        self.diagnostics["arm_wald_t_statistic"] = {
+            arm: float(stat) for arm, stat in zip(ordered_arms, arm_t_stat)
+        }
+        self.diagnostics["arm_wald_p_value"] = {
+            arm: float(value) for arm, value in zip(ordered_arms, arm_p_value)
+        }
+        self.diagnostics["ate_wald_null"] = null_preview
+        self.diagnostics["ate_wald_alternative"] = alternative
+        self.diagnostics["ate_wald_t_statistic"] = {
+            arm: float(stat) for arm, stat in zip(comparison_arms, ate_t_stat)
+        }
+        self.diagnostics["ate_wald_p_value"] = {
+            arm: float(value) for arm, value in zip(comparison_arms, ate_p_value)
+        }
+
+        arm_methods = {arm: result.method for arm, result in self.arm_results.items()}
+        unique_methods = tuple(dict.fromkeys(arm_methods[arm] for arm in ordered_arms))
+        lines = [
+            "CausalInferenceResult summary",
+            f"control_arm: {self.control_arm!r}",
+            f"treatment_levels: {self.treatment_levels!r}",
+            f"inference: {self.diagnostics.get('inference', 'wald')}",
+            f"wald_null: {_preview_value(null_preview, digits=6)}",
+            f"wald_alternative: {alternative}",
+        ]
+        if len(unique_methods) == 1:
+            lines.append(f"arm_method: {unique_methods[0]}")
+        else:
+            lines.append(f"arm_methods: {arm_methods}")
+
+        lines.append("")
+        lines.append("Arm means:")
+        for arm, estimate, se, lower, upper, t_stat, p_value in zip(
+            ordered_arms,
+            arm_estimates,
+            arm_ses,
+            arm_ci_lower,
+            arm_ci_upper,
+            arm_t_stat,
+            arm_p_value,
+        ):
+            lines.append(
+                "arm={arm!r}: estimate={estimate}, se={se}, ci=({lower}, {upper}), "
+                "wald_t={t_stat}, p_value={p_value}".format(
+                    arm=arm,
+                    estimate=_summary_value(float(estimate)),
+                    se=_summary_value(float(se)),
+                    lower=_summary_value(float(lower)),
+                    upper=_summary_value(float(upper)),
+                    t_stat=_summary_value(float(t_stat)),
+                    p_value=_summary_value(float(p_value)),
+                )
+            )
+
+        lines.append("")
+        lines.append("ATEs vs control:")
+        for arm, estimate, se, lower, upper, t_stat, p_value in zip(
+            comparison_arms,
+            ate_estimates,
+            ate_ses,
+            ate_ci_lower,
+            ate_ci_upper,
+            ate_t_stat,
+            ate_p_value,
+        ):
+            lines.append(
+                "{arm!r} - {control!r}: estimate={estimate}, se={se}, ci=({lower}, {upper}), "
+                "wald_t={t_stat}, p_value={p_value}".format(
+                    arm=arm,
+                    control=self.control_arm,
+                    estimate=_summary_value(float(estimate)),
+                    se=_summary_value(float(se)),
+                    lower=_summary_value(float(lower)),
+                    upper=_summary_value(float(upper)),
+                    t_stat=_summary_value(float(t_stat)),
+                    p_value=_summary_value(float(p_value)),
+                )
+            )
+        return "\n".join(lines)
 
 
 def _validate_outcome_vector(Y: np.ndarray) -> np.ndarray:
@@ -451,6 +583,20 @@ def causal_inference(
         ate_ses[arm] = standard_error
         ate_cis[arm] = (float(lower[0]), float(upper[0]))
 
+    arm_wald_null, arm_wald_t_stat, arm_wald_p_value = _compute_wald_statistics(
+        np.array([arm_means[arm] for arm in ordered_arms], dtype=float),
+        np.array([arm_ses[arm] for arm in ordered_arms], dtype=float),
+        null=0.0,
+        alternative=alternative,
+    )
+    comparison_arms = [arm for arm in ordered_arms if arm != resolved_control_arm]
+    ate_wald_null, ate_wald_t_stat, ate_wald_p_value = _compute_wald_statistics(
+        np.array([ate[arm] for arm in comparison_arms], dtype=float),
+        np.array([ate_ses[arm] for arm in comparison_arms], dtype=float),
+        null=0.0,
+        alternative=alternative,
+    )
+
     diagnostics = {
         "inference": "wald",
         "treatment_levels": resolved_levels,
@@ -458,6 +604,22 @@ def causal_inference(
         "arm_counts": {arm: int(np.sum(A_arr == arm)) for arm in resolved_levels},
         "arm_prediction_columns": arm_to_column,
         "per_arm": {arm: result.diagnostics for arm, result in arm_results.items()},
+        "arm_wald_null": 0.0,
+        "arm_wald_alternative": alternative,
+        "arm_wald_t_statistic": {
+            arm: float(stat) for arm, stat in zip(ordered_arms, arm_wald_t_stat)
+        },
+        "arm_wald_p_value": {
+            arm: float(value) for arm, value in zip(ordered_arms, arm_wald_p_value)
+        },
+        "ate_wald_null": 0.0 if ate_wald_null.size > 0 else 0.0,
+        "ate_wald_alternative": alternative,
+        "ate_wald_t_statistic": {
+            arm: float(stat) for arm, stat in zip(comparison_arms, ate_wald_t_stat)
+        },
+        "ate_wald_p_value": {
+            arm: float(value) for arm, value in zip(comparison_arms, ate_wald_p_value)
+        },
     }
     if not use_unweighted_causal_path:
         diagnostics["causal_weight_normalization"] = "global_full_sample"

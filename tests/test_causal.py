@@ -164,6 +164,55 @@ def test_causal_multiarms_returns_all_noncontrol_vs_control_ates() -> None:
         assert result.ate_cis[arm][0] <= result.ate_cis[arm][1]
 
 
+def test_causal_summary_reports_arm_means_ates_and_wald_statistics() -> None:
+    Y, A, Yhat_potential = _make_causal_data(seed=44, n=160, treatment_levels=(0, 1, 2))
+
+    result = causal_inference(
+        Y,
+        A,
+        Yhat_potential,
+        method="auto",
+        candidate_methods=("aipw", "linear"),
+        num_folds=4,
+        selection_random_state=0,
+    )
+
+    text = result.summary()
+
+    assert "CausalInferenceResult summary" in text
+    assert "control_arm: 0" in text
+    assert "Arm means:" in text
+    assert "ATEs vs control:" in text
+    assert "arm=0: estimate=" in text
+    assert "1 - 0: estimate=" in text
+    assert "wald_t=" in text
+    assert "p_value=" in text
+    assert "arm_wald_t_statistic" in result.diagnostics
+    assert "ate_wald_p_value" in result.diagnostics
+
+
+def test_causal_summary_null_override_changes_reported_wald_statistics() -> None:
+    Y, A, Yhat_potential = _make_causal_data(seed=45, n=140, treatment_levels=(0, 1))
+
+    result = causal_inference(
+        Y,
+        A,
+        Yhat_potential,
+        method="linear",
+    )
+
+    baseline = result.summary()
+    shifted = result.summary(null=1.0, alternative="larger")
+
+    assert "wald_null: 0" in baseline
+    assert "wald_alternative: two-sided" in baseline
+    assert "wald_null: 1" in shifted
+    assert "wald_alternative: larger" in shifted
+    assert baseline != shifted
+    assert result.diagnostics["ate_wald_alternative"] == "larger"
+    assert result.diagnostics["arm_wald_null"] == 1.0
+
+
 def test_uniform_weights_reproduce_unweighted_causal_inference() -> None:
     Y, A, Yhat_potential = _make_causal_data(seed=22, n=120, treatment_levels=(0, 1, 2))
 

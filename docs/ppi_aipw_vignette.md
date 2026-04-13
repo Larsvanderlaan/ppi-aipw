@@ -550,6 +550,8 @@ result = causal_inference(
 mu_control = result.arm_means["control"]
 mu_treated = result.arm_means["treated"]
 ate = result.ate["treated"]
+
+print(result.summary())
 ```
 
 What it does:
@@ -557,6 +559,8 @@ What it does:
 - treats each arm-specific mean as a semisupervised mean problem
 - uses units in the target arm as labeled and units outside the target arm as unlabeled
 - returns arm-specific Wald intervals and all control-vs-treatment ATEs
+- returns a causal result object with `summary()` for a compact Wald summary of
+  both the arm means and the ATEs
 
 Important notes:
 

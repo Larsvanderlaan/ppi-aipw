@@ -224,6 +224,9 @@ Causal API:
   propensity weights or balancing weights; in randomized studies they can
   adjust for chance covariate imbalance for efficiency, and in observational
   studies they can adjust for confounding for bias reduction
+- the returned causal result object exposes `arm_means`, `ate`, interval fields,
+  and `result.summary()` for a compact Wald summary of both arm means and
+  control-vs-treatment effects
 - `control_arm=None` defaults to the minimum resolved treatment level
 - this API is a convenience layer over the semisupervised mean engine, not a
   full observational causal pipeline

@@ -100,8 +100,14 @@ result = causal_inference(
 mu_control = result.arm_means["control"]
 mu_treated = result.arm_means["treated"]
 ate = result.ate["treated"]
-lower, upper = result.ate_cis["treated"]</code></pre>
+lower, upper = result.ate_cis["treated"]
+
+print(result.summary())</code></pre>
           </div>
+          <p class="panel-note">
+            The returned result object also has <code>summary()</code> for a
+            compact Wald summary of the arm means and treatment effects.
+          </p>
         </section>
 
         <section class="section" id="inputs">
@@ -169,6 +175,10 @@ lower, upper = result.ate_cis["treated"]</code></pre>
             <article class="takeaway-card">
               <h3><code>arm_results</code></h3>
               <p>The underlying arm-by-arm <code>MeanInferenceResult</code> objects, exposed for inspection.</p>
+            </article>
+            <article class="takeaway-card">
+              <h3><code>summary()</code></h3>
+              <p>A human-readable Wald summary for all arm means and control-vs-treatment ATEs.</p>
             </article>
           </div>
 

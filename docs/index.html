@@ -87,8 +87,11 @@ lower, upper = result.ci
 print(result.summary())
 diagnostics = calibration_diagnostics(result, Y, Yhat)</code></pre>
               <p class="panel-note">
-                Use <code>mean_pointestimate</code>, <code>mean_se</code>, or
-                <code>mean_ci</code> when you only need one output.
+                The returned result object gives you
+                <code>pointestimate</code>, <code>se</code>, <code>ci</code>,
+                and <code>summary()</code> in one place. Use
+                <code>mean_pointestimate</code>, <code>mean_se</code>, or
+                <code>mean_ci</code> only when you need one output.
               </p>
             </div>
           </aside>
@@ -157,6 +160,16 @@ diagnostics = calibration_diagnostics(result, Y, Yhat)</code></pre>
             </div>
 
           <div class="argument-grid">
+            <article class="argument-card">
+              <h3>Result object</h3>
+              <p>
+                <code>mean_inference(...)</code> returns a result object with
+                <code>pointestimate</code>, <code>se</code>, <code>ci</code>,
+                <code>diagnostics</code>, and
+                <code>result.summary()</code> for a quick human-readable Wald
+                summary.
+              </p>
+            </article>
             <article class="argument-card">
               <h3><code>Y</code></h3>
               <p>Observed outcomes for the labeled sample.</p>
