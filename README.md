@@ -28,7 +28,13 @@ This repository contains the code and manuscript assets for our paper on calibra
 This repo now includes `ppi_aipw`, a Python package for semisupervised mean
 estimation with AIPW, calibration, and uncertainty quantification.
 
-Install directly from GitHub:
+Install from PyPI:
+
+```bash
+python -m pip install ppi-aipw
+```
+
+If you want the latest GitHub version instead:
 
 ```bash
 python -m pip install "git+https://github.com/Larsvanderlaan/ppi-aipw.git"
@@ -228,7 +234,7 @@ Causal API:
   full observational causal pipeline
 
 The full user guide is in [docs/ppi_aipw_vignette.md](docs/ppi_aipw_vignette.md).
-There is also a compact runnable notebook covering both the mean and causal APIs in [examples/ppi_aipw_quickstart.ipynb](examples/ppi_aipw_quickstart.ipynb), and it can be opened directly in Colab at [colab.research.google.com/github/Larsvanderlaan/ppi-aipw/blob/main/examples/ppi_aipw_quickstart.ipynb](https://colab.research.google.com/github/Larsvanderlaan/ppi-aipw/blob/main/examples/ppi_aipw_quickstart.ipynb).
+There is also a compact runnable notebook covering both the mean and causal APIs in [examples/ppi_aipw_quickstart.ipynb](examples/ppi_aipw_quickstart.ipynb), and it can be opened directly in Colab at [colab.research.google.com/github/Larsvanderlaan/ppi-aipw/blob/main/examples/ppi_aipw_quickstart.ipynb](https://colab.research.google.com/github/Larsvanderlaan/ppi-aipw/blob/main/examples/ppi_aipw_quickstart.ipynb). The notebook installs `ppi-aipw` automatically in Colab.
 The package website lives at [docs/index.html](docs/index.html), with a
 dedicated causal page at [docs/causal.html](docs/causal.html).
 
