@@ -4,6 +4,9 @@
 __pycache__/
 .pytest_cache/
 .mplconfig/
+build/
+dist/
+*.egg-info/
 docs/.Rhistory
 
 outputs/

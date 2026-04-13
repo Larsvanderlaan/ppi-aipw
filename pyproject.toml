@@ -3,8 +3,8 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ppi_aipw"
-version = "0.2.0"
+name = "ppi-aipw"
+version = "0.2.1"
 description = "AIPW-style semisupervised mean inference with calibration methods."
 readme = "README.md"
 requires-python = ">=3.9"
