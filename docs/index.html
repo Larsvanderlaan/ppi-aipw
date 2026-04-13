@@ -395,7 +395,7 @@ print(result.summary())</code></pre>
             </p>
             <ul>
               <li>PPI and PPI++ can be understood within the AIPW, semiparametric-efficiency, and debiased machine learning framework.</li>
-              <li>In the one-score setting, <code>efficiency_maximization=True</code> for <code>method="aipw"</code> is equivalent to PPI++; see Rubin and van der Laan (2008). Plain PPI is not implemented because raw-score AIPW is typically at least as efficient.</li>
+              <li>In the one-score setting, <code>efficiency_maximization=True</code> for <code>method="aipw"</code> targets the same empirical efficiency-maximization problem as PPI++; see Rubin and van der Laan (2008). The official <code>ppi_py</code> implementation of PPI++ may differ in finite samples because it clips the optimized scale to lie in <code>[0,1]</code>. Plain PPI is not implemented because raw-score AIPW is typically at least as efficient.</li>
               <li>In the one-score setting, AIPW with empirical efficiency maximization (PPI++) is asymptotically equivalent to linear calibration and prognostic-score regression adjustment.</li>
               <li>Calibration is stronger than mean-bias correction alone and can improve semisupervised inference when the score is miscalibrated. Linear calibration is the less flexible parametric option, while isotonic calibration is a nonparametric calibrator.</li>
               <li>Monotone spline calibration implements a smoothed version of isotonic calibration and is the package default, while linear calibration remains the simplest affine alternative and isotonic calibration provides a more flexible monotone option when the labeled sample is large enough.</li>
