@@ -37,7 +37,17 @@
         <div class="hero-grid">
           <section class="hero-copy">
             <p class="eyebrow">Semisupervised Mean Inference</p>
-            <h1>Semisupervised mean inference with AIPW and calibration</h1>
+            <div class="hero-head">
+              <h1>Semisupervised mean inference with AIPW and calibration</h1>
+              <div class="hero-art">
+                <img
+                  src="./assets/ppi-aipw-badge-mark.svg"
+                  alt="Circular ppi_aipw package badge with a calibration plot"
+                  width="1024"
+                  height="1024"
+                />
+              </div>
+            </div>
             <p class="lede">
               <code>ppi_aipw</code> is for the small-labeled, large-unlabeled
               setting where predictions from a fixed model can improve power
@@ -49,14 +59,6 @@
             <div class="hero-actions">
               <a class="button button-primary" href="#quickstart">Quickstart</a>
               <a class="button button-secondary" href="https://colab.research.google.com/github/Larsvanderlaan/ppi-aipw/blob/main/examples/ppi_aipw_quickstart.ipynb">Open in Colab</a>
-            </div>
-            <div class="hero-art">
-              <img
-                src="./assets/ppi-aipw-badge-mark.svg"
-                alt="Circular ppi_aipw package badge with a calibration plot"
-                width="1024"
-                height="1024"
-              />
             </div>
           </section>
 
@@ -79,21 +81,18 @@
             </div>
             <div class="panel-card code-card">
               <p class="panel-label">Main Function</p>
-              <pre><code>from ppi_aipw import calibration_diagnostics, mean_inference
+              <pre><code>from ppi_aipw import mean_inference
 
 result = mean_inference(
     Y, Yhat, Yhat_unlabeled,
     method="monotone_spline",
     alpha=0.1,
-    inference="wald",
 )
 
 estimate = result.pointestimate
 standard_error = result.se
 lower, upper = result.ci
-
-print(result.summary())
-diagnostics = calibration_diagnostics(result, Y, Yhat)</code></pre>
+print(result.summary())</code></pre>
               <p class="panel-note">
                 The returned result object gives you
                 <code>pointestimate</code>, <code>se</code>, <code>ci</code>,

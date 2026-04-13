@@ -43,7 +43,7 @@ python -m pip install -e .
 Most users should start with:
 
 ```python
-from ppi_aipw import calibration_diagnostics, mean_inference
+from ppi_aipw import mean_inference
 
 result = mean_inference(
     Y,
@@ -56,11 +56,7 @@ result = mean_inference(
 estimate = result.pointestimate
 standard_error = result.se
 lower, upper = result.ci
-
 print(result.summary())
-
-diagnostics = calibration_diagnostics(result, Y, Yhat)
-# plot_calibration(diagnostics)  # optional helper; requires matplotlib
 ```
 
 If you want a linear prognostic adjustment with optional extra covariates:

@@ -182,9 +182,15 @@ pre {
 }
 
 .hero-copy {
-  display: flex;
-  flex-direction: column;
-  min-height: 100%;
+  min-width: 0;
+}
+
+.hero-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(170px, 20vw, 235px);
+  gap: clamp(18px, 3vw, 32px);
+  align-items: center;
+  margin-bottom: 10px;
 }
 
 .lede {
@@ -202,14 +208,16 @@ pre {
 }
 
 .hero-art {
-  margin-top: auto;
-  padding-top: clamp(12px, 3vw, 28px);
-  width: min(100%, 240px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  width: 100%;
 }
 
 .hero-art img {
   display: block;
-  width: clamp(150px, 23vw, 220px);
+  width: min(100%, 230px);
   max-width: 100%;
   height: auto;
   filter: drop-shadow(0 16px 30px rgba(41, 65, 73, 0.12));
@@ -716,13 +724,13 @@ pre {
     grid-column: 1;
   }
 
-  .hero-copy {
-    min-height: auto;
+  .hero-head {
+    grid-template-columns: minmax(0, 1fr) 190px;
+    gap: 18px;
   }
 
   .hero-art {
-    margin-top: 16px;
-    width: min(100%, 220px);
+    width: 100%;
   }
 }
 
@@ -746,14 +754,17 @@ pre {
     max-width: 100%;
   }
 
+  .hero-head {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
   .hero-art {
-    align-self: center;
-    width: min(100%, 220px);
-    padding-top: 12px;
+    width: 100%;
   }
 
   .hero-art img {
-    width: min(100%, 200px);
+    width: min(100%, 180px);
     margin: 0 auto;
   }
 

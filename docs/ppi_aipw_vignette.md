@@ -23,7 +23,7 @@ It returns the point estimate, standard error, confidence interval, fitted
 calibrator, and auto-selection diagnostics in one pass:
 
 ```python
-from ppi_aipw import calibration_diagnostics, mean_inference
+from ppi_aipw import mean_inference
 
 result = mean_inference(
     Y,
@@ -36,11 +36,7 @@ result = mean_inference(
 estimate = result.pointestimate
 standard_error = result.se
 lower, upper = result.ci
-
 print(result.summary())
-
-diagnostics = calibration_diagnostics(result, Y, Yhat)
-# plot_calibration(diagnostics)  # optional helper; requires matplotlib
 ```
 
 If you prefer narrower convenience functions, the package also exports:
