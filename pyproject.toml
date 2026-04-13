@@ -25,6 +25,9 @@ dependencies = [
     "xgboost",
 ]
 
+[project.optional-dependencies]
+plot = ["matplotlib"]
+
 [project.urls]
 Homepage = "https://github.com/Larsvanderlaan/ppi-aipw"
 Repository = "https://github.com/Larsvanderlaan/ppi-aipw"

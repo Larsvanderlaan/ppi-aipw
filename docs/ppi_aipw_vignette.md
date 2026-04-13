@@ -23,7 +23,7 @@ It returns the point estimate, standard error, confidence interval, fitted
 calibrator, and auto-selection diagnostics in one pass:
 
 ```python
-from ppi_aipw import mean_inference
+from ppi_aipw import calibration_diagnostics, mean_inference
 
 result = mean_inference(
     Y,
@@ -36,6 +36,11 @@ result = mean_inference(
 estimate = result.pointestimate
 standard_error = result.se
 lower, upper = result.ci
+
+print(result.summary())
+
+diagnostics = calibration_diagnostics(result, Y, Yhat)
+# plot_calibration(diagnostics)  # optional helper; requires matplotlib
 ```
 
 If you prefer narrower convenience functions, the package also exports:
@@ -73,6 +78,35 @@ If you only remember one pattern, remember `result = mean_inference(...)`.
 A compact notebook covering both the mean and causal APIs is in
 `examples/ppi_aipw_quickstart.ipynb`, and it can be opened directly in Colab:
 <https://colab.research.google.com/github/Larsvanderlaan/ppi-aipw/blob/main/examples/ppi_aipw_quickstart.ipynb>.
+
+## Summaries And Calibration Diagnostics
+
+The `MeanInferenceResult` returned by `mean_inference(...)` now supports a
+compact printable representation together with a fuller summary:
+
+```python
+print(result)
+print(result.summary())
+```
+
+`summary()` reports the method, uncertainty output, and a default Wald test
+against the null value `0`. You can override the test target if needed:
+
+```python
+print(result.summary(null=1.0))
+```
+
+If you want a labeled-sample calibration check after fitting, use:
+
+```python
+from ppi_aipw import calibration_diagnostics
+
+diagnostics = calibration_diagnostics(result, Y, Yhat, num_bins=10)
+```
+
+This returns structured bin-level diagnostics and the fitted calibration curve.
+If you want a quick plot, use `plot_calibration(diagnostics, ...)`. Plotting is
+optional and requires `matplotlib`.
 
 ## What The Arguments Mean
 

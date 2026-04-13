@@ -104,6 +104,7 @@ Causal API:
 """
 
 from ._api import (
+    MeanInferenceResult,
     aipw_mean_ci,
     aipw_mean_inference,
     aipw_mean_pointestimate,
@@ -125,20 +126,23 @@ from ._api import (
     select_mean_method_cv,
     sigmoid_mean_ci,
     sigmoid_mean_pointestimate,
-    MeanInferenceResult,
 )
 from ._calibration import CalibrationModel, calibrate_predictions, fit_calibrator
 from ._causal import CausalInferenceResult, causal_inference
+from ._diagnostics import CalibrationCurveDiagnostics, CalibrationDiagnostics, calibration_diagnostics, plot_calibration
 from ._weights import compute_two_sample_balancing_weights
 
 __all__ = [
     "CalibrationModel",
+    "CalibrationCurveDiagnostics",
+    "CalibrationDiagnostics",
     "CausalInferenceResult",
     "MeanInferenceResult",
     "aipw_mean_ci",
     "aipw_mean_inference",
     "aipw_mean_pointestimate",
     "aipw_mean_se",
+    "calibration_diagnostics",
     "calibrate_predictions",
     "causal_inference",
     "compute_two_sample_balancing_weights",
@@ -157,6 +161,7 @@ __all__ = [
     "pi_aipw_mean_ci",
     "pi_aipw_mean_inference",
     "pi_aipw_mean_pointestimate",
+    "plot_calibration",
     "select_mean_method_cv",
     "sigmoid_mean_ci",
     "sigmoid_mean_pointestimate",

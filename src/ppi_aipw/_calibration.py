@@ -139,6 +139,17 @@ class CalibrationModel:
     calibrators: list[_CoordinateCalibrator]
     metadata: dict[str, Any] = field(default_factory=dict)
 
+    def __repr__(self) -> str:
+        n_outputs = len(self.calibrators)
+        parts = [f"method={self.method!r}", f"n_outputs={n_outputs}"]
+        backend = self.metadata.get("isocal_backend")
+        if backend:
+            parts.append(f"isocal_backend={backend!r}")
+        lambda_source = self.metadata.get("efficiency_lambda_source")
+        if lambda_source:
+            parts.append(f"efficiency_lambda_source={lambda_source!r}")
+        return f"CalibrationModel({', '.join(parts)})"
+
     def predict(self, scores: np.ndarray) -> np.ndarray:
         scores = np.asarray(scores, dtype=float)
         scores_2d = scores.reshape(-1, 1) if scores.ndim == 1 else scores.copy()

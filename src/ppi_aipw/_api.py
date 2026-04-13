@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
+from scipy.stats import norm
 from sklearn.model_selection import KFold
 
 from ._calibration import CalibrationModel, calibrate_predictions, canonical_method, fit_calibrator
@@ -18,6 +19,100 @@ from ._utils import (
 
 _AUTO_AIPW_EFFICIENCY_LABEL = "aipw_efficiency_maximization"
 _PROGNOSTIC_LINEAR_RIDGE_GRID = np.array([1e-6, 1e-4, 1e-2, 1e-1, 1.0, 10.0, 100.0], dtype=float)
+
+
+def _flatten_parameter(x: float | np.ndarray) -> np.ndarray:
+    return np.asarray(x, dtype=float).reshape(-1)
+
+
+def _coerce_null_array(null: float | np.ndarray, size: int) -> np.ndarray:
+    null_arr = np.asarray(null, dtype=float)
+    if null_arr.ndim == 0:
+        return np.full(size, float(null_arr), dtype=float)
+    null_arr = null_arr.reshape(-1)
+    if null_arr.size != size:
+        raise ValueError(f"Expected null to have {size} value(s), got {null_arr.size}.")
+    return null_arr
+
+
+def _format_coordinate_output(x: np.ndarray) -> float | np.ndarray:
+    x = np.asarray(x, dtype=float).reshape(-1)
+    return float(x[0]) if x.size == 1 else x.copy()
+
+
+def _compute_wald_statistics(
+    pointestimate: float | np.ndarray,
+    standard_error: float | np.ndarray,
+    *,
+    null: float | np.ndarray = 0.0,
+    alternative: str = "two-sided",
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    estimate_arr = _flatten_parameter(pointestimate)
+    se_arr = _flatten_parameter(standard_error)
+    if estimate_arr.size != se_arr.size:
+        raise ValueError("pointestimate and standard_error must have the same number of coordinates.")
+    null_arr = _coerce_null_array(null, estimate_arr.size)
+
+    if alternative not in {"two-sided", "larger", "smaller"}:
+        raise ValueError("alternative must be 'two-sided', 'larger', or 'smaller'.")
+
+    t_stat = np.full(estimate_arr.size, np.nan, dtype=float)
+    valid = np.isfinite(estimate_arr) & np.isfinite(se_arr) & (se_arr > 0.0)
+    t_stat[valid] = (estimate_arr[valid] - null_arr[valid]) / se_arr[valid]
+
+    p_value = np.full(estimate_arr.size, np.nan, dtype=float)
+    if alternative == "two-sided":
+        p_value[valid] = 2.0 * norm.sf(np.abs(t_stat[valid]))
+    elif alternative == "larger":
+        p_value[valid] = norm.sf(t_stat[valid])
+    else:
+        p_value[valid] = norm.cdf(t_stat[valid])
+
+    return null_arr, t_stat, p_value
+
+
+def _attach_wald_diagnostics(
+    diagnostics: dict[str, Any],
+    *,
+    pointestimate: float | np.ndarray,
+    standard_error: float | np.ndarray,
+    null: float | np.ndarray = 0.0,
+    alternative: str = "two-sided",
+) -> None:
+    null_arr, t_stat, p_value = _compute_wald_statistics(
+        pointestimate,
+        standard_error,
+        null=null,
+        alternative=alternative,
+    )
+    diagnostics["wald_null"] = _format_coordinate_output(null_arr)
+    diagnostics["wald_alternative"] = alternative
+    diagnostics["wald_t_statistic"] = _format_coordinate_output(t_stat)
+    diagnostics["wald_p_value"] = _format_coordinate_output(p_value)
+
+
+def _preview_value(x: float | np.ndarray, *, digits: int = 4) -> str:
+    arr = _flatten_parameter(x)
+    if arr.size == 1:
+        return "NA" if not np.isfinite(arr[0]) else f"{float(arr[0]):.{digits}g}"
+    preview = ", ".join("NA" if not np.isfinite(v) else f"{float(v):.{digits}g}" for v in arr[:3])
+    suffix = ", ..." if arr.size > 3 else ""
+    return f"[{preview}{suffix}]"
+
+
+def _preview_ci(ci: tuple[float | np.ndarray, float | np.ndarray]) -> str:
+    lower, upper = ci
+    lower_arr = _flatten_parameter(lower)
+    upper_arr = _flatten_parameter(upper)
+    if lower_arr.size == 1 and upper_arr.size == 1:
+        low = "NA" if not np.isfinite(lower_arr[0]) else f"{float(lower_arr[0]):.4g}"
+        up = "NA" if not np.isfinite(upper_arr[0]) else f"{float(upper_arr[0]):.4g}"
+        return f"({low}, {up})"
+    return f"({_preview_value(lower)}, {_preview_value(upper)})"
+
+
+def _summary_value(x: float) -> str:
+    return "NA" if not np.isfinite(x) else f"{float(x):.6g}"
 
 
 @dataclass(frozen=True)
@@ -74,6 +169,86 @@ class MeanInferenceResult:
     diagnostics: dict[str, Any]
     calibrator: Any
 
+    def __repr__(self) -> str:
+        parts = [
+            f"method={self.method!r}",
+            f"pointestimate={_preview_value(self.pointestimate)}",
+            f"se={_preview_value(self.se)}",
+            f"ci={_preview_ci(self.ci)}",
+            f"inference={self.inference!r}",
+        ]
+        if self.selected_candidate != self.method:
+            parts.append(f"selected_candidate={self.selected_candidate!r}")
+        if self.efficiency_lambda is not None:
+            parts.append(f"efficiency_lambda={_preview_value(self.efficiency_lambda)}")
+        return f"MeanInferenceResult({', '.join(parts)})"
+
+    def summary(
+        self,
+        *,
+        null: float | np.ndarray = 0.0,
+        alternative: str = "two-sided",
+    ) -> str:
+        _attach_wald_diagnostics(
+            self.diagnostics,
+            pointestimate=self.pointestimate,
+            standard_error=self.se,
+            null=null,
+            alternative=alternative,
+        )
+        estimate_arr = _flatten_parameter(self.pointestimate)
+        se_arr = _flatten_parameter(self.se)
+        lower_arr = _flatten_parameter(self.ci[0])
+        upper_arr = _flatten_parameter(self.ci[1])
+        null_arr, t_stat, p_value = _compute_wald_statistics(
+            self.pointestimate,
+            self.se,
+            null=null,
+            alternative=alternative,
+        )
+
+        lines = [
+            "MeanInferenceResult summary",
+            f"method: {self.method}",
+            f"inference: {self.inference}",
+        ]
+        if self.selected_candidate != self.method:
+            lines.append(f"selected_candidate: {self.selected_candidate}")
+        if self.selected_efficiency_maximization:
+            lines.append("efficiency_maximization: True")
+        if self.efficiency_lambda is not None:
+            lines.append(f"efficiency_lambda: {_preview_value(self.efficiency_lambda, digits=6)}")
+        lines.append(f"wald_null: {_preview_value(null_arr, digits=6)}")
+        lines.append(f"wald_alternative: {alternative}")
+
+        if estimate_arr.size == 1:
+            lines.extend(
+                [
+                    f"estimate: {_summary_value(float(estimate_arr[0]))}",
+                    f"se: {_summary_value(float(se_arr[0]))}",
+                    f"ci: ({_summary_value(float(lower_arr[0]))}, {_summary_value(float(upper_arr[0]))})",
+                    f"wald_t: {_summary_value(float(t_stat[0]))}",
+                    f"wald_p_value: {_summary_value(float(p_value[0]))}",
+                ]
+            )
+        else:
+            for idx, (estimate_val, se_val, lower_val, upper_val, t_val, p_val) in enumerate(
+                zip(estimate_arr, se_arr, lower_arr, upper_arr, t_stat, p_value)
+            ):
+                lines.append(
+                    "output[{idx}]: estimate={estimate}, se={se}, ci=({lower}, {upper}), "
+                    "wald_t={t_stat}, p_value={p_value}".format(
+                        idx=idx,
+                        estimate=_summary_value(float(estimate_val)),
+                        se=_summary_value(float(se_val)),
+                        lower=_summary_value(float(lower_val)),
+                        upper=_summary_value(float(upper_val)),
+                        t_stat=_summary_value(float(t_val)),
+                        p_value=_summary_value(float(p_val)),
+                    )
+                )
+        return "\n".join(lines)
+
 
 @dataclass
 class PrognosticLinearModel:
@@ -81,6 +256,14 @@ class PrognosticLinearModel:
     x_dim: int
     metadata: dict[str, Any] = field(default_factory=dict)
     method: str = "prognostic_linear"
+
+    def __repr__(self) -> str:
+        n_outputs = len(self.coefficients)
+        parts = [f"n_outputs={n_outputs}", f"x_dim={self.x_dim}"]
+        ridge_alpha = self.metadata.get("ridge_alpha")
+        if ridge_alpha is not None:
+            parts.append(f"ridge_alpha={_preview_value(ridge_alpha)}")
+        return f"PrognosticLinearModel(method={self.method!r}, {', '.join(parts)})"
 
     def predict(
         self,
@@ -1576,7 +1759,7 @@ def aipw_mean_inference(
     )
     if state.se is None or state.ci is None:
         raise RuntimeError("Internal error: mean inference did not compute uncertainty outputs.")
-    return MeanInferenceResult(
+    result = MeanInferenceResult(
         pointestimate=restore_shape(state.pointestimate, np.asarray(Y)),
         se=restore_shape(state.se, np.asarray(Y)),
         ci=(
@@ -1591,6 +1774,14 @@ def aipw_mean_inference(
         diagnostics=state.diagnostics,
         calibrator=state.calibrator,
     )
+    _attach_wald_diagnostics(
+        result.diagnostics,
+        pointestimate=result.pointestimate,
+        standard_error=result.se,
+        null=0.0,
+        alternative="two-sided",
+    )
+    return result
 
 
 def aipw_mean_pointestimate(

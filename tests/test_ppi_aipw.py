@@ -16,6 +16,7 @@ from ppi_aipw import (
     aipw_mean_inference,
     aipw_mean_pointestimate,
     aipw_mean_se,
+    calibration_diagnostics,
     calibrate_predictions,
     compute_two_sample_balancing_weights,
     fit_calibrator,
@@ -26,6 +27,7 @@ from ppi_aipw import (
     mean_pointestimate,
     mean_se,
     ppi_aipw_mean_pointestimate,
+    plot_calibration,
     sigmoid_mean_pointestimate,
     select_mean_method_cv,
 )
@@ -1388,6 +1390,211 @@ def test_fit_calibrator_returns_reusable_model() -> None:
     assert pred.shape == (2,)
     assert np.all(pred >= 0.0)
     assert np.all(pred <= 1.0)
+
+
+def test_calibration_diagnostics_linear_returns_expected_structure() -> None:
+    y = np.array([0.0, 0.2, 0.7, 1.0], dtype=float)
+    yhat = np.array([0.1, 0.3, 0.6, 0.9], dtype=float)
+    model = fit_calibrator(y, yhat, method="linear")
+
+    diagnostics = calibration_diagnostics(model, y, yhat, num_bins=3)
+
+    assert diagnostics.method == "linear"
+    assert diagnostics.n_outputs == 1
+    assert diagnostics.n_labeled == 4
+    assert diagnostics.num_bins == 3
+    assert len(diagnostics.per_output) == 1
+    record = diagnostics.per_output[0]
+    assert record.raw_labeled_scores.shape == (4,)
+    assert record.calibrated_labeled_scores.shape == (4,)
+    assert record.observed_outcomes.shape == (4,)
+    assert record.bin_counts.sum() == 4
+    assert record.grid_scores.ndim == 1
+    assert record.fitted_curve.shape == record.grid_scores.shape
+
+
+def test_calibration_diagnostics_weighted_bins_use_labeled_weights() -> None:
+    y = np.array([0.0, 1.0, 0.5, 0.5], dtype=float)
+    yhat = np.array([0.1, 0.2, 0.8, 0.9], dtype=float)
+    w = np.array([1.0, 3.0, 1.0, 1.0], dtype=float)
+    model = fit_calibrator(y, yhat, method="linear", w=w)
+
+    diagnostics = calibration_diagnostics(model, y, yhat, w=w, num_bins=2)
+    record = diagnostics.per_output[0]
+
+    assert record.bin_counts.tolist() == [2, 2]
+    np.testing.assert_allclose(record.bin_mean_outcome[0], 0.75, atol=1e-12)
+
+
+def test_calibration_diagnostics_supports_nonlinear_monotone_method() -> None:
+    x = np.linspace(0.0, 1.0, 40)
+    y = 0.15 + 0.65 * x**2
+    yhat = x + 0.05 * np.sin(3.0 * np.pi * x)
+    model = fit_calibrator(y, yhat, method="monotone_spline")
+
+    diagnostics = calibration_diagnostics(model, y, yhat, num_bins=5)
+    record = diagnostics.per_output[0]
+
+    assert diagnostics.method == "monotone_spline"
+    assert np.all(np.diff(record.fitted_curve) >= -1e-8)
+    assert np.all(np.diff(record.bin_mean_calibrated_score) >= -1e-8)
+
+
+def test_calibration_diagnostics_accepts_mean_inference_result() -> None:
+    rng = np.random.default_rng(99)
+    y = rng.normal(size=50)
+    yhat = y + rng.normal(scale=0.25, size=50)
+    yhat_unlabeled = rng.normal(size=100)
+    result = mean_inference(y, yhat, yhat_unlabeled, method="linear")
+
+    diagnostics = calibration_diagnostics(result, y, yhat, num_bins=4)
+
+    assert diagnostics.method == result.calibrator.method
+    assert diagnostics.per_output[0].raw_labeled_scores.shape == (50,)
+
+
+def test_calibration_diagnostics_prognostic_linear_requires_covariates() -> None:
+    rng = np.random.default_rng(101)
+    x = rng.normal(size=(60, 2))
+    x_unlabeled = rng.normal(size=(120, 2))
+    y = 1.0 + 0.8 * x[:, 0] - 0.4 * x[:, 1] + rng.normal(scale=0.2, size=60)
+    yhat = 0.9 * y + 0.3 * x[:, 0]
+    yhat_unlabeled = 0.9 * (
+        1.0 + 0.8 * x_unlabeled[:, 0] - 0.4 * x_unlabeled[:, 1]
+    ) + 0.3 * x_unlabeled[:, 0]
+
+    result = mean_inference(
+        y,
+        yhat,
+        yhat_unlabeled,
+        X=x,
+        X_unlabeled=x_unlabeled,
+        method="prognostic_linear",
+    )
+
+    with pytest.raises(ValueError, match="X is required"):
+        calibration_diagnostics(result, y, yhat)
+
+    diagnostics = calibration_diagnostics(result, y, yhat, X=x)
+    assert diagnostics.reference_covariates is not None
+    assert diagnostics.reference_covariates.shape == (2,)
+
+
+def test_calibration_diagnostics_supports_multioutput() -> None:
+    rng = np.random.default_rng(123)
+    y = rng.normal(size=(40, 2))
+    yhat = y + rng.normal(scale=0.2, size=(40, 2))
+    model = fit_calibrator(y, yhat, method="linear")
+
+    diagnostics = calibration_diagnostics(model, y, yhat, num_bins=5)
+
+    assert diagnostics.n_outputs == 2
+    assert len(diagnostics.per_output) == 2
+    assert diagnostics.per_output[1].fitted_curve.ndim == 1
+
+
+def test_plot_calibration_returns_axes_and_uses_output_index() -> None:
+    matplotlib = pytest.importorskip("matplotlib")
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    rng = np.random.default_rng(321)
+    y = rng.normal(size=(30, 2))
+    yhat = y + rng.normal(scale=0.25, size=(30, 2))
+    model = fit_calibrator(y, yhat, method="linear")
+    diagnostics = calibration_diagnostics(model, y, yhat, num_bins=4)
+
+    fig, ax = plt.subplots()
+    returned_ax = plot_calibration(diagnostics, output_index=1, ax=ax)
+
+    assert returned_ax is ax
+    assert "output 1" in ax.get_title()
+    plt.close(fig)
+
+
+def test_mean_inference_result_summary_includes_wald_statistics() -> None:
+    rng = np.random.default_rng(2024)
+    y = rng.normal(size=60)
+    yhat = y + rng.normal(scale=0.35, size=60)
+    yhat_unlabeled = rng.normal(size=120)
+
+    result = mean_inference(y, yhat, yhat_unlabeled, method="linear")
+    summary = result.summary()
+
+    assert "MeanInferenceResult summary" in summary
+    assert "wald_t:" in summary
+    assert "wald_p_value:" in summary
+    assert result.diagnostics["wald_null"] == 0.0
+    assert result.diagnostics["wald_alternative"] == "two-sided"
+
+
+def test_mean_inference_result_summary_updates_wald_null() -> None:
+    rng = np.random.default_rng(2025)
+    y = rng.normal(size=40)
+    yhat = y + rng.normal(scale=0.3, size=40)
+    yhat_unlabeled = rng.normal(size=100)
+
+    result = mean_inference(y, yhat, yhat_unlabeled, method="linear")
+    original_t = result.diagnostics["wald_t_statistic"]
+    summary = result.summary(null=1.0)
+
+    assert "wald_null: 1" in summary
+    assert result.diagnostics["wald_null"] == 1.0
+    assert result.diagnostics["wald_t_statistic"] != original_t
+
+
+def test_mean_inference_result_summary_formats_vector_outputs() -> None:
+    rng = np.random.default_rng(2026)
+    y = rng.normal(size=(50, 2))
+    yhat = y + rng.normal(scale=0.25, size=(50, 2))
+    yhat_unlabeled = rng.normal(size=(80, 2))
+
+    result = mean_inference(y, yhat, yhat_unlabeled, method="linear")
+    summary = result.summary()
+
+    assert "output[0]:" in summary
+    assert "output[1]:" in summary
+
+
+def test_repr_outputs_are_informative() -> None:
+    rng = np.random.default_rng(2027)
+    y = rng.normal(size=30)
+    yhat = y + rng.normal(scale=0.2, size=30)
+    yhat_unlabeled = rng.normal(size=60)
+
+    result = mean_inference(y, yhat, yhat_unlabeled, method="linear")
+    calibrator = fit_calibrator(y, yhat, method="linear")
+    prognostic = mean_inference(
+        y,
+        yhat,
+        yhat_unlabeled,
+        X=np.column_stack([yhat, yhat**2]),
+        X_unlabeled=np.column_stack([yhat_unlabeled, yhat_unlabeled**2]),
+        method="prognostic_linear",
+    ).calibrator
+
+    assert "MeanInferenceResult(" in repr(result)
+    assert "CalibrationModel(" in repr(calibrator)
+    assert "PrognosticLinearModel(" in repr(prognostic)
+
+
+def test_end_to_end_semisupervised_summary_and_diagnostics_workflow() -> None:
+    rng = np.random.default_rng(2028)
+    x_labeled = rng.normal(size=(80, 2))
+    x_unlabeled = rng.normal(size=(200, 2))
+    mu_labeled = 2.0 + 0.8 * x_labeled[:, 0] - 0.5 * x_labeled[:, 1]
+    mu_unlabeled = 2.0 + 0.8 * x_unlabeled[:, 0] - 0.5 * x_unlabeled[:, 1]
+    y = mu_labeled + rng.normal(scale=0.5, size=80)
+    yhat = 0.85 * mu_labeled + 0.4 * np.maximum(mu_labeled - 2.0, 0.0) + 0.25
+    yhat_unlabeled = 0.85 * mu_unlabeled + 0.4 * np.maximum(mu_unlabeled - 2.0, 0.0) + 0.25
+
+    result = mean_inference(y, yhat, yhat_unlabeled, method="monotone_spline")
+    diagnostics = calibration_diagnostics(result, y, yhat, num_bins=6)
+    summary = result.summary()
+
+    assert diagnostics.method == "monotone_spline"
+    assert diagnostics.per_output[0].bin_counts.sum() == y.shape[0]
+    assert "estimate:" in summary
 
 
 def test_bootstrap_ci_is_reproducible() -> None:

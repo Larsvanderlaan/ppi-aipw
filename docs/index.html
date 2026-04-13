@@ -71,7 +71,7 @@
             </div>
             <div class="panel-card code-card">
               <p class="panel-label">Main Function</p>
-              <pre><code>from ppi_aipw import mean_inference
+              <pre><code>from ppi_aipw import calibration_diagnostics, mean_inference
 
 result = mean_inference(
     Y, Yhat, Yhat_unlabeled,
@@ -82,7 +82,10 @@ result = mean_inference(
 
 estimate = result.pointestimate
 standard_error = result.se
-lower, upper = result.ci</code></pre>
+lower, upper = result.ci
+
+print(result.summary())
+diagnostics = calibration_diagnostics(result, Y, Yhat)</code></pre>
               <p class="panel-note">
                 Use <code>mean_pointestimate</code>, <code>mean_se</code>, or
                 <code>mean_ci</code> when you only need one output.
@@ -142,6 +145,14 @@ lower, upper = result.ci</code></pre>
                 Prefer a runnable walkthrough? The
                 <a href="https://colab.research.google.com/github/Larsvanderlaan/ppi-aipw/blob/main/examples/ppi_aipw_quickstart.ipynb">quickstart notebook opens directly in Colab</a>
                 and covers both the mean API and the causal API in one compact example.
+              </p>
+              <p>
+                The returned result object also supports <code>result.summary()</code>
+                for a human-readable Wald summary, and
+                <code>calibration_diagnostics(result, Y, Yhat)</code> for a
+                labeled-sample calibration check. If you want a quick plot on
+                top of those diagnostics, use <code>plot_calibration(...)</code>
+                with an optional matplotlib install.
               </p>
             </div>
 
