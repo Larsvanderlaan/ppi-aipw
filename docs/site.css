@@ -141,7 +141,7 @@ pre {
   grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.75fr);
   gap: 26px;
   margin-top: 22px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .hero-copy,
@@ -203,13 +203,13 @@ pre {
 
 .hero-art {
   margin-top: auto;
-  padding-top: clamp(24px, 5vw, 56px);
-  width: min(100%, 380px);
+  padding-top: clamp(12px, 3vw, 28px);
+  width: min(100%, 240px);
 }
 
 .hero-art img {
   display: block;
-  width: clamp(220px, 35vw, 360px);
+  width: clamp(150px, 23vw, 220px);
   max-width: 100%;
   height: auto;
   filter: drop-shadow(0 16px 30px rgba(41, 65, 73, 0.12));
@@ -722,6 +722,7 @@ pre {
 
   .hero-art {
     margin-top: 16px;
+    width: min(100%, 220px);
   }
 }
 
@@ -747,12 +748,12 @@ pre {
 
   .hero-art {
     align-self: center;
-    width: min(100%, 300px);
+    width: min(100%, 220px);
     padding-top: 12px;
   }
 
   .hero-art img {
-    width: min(100%, 280px);
+    width: min(100%, 200px);
     margin: 0 auto;
   }
 
