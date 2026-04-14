@@ -15,6 +15,18 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./site.css" />
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [["\\(", "\\)"], ["$", "$"]],
+          displayMath: [["\\[", "\\]"]]
+        },
+        svg: {
+          fontCache: "global"
+        }
+      };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
   </head>
   <body>
     <div class="page-shell">
@@ -76,7 +88,7 @@
               <p class="panel-note">
                 AIPW is not one special formula with one special prediction
                 model. It is a broad template, and you are free to choose the
-                score <code>f(X)</code> that enters it.
+                score \(f(X)\) that enters it.
               </p>
             </div>
           </aside>
@@ -115,9 +127,9 @@
               <h3>Notation</h3>
               <p>
                 Let the labeled sample be
-                <code>(X_1, Y_1), ..., (X_n, Y_n)</code> and the unlabeled
-                sample be <code>X~_1, ..., X~_N</code>. Here
-                <code>f(X)</code> is the score we choose to plug into AIPW.
+                \((X_1, Y_1), \ldots, (X_n, Y_n)\) and the unlabeled
+                sample be \(\widetilde X_1, \ldots, \widetilde X_N\). Here
+                \(f(X)\) is the score we choose to plug into AIPW.
               </p>
             </article>
             <article class="argument-card">
@@ -126,12 +138,20 @@
                 A simple semisupervised AIPW estimator for the mean can be
                 written as:
               </p>
-              <p class="mini-equation">
-                θ̂(f) = (1 / (n + N))
-                [∑<sub>i=1</sub><sup>n</sup> f(X<sub>i</sub>) +
-                ∑<sub>j=1</sub><sup>N</sup> f(X~<sub>j</sub>)]
-                + (1 / n) ∑<sub>i=1</sub><sup>n</sup> [Y<sub>i</sub> - f(X<sub>i</sub>)]
-              </p>
+              <div class="mini-equation">
+\[
+\hat\theta(f)
+=
+\frac{1}{n+N}
+\left\{
+\sum_{i=1}^{n} f(X_i)
++
+\sum_{j=1}^{N} f(\widetilde X_j)
+\right\}
++
+\frac{1}{n}\sum_{i=1}^{n}\{Y_i-f(X_i)\}.
+\]
+              </div>
             </article>
             <article class="argument-card">
               <h3>Why this form matters</h3>
@@ -195,7 +215,7 @@
               <h2>AIPW is a class, not one estimator</h2>
             </div>
             <p class="section-side-note">
-              You are free to choose the score <code>f(X)</code>. Different
+              You are free to choose the score \(f(X)\). Different
               choices give different AIPW estimators.
             </p>
           </div>
@@ -204,7 +224,7 @@
             <article class="argument-card">
               <h3>You choose the score</h3>
               <p>
-                The score <code>f(X)</code> can be a raw prediction, a linear
+                The score \(f(X)\) can be a raw prediction, a linear
                 recalibration, a monotone calibration map, or another
                 data-adaptive score. AIPW supplies the correction template
                 around it.
@@ -214,7 +234,7 @@
               <h3>Better scores improve efficiency</h3>
               <p>
                 If the score is closer to the true outcome regression
-                <code>mu_0(X) = E[Y | X]</code>, then the residual correction is
+                \(\mu_0(X)=E_0[Y \mid X]\), then the residual correction is
                 smaller and the final estimator is typically more efficient.
               </p>
             </article>
@@ -234,27 +254,14 @@
               At the population level, the most efficient score is the one that
               makes the large-sample variance of the AIPW estimator as small as
               possible. Up to a centering constant, that means choosing
-              <code>f</code> to make
-              <code>E<sub>0</sub>[(Y - f(X))<sup>2</sup>]</code> small. When the
-              score class allows an intercept, this can be written as:
-            </p>
-            <p class="mini-equation">
-              f* ∈ arg min<sub>f ∈ G</sub> E<sub>0</sub>[(Y - f(X))<sup>2</sup>].
-            </p>
-            <p class="equation-note">
-              So the efficiency story is simple: inside the class you are
-              willing to use, choose the score that predicts the outcome best.
-              That is why better prediction and better efficiency line up here.
+              \(f\) to make \(E_0[(Y-f(X))^2]\) small.
             </p>
           </div>
 
           <div class="theory-note">
-            This is why AIPW is a class of estimators rather than a single
-            formula. We can optimize over a family of scores
-            <code>f(X)</code>, including data-adaptive ones. In practice, that
-            means we can search over scaled scores, linear recalibrations,
-            spline or isotonic calibrators, or richer machine-learning
-            regression classes.
+            In practice, that means we can search over scaled scores, linear
+            recalibrations, spline or isotonic calibrators, or richer
+            machine-learning regression classes.
           </div>
         </section>
 
@@ -270,47 +277,92 @@
             </p>
           </div>
 
-          <div class="argument-grid">
+          <div class="theory-comparison-grid">
+            <article class="argument-card">
+              <h3>Standard AIPW</h3>
+              <p>
+                With the raw score \(m(X)\), standard AIPW uses the pooled
+                plug-in average:
+              </p>
+              <div class="mini-equation">
+\[
+\hat\theta_{\mathrm{AIPW}}
+=
+\frac{1}{n+N}
+\left\{
+\sum_{i=1}^{n} m(X_i)
++
+\sum_{j=1}^{N} m(\widetilde X_j)
+\right\}
++
+\frac{1}{n}\sum_{i=1}^{n}\{Y_i-m(X_i)\}.
+\]
+              </div>
+              <p>
+                Same correction term as PPI, but it also uses the labeled
+                covariates in the plug-in average.
+              </p>
+            </article>
             <article class="argument-card">
               <h3>PPI</h3>
               <p>
-                If <code>m(X)</code> is the raw prediction score, then plain
+                If \(m(X)\) is the raw prediction score, then plain
                 PPI uses the raw score in the unlabeled-only plug-in form:
               </p>
-              <p class="mini-equation">
-                θ̂<sub>PPI</sub> = (1 / N) ∑<sub>j=1</sub><sup>N</sup> m(X~<sub>j</sub>)
-                + (1 / n) ∑<sub>i=1</sub><sup>n</sup> [Y<sub>i</sub> - m(X<sub>i</sub>)]
-              </p>
+              <div class="mini-equation">
+\[
+\hat\theta_{\mathrm{PPI}}
+=
+\frac{1}{N}\sum_{j=1}^{N} m(\widetilde X_j)
++
+\frac{1}{n}\sum_{i=1}^{n}\{Y_i-m(X_i)\}.
+\]
+              </div>
               <p>
                 In words: average the raw score on the unlabeled sample, then
                 add a labeled mean correction.
+              </p>
+              <p>
+                Within the common AIPW family, this is equivalent to using the
+                rescaled score \(f(X)=m(X)/(1-\rho)\). So if \(m(X)\) is
+                already close to the right outcome scale, PPI can push that
+                score away from the best prediction target.
               </p>
             </article>
             <article class="argument-card">
               <h3>PPI++</h3>
               <p>
-                PPI++ is the one-score efficiency-maximized version: it keeps
-                the AIPW structure but rescales the raw score.
+                PPI++ is AIPW with empirical efficiency maximization over the
+                one-score scaling class.
               </p>
-              <p class="mini-equation">
-                θ̂<sub>PPI++</sub> = θ̂(λ̂ m)
+              <div class="mini-equation">
+\[
+\hat\theta_{\mathrm{PPI++}} = \hat\theta(\hat\lambda\,m).
+\]
+              </div>
+              <p>
+                The scale factor \(\lambda\) is chosen from the labeled
+                data to make the final estimator more efficient.
               </p>
               <p>
-                The scale factor <code>lambda</code> is chosen from the labeled
-                data to make the final estimator more efficient.
+                In this one-score setting, PPI++ is asymptotically equivalent
+                to linear calibration, even though the finite-sample
+                estimators are not identical.
               </p>
             </article>
             <article class="argument-card">
               <h3>Empirical efficiency maximization</h3>
               <p>
                 In the one-score case, this means choosing
-                <code>lambda</code> to minimize the estimated influence-function
-                variance over the scaling class <code>{lambda m(X)}</code>. A
+                \(\lambda\) to minimize the estimated influence-function
+                variance over the scaling class \(\{\lambda m(X)\}\). A
                 compact summary is:
               </p>
-              <p class="mini-equation">
-                λ̂ = arg min<sub>λ</sub> σ̂<sup>2</sup>(lambda m)
-              </p>
+              <div class="mini-equation">
+\[
+\hat\lambda \in \arg\min_{\lambda}\,\hat\sigma^2(\lambda m).
+\]
+              </div>
             </article>
           </div>
 
@@ -350,13 +402,13 @@
 
               <text class="diagram-text diagram-text-strong" x="88" y="210">Raw score</text>
               <text class="diagram-text" x="88" y="236">f(X) = m(X)</text>
-              <text class="diagram-text-small" x="62" y="264">Plain PPI is mean correction on</text>
-              <text class="diagram-text-small" x="62" y="282">the raw prediction scale.</text>
+              <text class="diagram-text-small" x="64" y="264">PPI uses the raw score in the</text>
+              <text class="diagram-text-small" x="64" y="282">unlabeled-only plug-in form.</text>
 
               <text class="diagram-text diagram-text-strong" x="298" y="210">Efficiency-scaled score</text>
-              <text class="diagram-text" x="300" y="236">f(X) = lambda m(X)</text>
-              <text class="diagram-text-small" x="286" y="264">PPI++ chooses lambda to reduce</text>
-              <text class="diagram-text-small" x="286" y="282">empirical variance.</text>
+              <text class="diagram-text" x="300" y="236">f(X) = λ m(X)</text>
+              <text class="diagram-text-small" x="286" y="264">PPI++ chooses λ by empirical</text>
+              <text class="diagram-text-small" x="286" y="282">efficiency maximization.</text>
 
               <text class="diagram-text diagram-text-strong" x="522" y="210">Linear calibration</text>
               <text class="diagram-text" x="520" y="236">f(X) = a + b m(X)</text>
@@ -369,23 +421,11 @@
               <text class="diagram-text-small" x="712" y="282">still plugs into AIPW.</text>
             </svg>
             <p class="diagram-caption">
-              PPI is the raw-score member of the family. PPI++ is the
-              efficiency-scaled one-score version. Rubin and van der Laan (2008)
-              give the empirical efficiency-maximization idea behind that scale
-              choice. In this one-score setting, PPI++ is asymptotically
-              equivalent to linear calibration, even though the finite-sample
-              estimators are not identical.
+              Standard AIPW is the raw-score baseline. PPI is an inefficient
+              variant that drops the labeled-sample plug-in contribution. PPI++
+              is AIPW with empirical efficiency maximization over the scaling
+              class, in the sense of Rubin and van der Laan (2008).
             </p>
-          </div>
-
-          <div class="theory-note">
-            A gentle way to think about empirical efficiency maximization is:
-            keep the AIPW wrapper fixed, then tune the score inside it. In the
-            one-score scaling class this is the same first-order path as linear
-            calibration. In richer classes, it says to choose the score that
-            gives the smallest limiting variance. In classes with an intercept,
-            this is the same as choosing the score with the smallest labeled
-            squared prediction error.
           </div>
         </section>
 
@@ -432,9 +472,9 @@
           </div>
 
           <div class="theory-note">
-            Starting from a raw score <code>m(X)</code>, calibration replaces it
-            by a transformed score <code>g(m(X))</code>. The ideal
-            one-dimensional target is <code>E[Y | m(X)]</code>: that is the
+            Starting from a raw score \(m(X)\), calibration replaces it
+            by a transformed score \(g(m(X))\). The ideal
+            one-dimensional target is \(E_0[Y \mid m(X)]\): that is the
             best squared-error predictor available from the original score
             alone. So calibration is trying to make the score as predictive as
             possible without asking for new features or retraining the original
@@ -444,24 +484,29 @@
           <div class="equation-card">
             <p class="panel-label">Why Mean Calibration Is Enough</p>
             <p class="equation-note">
-              Write the target mean as <code>theta_0 = E_0[Y]</code>. If a
+              Write the target mean as \(\theta_0 = E_0[Y]\). If a
               calibrated score satisfies the mean-calibration condition
             </p>
-            <p class="mini-equation">
-              E<sub>0</sub>[Y - f(X)] = 0,
-            </p>
+            <div class="mini-equation">
+\[
+E_0[Y-f(X)] = 0.
+\]
+            </div>
             <p class="equation-note">
               then automatically
             </p>
-            <p class="mini-equation">
-              E<sub>0</sub>[f(X)] = E<sub>0</sub>[Y] = theta_0.
-            </p>
+            <div class="mini-equation">
+\[
+E_0[f(X)] = E_0[Y] = \theta_0.
+\]
+            </div>
             <p class="equation-note">
               So the pooled plug-in estimator
-              <code>(1 / (n + N)) [∑ f(X<sub>i</sub>) + ∑ f(X~<sub>j</sub>)]</code>
+              \(\frac{1}{n+N}\left[\sum_{i=1}^{n} f(X_i) + \sum_{j=1}^{N}
+              f(\widetilde X_j)\right]\)
               is targeting the right mean by itself. The AIPW version keeps the
               extra labeled correction term
-              <code>(1 / n) ∑ [Y<sub>i</sub> - f(X<sub>i</sub>)]</code>,
+              \(\frac{1}{n}\sum_{i=1}^{n}\{Y_i-f(X_i)\}\),
               which is centered at zero under mean calibration and acts as a
               safeguard in finite samples or when calibration is imperfect.
             </p>
@@ -537,9 +582,9 @@
             <article class="argument-card">
               <h3>Use flexible scores when they help</h3>
               <p>
-                The score <code>f(X)</code> can be learned with modern machine
+                The score \(f(X)\) can be learned with modern machine
                 learning if that gives a better approximation to
-                <code>mu_0(X)</code>. Better approximation usually means better
+                \(\mu_0(X)\). Better approximation usually means better
                 efficiency.
               </p>
             </article>
@@ -588,7 +633,7 @@
               <h3>Practical takeaway</h3>
               <ul>
                 <li>AIPW is the safe wrapper.</li>
-                <li><code>f(X)</code> is the efficiency lever.</li>
+                <li>\(f(X)\) is the efficiency lever.</li>
                 <li>Calibration is one way to improve that lever.</li>
                 <li>PPI and PPI++ are specific choices inside this broader workflow.</li>
               </ul>
