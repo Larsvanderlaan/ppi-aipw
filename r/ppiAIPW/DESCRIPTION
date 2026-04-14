@@ -1,0 +1,28 @@
+Package: ppiAIPW
+Type: Package
+Title: Semi-Supervised Mean Inference with AIPW and Calibration
+Version: 0.0.1
+Authors@R: person("Lars", "van der Laan", email = "lars@example.com", role = c("aut", "cre"))
+Description: Native R implementation of semi-supervised mean inference with
+    AIPW-style augmentation, calibration methods, automatic method selection,
+    diagnostics, and a causal convenience wrapper.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Depends:
+    R (>= 4.1.0)
+Imports:
+    graphics,
+    grDevices,
+    MASS,
+    splines,
+    stats,
+    utils
+Suggests:
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+VignetteBuilder: knitr
