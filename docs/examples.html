@@ -129,10 +129,10 @@
               <p class="panel-label">Workflow 3</p>
               <h3>Optional: inspect calibration honestly</h3>
               <p>
-                Use this when you want to understand the score, make a plot, or
-                check whether calibration is likely to matter. If you just want
-                the package to choose a method, use <code>method="auto"</code>
-                instead.
+                Use this when you want to understand the raw prediction scale,
+                make a plot, or check whether the model output needs
+                recalibration. If you just want the package to choose a method,
+                use <code>method="auto"</code> instead.
               </p>
               <p><strong>Call this:</strong> <code>calibration_diagnostics(...)</code></p>
               <div class="example-entry-grid">
@@ -194,8 +194,10 @@
           <div class="theory-note">
             Smooth monotone calibration remains the default because it handled
             strong miscalibration well in simulations and stayed competitive on
-            the real benchmarks. The figures below are reproducible from the
-            public diagnostics API.
+            the real benchmarks. A useful model score can help even before it
+            is perfectly calibrated; calibration tries to put that score on the
+            right outcome scale before averaging it. The figures below are
+            reproducible from the public diagnostics API.
           </div>
 
           <div class="argument-grid argument-grid-two">
@@ -204,7 +206,7 @@
               <h3>Income prediction at scale</h3>
               <p>
                 <strong>Setup.</strong> Small labeled sample, enormous unlabeled
-                sample, and a raw score available for everyone.
+                sample, and a raw prediction score available for everyone.
               </p>
               <p>
                 <strong>What happened.</strong> AIPW and PPI are nearly
@@ -215,8 +217,8 @@
               </p>
               <p>
                 <strong>Takeaway.</strong> When the unlabeled sample is huge and
-                the score is somewhat miscalibrated, simple calibration can help
-                without changing the workflow much.
+                the raw model output is somewhat miscalibrated, simple
+                calibration can help without changing the workflow much.
               </p>
               <figure class="case-study-figure">
                 <img
@@ -224,9 +226,9 @@
                   alt="Representative census_income comparison plot showing smooth calibration curves for the raw AIPW score, the PPI-implied rescaled score, linear calibration, and smooth monotone calibration."
                 />
                 <figcaption>
-                  AIPW uses the raw score. PPI uses the implied rescaled score.
-                  Linear and smooth monotone calibration move the score closer
-                  to the observed outcome scale.
+                  AIPW uses the raw prediction score. PPI uses the implied
+                  rescaled score. Linear and smooth monotone calibration move
+                  the model output closer to the observed outcome scale.
                 </figcaption>
               </figure>
               <div class="example-links">
@@ -239,8 +241,8 @@
               <p class="panel-label">Benchmark: <code>forest</code> · representative split at <code>n = 500</code></p>
               <h3>Already-strong score</h3>
               <p>
-                <strong>Setup.</strong> The original score is already strong, so
-                calibration has less room to help.
+                <strong>Setup.</strong> The original prediction score is already
+                strong, so calibration has less room to help.
               </p>
               <p>
                 <strong>What happened.</strong> AIPW is already hard to beat,
@@ -250,8 +252,8 @@
                 the outcome level.
               </p>
               <p>
-                <strong>Takeaway.</strong> If the original score is already
-                strong, raw AIPW may already be the right default and
+                <strong>Takeaway.</strong> If the original prediction score is
+                already strong, raw AIPW may already be the right default and
                 calibration may change little.
               </p>
               <figure class="case-study-figure">

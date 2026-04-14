@@ -59,6 +59,11 @@
               mean correction, together with uncertainty quantification in one
               API.
             </p>
+            <p class="panel-note">
+              A useful model score can help even if it is not perfectly
+              calibrated. Calibration is the step that puts that prediction
+              score on the right outcome scale before averaging it.
+            </p>
             <div class="hero-actions">
               <a class="button button-primary" href="#quickstart">Quickstart</a>
               <a class="button button-secondary" href="./r.html">Explore the R Package</a>
@@ -202,7 +207,7 @@ print(result.summary())</code></pre>
             </article>
             <article class="argument-card">
               <h3><code>efficiency_maximization</code></h3>
-              <p>Optional rescaling to <code>lambda m(X)</code>, where <code>m(X)</code> is the raw score for <code>method="aipw"</code> and the calibrated score otherwise. The scaling factor <code>lambda</code> is chosen by empirical efficiency maximization.</p>
+              <p>Optional rescaling to <code>lambda m(X)</code>, where <code>m(X)</code> is the raw prediction score for <code>method="aipw"</code> and the calibrated score otherwise. The scaling factor <code>lambda</code> is chosen by empirical efficiency maximization.</p>
             </article>
             <article class="argument-card">
               <h3><code>w</code>, <code>w_unlabeled</code></h3>
@@ -231,21 +236,22 @@ print(result.summary())</code></pre>
             <article class="argument-card">
               <h3>From The ML Perspective</h3>
               <p>
-                A score is calibrated when its numeric values mean what they say.
-                If a model outputs values near <code>0.8</code>, we want outcomes
-                near <code>0.8</code> on average for examples scored around
-                <code>0.8</code>. A model can rank well and still be poorly
-                calibrated on its original scale.
+                A prediction score is calibrated when its numeric values mean
+                what they say. If a model outputs values near <code>0.8</code>,
+                we want outcomes near <code>0.8</code> on average for examples
+                scored around <code>0.8</code>. A model output can still be
+                useful before calibration; calibration fixes the scale rather
+                than deciding whether the model helps at all.
               </p>
             </article>
             <article class="argument-card">
               <h3>From The Inference Perspective</h3>
               <p>
-                Here we do not just rank units; we average predictions and use
-                them inside AIPW-style estimators. That means miscalibration can
-                directly affect bias correction and efficiency, while
-                recalibration can improve semisupervised mean inference without
-                retraining the original model.
+                Here we do not just rank units; we average a prediction score
+                and use it inside AIPW-style estimators. That means
+                miscalibration can directly affect bias correction and
+                efficiency, while recalibration can improve semisupervised mean
+                inference without retraining the original model.
               </p>
             </article>
           </div>
@@ -288,8 +294,9 @@ print(result.summary())</code></pre>
                 <div class="method-visual-copy">
                   <span class="curve-kicker">Calibration Map</span>
                   <p data-method-visual-note>
-                    Schematic view of how the original score <code>m(X)</code>
-                    is transformed before the semisupervised mean step.
+                    Schematic view of how the raw prediction score
+                    <code>m(X)</code> is transformed before the semisupervised
+                    mean step.
                   </p>
                 </div>
                 <div class="curve-stage">
