@@ -643,6 +643,7 @@ pre {
   width: 100%;
   height: auto;
   margin-top: 16px;
+  overflow: hidden;
 }
 
 .diagram-caption {
@@ -706,13 +707,13 @@ pre {
 .diagram-text {
   fill: var(--ink);
   font-family: "Space Grotesk", "Avenir Next", "Trebuchet MS", sans-serif;
-  font-size: 16px;
+  font-size: 15px;
 }
 
 .diagram-text-small {
   fill: var(--muted);
   font-family: "Space Grotesk", "Avenir Next", "Trebuchet MS", sans-serif;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .diagram-text-strong {

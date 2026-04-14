@@ -173,7 +173,8 @@
             </p>
             <svg
               class="theory-diagram"
-              viewBox="0 0 860 320"
+              viewBox="0 0 940 320"
+              preserveAspectRatio="xMidYMid meet"
               role="img"
               aria-label="AIPW decomposition diagram"
             >
@@ -182,22 +183,22 @@
                   <path d="M 0 0 L 10 5 L 0 10 z" fill="#16323d"></path>
                 </marker>
               </defs>
-              <rect class="diagram-panel-strong" x="30" y="70" width="250" height="92" rx="26"></rect>
-              <rect class="diagram-panel" x="30" y="190" width="250" height="92" rx="26"></rect>
-              <rect class="diagram-panel-warm" x="560" y="125" width="270" height="102" rx="28"></rect>
-              <path class="diagram-line" d="M 280 116 C 380 116, 430 126, 560 160" marker-end="url(#theoryArrowA)"></path>
-              <path class="diagram-line" d="M 280 236 C 385 236, 430 214, 560 192" marker-end="url(#theoryArrowA)"></path>
-              <text class="diagram-text diagram-text-strong" x="58" y="104">Large unlabeled sample</text>
-              <text class="diagram-text" x="58" y="130">Contributes to the pooled</text>
-              <text class="diagram-text" x="58" y="152">average of f(X)</text>
-              <text class="diagram-text diagram-text-strong" x="58" y="224">Small labeled sample</text>
-              <text class="diagram-text" x="58" y="250">Contributes to the pooled</text>
-              <text class="diagram-text" x="58" y="272">average and the residual correction</text>
-              <text class="diagram-text diagram-text-strong" x="590" y="164">Final semisupervised estimate</text>
-              <text class="diagram-text" x="590" y="190">pooled score average</text>
-              <text class="diagram-text" x="590" y="212">plus labeled correction</text>
-              <text class="diagram-text-small" x="314" y="98">uses covariate information broadly</text>
-              <text class="diagram-text-small" x="314" y="252">repairs systematic score error</text>
+              <rect class="diagram-panel-strong" x="42" y="70" width="260" height="92" rx="26"></rect>
+              <rect class="diagram-panel" x="42" y="190" width="260" height="92" rx="26"></rect>
+              <rect class="diagram-panel-warm" x="610" y="125" width="250" height="102" rx="28"></rect>
+              <path class="diagram-line" d="M 302 116 C 410 116, 480 126, 610 160" marker-end="url(#theoryArrowA)"></path>
+              <path class="diagram-line" d="M 302 236 C 410 236, 480 214, 610 192" marker-end="url(#theoryArrowA)"></path>
+              <text class="diagram-text diagram-text-strong" x="70" y="104">Large unlabeled sample</text>
+              <text class="diagram-text" x="70" y="130">Adds to the pooled</text>
+              <text class="diagram-text" x="70" y="152">average of f(X)</text>
+              <text class="diagram-text diagram-text-strong" x="70" y="224">Small labeled sample</text>
+              <text class="diagram-text" x="70" y="250">Adds to the pooled average</text>
+              <text class="diagram-text" x="70" y="272">and the residual correction</text>
+              <text class="diagram-text diagram-text-strong" x="642" y="164">Final estimate</text>
+              <text class="diagram-text" x="642" y="190">pooled score average</text>
+              <text class="diagram-text" x="642" y="212">plus labeled correction</text>
+              <text class="diagram-text-small" x="346" y="98">uses covariate information broadly</text>
+              <text class="diagram-text-small" x="346" y="252">repairs systematic score error</text>
             </svg>
             <p class="diagram-caption">
               A good score helps the pooled plug-in term. The correction term
