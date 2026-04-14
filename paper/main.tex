@@ -647,20 +647,28 @@ The following proposition shows that, in the mean-estimation problem, PPI++ and 
  
 \begin{proposition}[First-order equivalence of PPI++ and linear calibration]
 \label{prop:ppi++-linear}
-Assume \(\Var\{m(X)\}>0\), \(\E[Y^2]<\infty\), and \(\E[m(X)^2]<\infty\). Then
+Assume that \(\Var\{m(X)\}>0\), \(\E[Y^2]<\infty\), and \(\E[m(X)^2]<\infty\). Then
 \[
 \widehat\psi_{++}(\hat\lambda_{++})-\widehat\psi_{\mathrm{lin}}
 =
 (1-\rho_n)\bigl(\hat\lambda_{++}-\hat a_{\mathrm{lin}}\bigr)
 \left\{\mathbb{P}_N^U m(\widetilde X)-\mathbb{P}_n^L m(X)\right\}.
 \]
-Moreover, $\hat\lambda_{++}-\hat a_{\mathrm{lin}} = O_p(n^{-1/2})$ and, therefore,
+Moreover, \(\hat\lambda_{++}-\hat a_{\mathrm{lin}} = O_p(n^{-1/2})\), and, under \(\rho_n \to \rho_0 \in (0,1)\),
 \[
 \widehat\psi_{++}(\hat\lambda_{++})-\widehat\psi_{\mathrm{lin}}
 =
-O_p(n^{-1/2})\,O_p\bigl((n+N)^{-1/2}\bigr)
+O_p\!\left(
+\frac{1-\rho_n}{\sqrt{\rho_n}}\,(n+N)^{-1}
+\right)
 =
-o_p\bigl((n+N)^{-1/2}\bigr).
+O_p\bigl((n+N)^{-1}\bigr).
+\]
+In particular,
+\[
+\widehat\psi_{++}(\hat\lambda_{++})-\widehat\psi_{\mathrm{lin}}
+=
+o_p\bigl(M^{-1/2}\bigr).
 \]
 \end{proposition}
 
@@ -1479,12 +1487,10 @@ Adding this zero term to \cref{eq:linear-plugin} yields \cref{eq:linear-ppi}.
 
 
 
-
- 
-\section{Proofs of first-order equivalence between  PPI++ and linear calibration}
+\section{Proofs of first-order equivalence between PPI++ and linear calibration}
 \label{sec:ppi++}
 
-Recall
+Recall that
 \[
 (\hat a_{\mathrm{lin}},\hat b_{\mathrm{lin}})
 \in
@@ -1496,13 +1502,13 @@ and define the corresponding linear-calibration estimator by
 =
 \rho_n \mathbb{P}_n^L\{\hat a_{\mathrm{lin}}m(X)+\hat b_{\mathrm{lin}}\}
 +
-(1-\rho_n)\mathbb{P}_N^U\{\hat a_{\mathrm{lin}}m(X)+\hat b_{\mathrm{lin}}\}.
+(1-\rho_n)\mathbb{P}_N^U\{\hat a_{\mathrm{lin}}m(\widetilde X)+\hat b_{\mathrm{lin}}\}.
 \]
 Also let \(\widehat\psi_{++}\) denote the PPI++ estimator obtained by minimizing the empirical influence-function variance over the scaling class \(\{\lambda m(X):\lambda\in\R\}\), and let \(\hat\lambda_{++}\) be the resulting selected coefficient. Define
 \[
-\Delta_n:=\mathbb{P}_N^U m(\widetilde X)-\mathbb{P}_n^L m(X).
+\Delta_n:=\mathbb{P}_N^U m(\widetilde X)-\mathbb{P}_n^L m(X),
 \]
-Finally, define
+and
 \[
 a_0:=\frac{\Cov\{Y,m(X)\}}{\Var\{m(X)\}}.
 \]
@@ -1510,74 +1516,78 @@ a_0:=\frac{\Cov\{Y,m(X)\}}{\Var\{m(X)\}}.
 \begin{proof}[Proof of Proposition \ref{prop:ppi++-linear}]
 The normal equations for the linear regression fit are
 \[
-\Pl\{Y-\hat a_{\mathrm{lin}}m(X)-\hat b_{\mathrm{lin}}\}=0
+\mathbb{P}_n^L\{Y-\hat a_{\mathrm{lin}}m(X)-\hat b_{\mathrm{lin}}\}=0
 \]
 and
 \[
-\Pl\bigl[m(X)\{Y-\hat a_{\mathrm{lin}}m(X)-\hat b_{\mathrm{lin}}\}\bigr]=0.
+\mathbb{P}_n^L\bigl[m(X)\{Y-\hat a_{\mathrm{lin}}m(X)-\hat b_{\mathrm{lin}}\}\bigr]=0.
 \]
 The first equation gives
 \[
-\hat b_{\mathrm{lin}}=\Pl Y-\hat a_{\mathrm{lin}}\Pl m(X).
+\hat b_{\mathrm{lin}}=\mathbb{P}_n^L Y-\hat a_{\mathrm{lin}}\mathbb{P}_n^L m(X).
 \]
 Substituting this into the second equation yields
 \[
 \hat a_{\mathrm{lin}}
 =
-\frac{\Pl\bigl[(m(X)-\Pl m(X))(Y-\Pl Y)\bigr]}
-{\Pl\bigl[(m(X)-\Pl m(X))^2\bigr]}.
+\frac{\mathbb{P}_n^L\bigl[(m(X)-\mathbb{P}_n^L m(X))(Y-\mathbb{P}_n^L Y)\bigr]}
+{\mathbb{P}_n^L\bigl[(m(X)-\mathbb{P}_n^L m(X))^2\bigr]}.
 \]
-Hence \(\hat a_{\mathrm{lin}}\) is the ordinary least-squares slope, so under finite second moments,
+Hence \(\hat a_{\mathrm{lin}}\) is the ordinary least-squares slope, and under finite second moments,
 \[
 \hat a_{\mathrm{lin}}=a_0+O_p(n^{-1/2}).
 \]
 
-It remains to compare the two estimators. Using
-\(\hat b_{\mathrm{lin}}=\Pl Y-\hat a_{\mathrm{lin}}\Pl m(X)\),
-we have
+Using
+\[
+\hat b_{\mathrm{lin}}=\mathbb{P}_n^L Y-\hat a_{\mathrm{lin}}\mathbb{P}_n^L m(X),
+\]
+we obtain
 \begin{align*}
 \widehat\psi_{\mathrm{lin}}
 &=
-\rho_n \Pl\{\hat a_{\mathrm{lin}}m(X)+\hat b_{\mathrm{lin}}\}
+\rho_n \mathbb{P}_n^L\{\hat a_{\mathrm{lin}}m(X)+\hat b_{\mathrm{lin}}\}
 +
-(1-\rho_n)\Pu\{\hat a_{\mathrm{lin}}m(\widetilde X)+\hat b_{\mathrm{lin}}\}\\
+(1-\rho_n)\mathbb{P}_N^U\{\hat a_{\mathrm{lin}}m(\widetilde X)+\hat b_{\mathrm{lin}}\}\\
 &=
 \hat b_{\mathrm{lin}}
 +
 \hat a_{\mathrm{lin}}
 \Bigl[
-\rho_n \Pl m(X)+(1-\rho_n)\Pu m(\widetilde X)
+\rho_n \mathbb{P}_n^L m(X)+(1-\rho_n)\mathbb{P}_N^U m(\widetilde X)
 \Bigr]\\
 &=
-\Pl Y-\hat a_{\mathrm{lin}}\Pl m(X)
+\mathbb{P}_n^L Y-\hat a_{\mathrm{lin}}\mathbb{P}_n^L m(X)
 +
 \hat a_{\mathrm{lin}}
 \Bigl[
-\rho_n \Pl m(X)+(1-\rho_n)\Pu m(\widetilde X)
+\rho_n \mathbb{P}_n^L m(X)+(1-\rho_n)\mathbb{P}_N^U m(\widetilde X)
 \Bigr]\\
 &=
-\Pl Y
+\mathbb{P}_n^L Y
 +
 (1-\rho_n)\hat a_{\mathrm{lin}}
-\bigl\{\Pu m(\widetilde X)-\Pl m(X)\bigr\}.
+\bigl\{\mathbb{P}_N^U m(\widetilde X)-\mathbb{P}_n^L m(X)\bigr\}\\
+&=
+\mathbb{P}_n^L Y + (1-\rho_n)\hat a_{\mathrm{lin}}\Delta_n.
 \end{align*}
-Thus, linear calibration depends on the data only through the correction coefficient
-\((1-\rho_n)\hat a_{\mathrm{lin}}\) multiplying the contrast \(\Delta_n\).
 
 On the other hand,
 \begin{align*}
 \widehat\psi_{++}(\hat\lambda_{++})
 &=
-\rho_n \Pl\{\hat\lambda_{++} m(X)\}
+\rho_n \mathbb{P}_n^L\{\hat\lambda_{++} m(X)\}
 +
-(1-\rho_n)\Pu\{\hat\lambda_{++} m(\widetilde X)\}
+(1-\rho_n)\mathbb{P}_N^U\{\hat\lambda_{++} m(\widetilde X)\}
 +
-\Pl\{Y-\hat\lambda_{++} m(X)\}\\
+\mathbb{P}_n^L\{Y-\hat\lambda_{++} m(X)\}\\
 &=
-\Pl Y
+\mathbb{P}_n^L Y
 +
 (1-\rho_n)\hat\lambda_{++}
-\bigl\{\Pu m(\widetilde X)-\Pl m(X)\bigr\}.
+\bigl\{\mathbb{P}_N^U m(\widetilde X)-\mathbb{P}_n^L m(X)\bigr\}\\
+&=
+\mathbb{P}_n^L Y + (1-\rho_n)\hat\lambda_{++}\Delta_n.
 \end{align*}
 Therefore,
 \[
@@ -1585,40 +1595,100 @@ Therefore,
 =
 (1-\rho_n)\bigl(\hat\lambda_{++}-\hat a_{\mathrm{lin}}\bigr)\Delta_n.
 \]
-In particular,
+
+Under the empirical PPI++ variance criterion over the class \(\{\lambda m(X):\lambda\in\R\}\), the selected coefficient satisfies
 \[
 \hat\lambda_{++}
 =
 \frac{
-\Pl\!\bigl[(Y-\Pl Y)(m(X)-\Pl m(X))\bigr]
+\mathbb{P}_n^L\bigl[(Y-\mathbb{P}_n^L Y)(m(X)-\mathbb{P}_n^L m(X))\bigr]
 }{
-(1-\rho_n)\Pl\!\bigl[(m(X)-\Pl m(X))^2\bigr]
+(1-\rho_n)\mathbb{P}_n^L\bigl[(m(X)-\mathbb{P}_n^L m(X))^2\bigr]
 +
-\rho_n\Pu\!\bigl[(m(\widetilde X)-\Pu m(\widetilde X))^2\bigr]
-},
+\rho_n\mathbb{P}_N^U\bigl[(m(\widetilde X)-\mathbb{P}_N^U m(\widetilde X))^2\bigr]
+}.
 \]
-which estimates the population minimizer of the asymptotic variance over the scaling class,
+Its population limit is
 \[
-\lambda_0=\frac{\Cov\{Y,m(X)\}}{\Var\{m(X)\}}
-=a_0.
+\lambda_0=\frac{\Cov\{Y,m(X)\}}{\Var\{m(X)\}}=a_0,
 \]
-Standard \(M\)-estimation arguments then imply
+so standard \(M\)-estimation arguments yield
 \[
-\hat\lambda_{++}=\lambda_0+O_p(n^{-1/2}).
+\hat\lambda_{++}=a_0+O_p(n^{-1/2}).
 \]
-Moreover, since \(\Pl m(X)\) and \(\Pu m(\widetilde X)\) are sample means under the same marginal law of \(X\) and $\rho_n \rightarrow \rho_0 \in (0,1)$,
+Combining this with \(\hat a_{\mathrm{lin}}=a_0+O_p(n^{-1/2})\) gives
 \[
-\Delta_n=O_p\bigl((n+N)^{-1/2}\bigr).
+\hat\lambda_{++}-\hat a_{\mathrm{lin}}=O_p(n^{-1/2}).
 \]
-Combining this with \(\hat a_{\mathrm{lin}}=a_0+O_p(n^{-1/2})\) yields
+
+Next, since \(\mathbb{P}_n^L m(X)\) and \(\mathbb{P}_N^U m(\widetilde X)\) are sample means under the same marginal law of \(X\),
 \[
-\hat\lambda_{++}-\hat a_{\mathrm{lin}}=O_p(n^{-1/2}),
+\Delta_n
+=
+O_p(n^{-1/2}+N^{-1/2}).
 \]
-and therefore
+Under the standing assumption \(\rho_n=n/(n+N)\to\rho_0\in(0,1)\), we may write
+\[
+n^{-1/2}=\rho_n^{-1/2}(n+N)^{-1/2},
+\qquad
+N^{-1/2}=(1-\rho_n)^{-1/2}(n+N)^{-1/2},
+\]
+and hence
+\[
+\Delta_n
+=
+O_p\!\left(\left\{\rho_n^{-1/2}+(1-\rho_n)^{-1/2}\right\}(n+N)^{-1/2}\right).
+\]
+Therefore,
+\begin{align*}
+\widehat\psi_{++}(\hat\lambda_{++})-\widehat\psi_{\mathrm{lin}}
+&=
+(1-\rho_n)\bigl(\hat\lambda_{++}-\hat a_{\mathrm{lin}}\bigr)\Delta_n\\
+&=
+(1-\rho_n)\,O_p(n^{-1/2})\,
+O_p\!\left(\left\{\rho_n^{-1/2}+(1-\rho_n)^{-1/2}\right\}(n+N)^{-1/2}\right)\\
+&=
+O_p\!\left(
+(1-\rho_n)\rho_n^{-1/2}
+\left\{\rho_n^{-1/2}+(1-\rho_n)^{-1/2}\right\}
+(n+N)^{-1}
+\right).
+\end{align*}
+Since
+\[
+(1-\rho_n)\rho_n^{-1/2}
+\left\{\rho_n^{-1/2}+(1-\rho_n)^{-1/2}\right\}
+=
+\frac{1-\rho_n}{\rho_n}
++
+\sqrt{\frac{1-\rho_n}{\rho_n}},
+\]
+It follows that
 \[
 \widehat\psi_{++}(\hat\lambda_{++})-\widehat\psi_{\mathrm{lin}}
 =
-(1-\rho_n)\,O_p(n^{-1/2})\,O_p\bigl((n+N)^{-1/2}\bigr)
+O_p\!\left(
+\left\{
+\frac{1-\rho_n}{\rho_n}
++
+\sqrt{\frac{1-\rho_n}{\rho_n}}
+\right\}
+(n+N)^{-1}
+\right).
+\]
+In particular, this implies the simpler bound
+\[
+\widehat\psi_{++}(\hat\lambda_{++})-\widehat\psi_{\mathrm{lin}}
+=
+O_p\!\left(
+\frac{1-\rho_n}{\rho_n}\,(n+N)^{-1}
+\right).
+\]
+Therefore, under \(\rho_n\to\rho_0\in(0,1)\),
+\[
+\widehat\psi_{++}(\hat\lambda_{++})-\widehat\psi_{\mathrm{lin}}
+=
+O_p\bigl((n+N)^{-1}\bigr)
 =
 o_p\bigl((n+N)^{-1/2}\bigr).
 \]
