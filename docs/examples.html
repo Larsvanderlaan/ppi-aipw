@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ppi_aipw examples</title>
+    <meta
+      name="description"
+      content="Skim-first examples for common ppi_aipw workflows, with Python and R entry points plus real-data case studies."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./site.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <nav class="topbar">
+          <div class="brand"><a href="./index.html">ppi_aipw</a></div>
+          <div class="toplinks">
+            <a href="./index.html">Python</a>
+            <a href="./r.html">R Package</a>
+            <a href="./theory.html">Theory</a>
+            <a href="#workflows">Workflows</a>
+            <a href="#case-studies">Case Studies</a>
+            <a href="./causal.html">Causal Inference</a>
+          </div>
+          <a class="paper-link" href="./paper.pdf">
+            <span class="paper-link-icon" aria-hidden="true"></span>
+            <span>Paper PDF</span>
+          </a>
+        </nav>
+
+        <div class="hero-grid">
+          <section class="hero-copy">
+            <p class="eyebrow">Examples</p>
+            <h1>Examples for common workflows.</h1>
+            <p class="lede">
+              Start from the problem, not the method list. These examples show
+              when to use the workflow, what to call, and where to go next in
+              Python or R.
+            </p>
+            <div class="hero-actions">
+              <a class="button button-primary" href="./index.html#quickstart">Python Quickstart</a>
+              <a class="button button-secondary" href="./r.html">R Package</a>
+              <a class="button button-secondary" href="./theory.html">Theory</a>
+            </div>
+          </section>
+
+          <aside class="hero-panel">
+            <div class="panel-card gradient-card">
+              <p class="panel-label">How To Use This Page</p>
+              <div class="default-stack">
+                <div>
+                  <span class="stack-name">Pick a scenario</span>
+                  <strong>Choose the card closest to your problem</strong>
+                </div>
+                <div>
+                  <span class="stack-name">Open the next link</span>
+                  <strong>Go straight to the right notebook, vignette, or page</strong>
+                </div>
+              </div>
+              <p class="panel-note">
+                The goal is fast orientation, not another full theory page.
+              </p>
+            </div>
+          </aside>
+        </div>
+      </header>
+
+      <main>
+        <section class="section" id="how-to-use">
+          <div class="section-heading">
+            <p class="eyebrow">Start Here</p>
+            <h2>Use the workflow first, then go deeper</h2>
+            <p>
+              Pick the scenario closest to your problem, use the main entry
+              point on that card, and then open the linked notebook, vignette,
+              or reference page.
+            </p>
+          </div>
+
+          <div class="mini-grid">
+            <article class="mini-box">
+              <span>1. Find your setup</span>
+              <strong>Mean estimation, automatic method choice, calibration, or causal effects.</strong>
+            </article>
+            <article class="mini-box">
+              <span>2. Call the right function</span>
+              <strong>Each card gives the shortest Python and R entry points.</strong>
+            </article>
+            <article class="mini-box">
+              <span>3. Open the next resource</span>
+              <strong>Use the linked notebook, vignette, or theory page only if you need more detail.</strong>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="workflows">
+          <div class="section-heading split">
+            <div>
+              <p class="eyebrow">Workflows</p>
+              <h2>Four common ways people use the package</h2>
+            </div>
+            <p class="section-side-note">
+              Use-case first, method second.
+            </p>
+          </div>
+
+          <div class="examples-grid">
+            <article class="argument-card">
+              <p class="panel-label">Workflow 1</p>
+              <h3>Small labeled sample, large unlabeled sample</h3>
+              <p>
+                Use this for the standard semisupervised mean problem: observed
+                outcomes on a small labeled sample, predictions on labeled and
+                unlabeled rows, and one mean to estimate.
+              </p>
+              <p><strong>Call this:</strong> <code>mean_inference(...)</code></p>
+              <div class="example-entry-grid">
+                <div class="example-entry">
+                  <p class="example-label">Python</p>
+                  <p class="example-call"><code>mean_inference(Y, Yhat, Yhat_unlabeled, ...)</code></p>
+                </div>
+                <div class="example-entry">
+                  <p class="example-label">R</p>
+                  <p class="example-call"><code>mean_inference(Y, Yhat, Yhat_unlabeled, ...)</code></p>
+                </div>
+              </div>
+              <div class="example-links">
+                <a href="./index.html#quickstart">Python quickstart</a>
+                <a href="https://colab.research.google.com/github/Larsvanderlaan/ppi-aipw/blob/main/examples/ppi_aipw_quickstart.ipynb">Colab notebook</a>
+                <a href="https://github.com/Larsvanderlaan/ppi-aipw/blob/main/r/ppiAIPW/vignettes/ppiAIPW-quickstart.Rmd">R quickstart vignette</a>
+              </div>
+            </article>
+
+            <article class="argument-card">
+              <p class="panel-label">Workflow 2</p>
+              <h3>Let the package choose the method</h3>
+              <p>
+                Use this when you do not want to hard-code one calibration rule
+                in advance. The package can compare a short list of candidate
+                methods and pick a good one data-adaptively.
+              </p>
+              <p><strong>Call this:</strong> <code>method="auto"</code></p>
+              <div class="example-entry-grid">
+                <div class="example-entry">
+                  <p class="example-label">Python</p>
+                  <p class="example-call"><code>mean_inference(..., method="auto")</code></p>
+                </div>
+                <div class="example-entry">
+                  <p class="example-label">R</p>
+                  <p class="example-call"><code>mean_inference(..., method = "auto")</code></p>
+                </div>
+              </div>
+              <div class="example-links">
+                <a href="./index.html#quickstart">Main API</a>
+                <a href="./theory.html#family">Efficiency intuition</a>
+              </div>
+            </article>
+
+            <article class="argument-card">
+              <p class="panel-label">Workflow 3</p>
+              <h3>Check or improve calibration</h3>
+              <p>
+                Use this when the prediction scale may be part of the problem,
+                not just the ranking. Start with diagnostics, then move to a
+                calibrated score if the raw score looks off.
+              </p>
+              <p><strong>Call this:</strong> diagnostics first, then calibration if needed</p>
+              <div class="example-entry-grid">
+                <div class="example-entry">
+                  <p class="example-label">Python</p>
+                  <p class="example-call"><code>calibration_diagnostics(...)</code><br /><code>plot_calibration(...)</code></p>
+                </div>
+                <div class="example-entry">
+                  <p class="example-label">R</p>
+                  <p class="example-call"><code>calibration_diagnostics(...)</code><br /><code>plot(...)</code></p>
+                </div>
+              </div>
+              <div class="example-links">
+                <a href="./theory.html#calibration">Why calibration helps</a>
+                <a href="https://github.com/Larsvanderlaan/ppi-aipw/blob/main/r/ppiAIPW/vignettes/ppiAIPW-diagnostics.Rmd">R diagnostics vignette</a>
+              </div>
+            </article>
+
+            <article class="argument-card">
+              <p class="panel-label">Workflow 4</p>
+              <h3>Predicted potential outcomes and ATEs</h3>
+              <p>
+                Use this when you already have predicted potential outcomes by
+                treatment arm and want arm means plus control-vs-treatment ATEs
+                from the same semisupervised mean engine.
+              </p>
+              <p><strong>Call this:</strong> <code>causal_inference(...)</code></p>
+              <div class="example-entry-grid">
+                <div class="example-entry">
+                  <p class="example-label">Python</p>
+                  <p class="example-call"><code>causal_inference(Y, A, Yhat_potential, ...)</code></p>
+                </div>
+                <div class="example-entry">
+                  <p class="example-label">R</p>
+                  <p class="example-call"><code>causal_inference(Y, A, Yhat_potential, ...)</code></p>
+                </div>
+              </div>
+              <div class="example-links">
+                <a href="./causal.html">Causal page</a>
+                <a href="https://colab.research.google.com/github/Larsvanderlaan/ppi-aipw/blob/main/examples/ppi_aipw_quickstart.ipynb">Python causal example</a>
+                <a href="https://github.com/Larsvanderlaan/ppi-aipw/blob/main/r/ppiAIPW/vignettes/ppiAIPW-causal.Rmd">R causal vignette</a>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="case-studies">
+          <div class="section-heading split">
+            <div>
+              <p class="eyebrow">Case Studies</p>
+              <h2>What this looks like on real benchmark data</h2>
+            </div>
+            <p class="section-side-note">
+              One case where calibration helps, one where raw AIPW is already enough.
+            </p>
+          </div>
+
+          <div class="argument-grid argument-grid-two">
+            <article class="argument-card">
+              <p class="panel-label">Benchmark: <code>census_income</code></p>
+              <h3>Income prediction at scale</h3>
+              <p>
+                <strong>Setup.</strong> Small labeled sample, enormous unlabeled
+                sample, and a raw score available for everyone.
+              </p>
+              <p>
+                <strong>What happened.</strong> AIPW and PPI are nearly
+                identical because the unlabeled sample dominates the plug-in
+                term. Simple calibration, especially linear calibration, gives
+                modest but repeatable gains, and <code>Auto</code> stays
+                competitive.
+              </p>
+              <p>
+                <strong>Takeaway.</strong> When the unlabeled sample is huge and
+                the score is somewhat miscalibrated, simple calibration can help
+                without changing the workflow much.
+              </p>
+              <div class="example-links">
+                <a href="./paper.pdf">Paper discussion</a>
+              </div>
+            </article>
+
+            <article class="argument-card">
+              <p class="panel-label">Benchmark: <code>forest</code></p>
+              <h3>Already-strong score</h3>
+              <p>
+                <strong>Setup.</strong> The original score is already strong, so
+                calibration has less room to help.
+              </p>
+              <p>
+                <strong>What happened.</strong> AIPW is already hard to beat,
+                PPI does not offer an advantage, and richer calibration rules
+                are close but not the main story.
+              </p>
+              <p>
+                <strong>Takeaway.</strong> If the original score is already
+                strong, raw AIPW may already be the right default and
+                calibration may change little.
+              </p>
+              <div class="example-links">
+                <a href="./paper.pdf">Paper discussion</a>
+              </div>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
