@@ -230,15 +230,10 @@
           </div>
 
           <div class="theory-note">
-            Smooth monotone calibration is still the package default. It did
-            very well in the simulation study when the score was badly
-            miscalibrated, and it remained competitive on the real benchmarks
-            even when simpler linear calibration often led on average. That is
-            why the default is a smooth monotone recalibration rather than only
-            a linear rescaling: when the score is severely mis-scaled, the
-            nonlinear correction can help more. The figures below are generated
-            from the cached benchmark bundles with the public diagnostics API,
-            so they can be reproduced from the repository.
+            Smooth monotone calibration remains the default because it handled
+            strong miscalibration well in simulations and stayed competitive on
+            the real benchmarks. The figures below are reproducible from the
+            public diagnostics API.
           </div>
 
           <div class="argument-grid argument-grid-two">
