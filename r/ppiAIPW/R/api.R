@@ -161,9 +161,9 @@ estimate_efficiency_lambda <- function(Y, pred_labeled, pred_unlabeled, w, w_unl
   n_labeled <- nrow(Y)
   n_unlabeled <- nrow(pred_unlabeled)
   c_weight <- 1 - labeled_fraction(n_labeled, n_unlabeled)
-  labeled_outcome <- w * Y
-  labeled_score <- c_weight * w * pred_labeled
-  unlabeled_score <- c_weight * w_unlabeled * pred_unlabeled
+  labeled_outcome <- weight_matrix(w, n_labeled, ncol(Y)) * Y
+  labeled_score <- c_weight * weight_matrix(w, n_labeled, ncol(pred_labeled)) * pred_labeled
+  unlabeled_score <- c_weight * weight_matrix(w_unlabeled, n_unlabeled, ncol(pred_unlabeled)) * pred_unlabeled
   numerator <- colMeans(
     (labeled_outcome - matrix(colMeans(labeled_outcome), nrow(labeled_outcome), ncol(labeled_outcome), byrow = TRUE)) *
       (labeled_score - matrix(colMeans(labeled_score), nrow(labeled_score), ncol(labeled_score), byrow = TRUE))
@@ -212,8 +212,8 @@ cv_selection_score <- function(Y, pred_labeled, pred_unlabeled, w = NULL, w_unla
   c_weight <- 1 - labeled_fraction(n_labeled, n_unlabeled)
   weights <- construct_weight_vector(n_labeled, w, vectorized = TRUE)
   weights_unlabeled <- construct_weight_vector(n_unlabeled, w_unlabeled, vectorized = TRUE)
-  labeled_component <- weights * (Y - c_weight * pred_labeled)
-  unlabeled_component <- weights_unlabeled * (c_weight * pred_unlabeled)
+  labeled_component <- weight_matrix(weights, n_labeled, ncol(Y)) * (Y - c_weight * pred_labeled)
+  unlabeled_component <- weight_matrix(weights_unlabeled, n_unlabeled, ncol(pred_unlabeled)) * (c_weight * pred_unlabeled)
   score <- apply(labeled_component, 2L, stats::var) / n_labeled +
     apply(unlabeled_component, 2L, stats::var) / n_unlabeled
   sum(score)
@@ -574,8 +574,8 @@ aipw_mean_pointestimate_from_predictions <- function(Y, pred_labeled, pred_unlab
   n_labeled <- nrow(Y)
   n_unlabeled <- nrow(pred_unlabeled)
   c_weight <- 1 - labeled_fraction(n_labeled, n_unlabeled)
-  labeled_term <- colMeans(w * (Y - c_weight * pred_labeled))
-  unlabeled_term <- colMeans(w_unlabeled * (c_weight * pred_unlabeled))
+  labeled_term <- colMeans(weight_matrix(w, n_labeled, ncol(Y)) * (Y - c_weight * pred_labeled))
+  unlabeled_term <- colMeans(weight_matrix(w_unlabeled, n_unlabeled, ncol(pred_unlabeled)) * (c_weight * pred_unlabeled))
   labeled_term + unlabeled_term
 }
 
@@ -583,8 +583,10 @@ wald_influence_components <- function(prepared) {
   n_labeled <- nrow(prepared$Y_2d)
   n_unlabeled <- nrow(prepared$pred_unlabeled_variance)
   c_weight <- 1 - labeled_fraction(n_labeled, n_unlabeled)
-  labeled_component <- prepared$weights * (prepared$Y_2d - c_weight * prepared$pred_labeled_variance)
-  unlabeled_component <- prepared$weights_unlabeled_variance * (c_weight * prepared$pred_unlabeled_variance)
+  labeled_component <- weight_matrix(prepared$weights, n_labeled, ncol(prepared$Y_2d)) *
+    (prepared$Y_2d - c_weight * prepared$pred_labeled_variance)
+  unlabeled_component <- weight_matrix(prepared$weights_unlabeled_variance, n_unlabeled, ncol(prepared$pred_unlabeled_variance)) *
+    (c_weight * prepared$pred_unlabeled_variance)
   list(labeled = labeled_component, unlabeled = unlabeled_component)
 }
 
@@ -1144,14 +1146,19 @@ aipw_mean_se <- mean_se
 aipw_mean_ci <- mean_ci
 ppi_aipw_mean_inference <- mean_inference
 ppi_aipw_mean_pointestimate <- mean_pointestimate
+ppi_aipw_mean_se <- mean_se
 ppi_aipw_mean_ci <- mean_ci
 pi_aipw_mean_inference <- mean_inference
 pi_aipw_mean_pointestimate <- mean_pointestimate
+pi_aipw_mean_se <- mean_se
 pi_aipw_mean_ci <- mean_ci
 
 linear_calibration_mean_pointestimate <- function(...) mean_pointestimate(..., method = "linear")
+linear_calibration_mean_se <- function(...) mean_se(..., method = "linear")
 linear_calibration_mean_ci <- function(...) mean_ci(..., method = "linear")
 sigmoid_mean_pointestimate <- function(...) mean_pointestimate(..., method = "sigmoid")
+sigmoid_mean_se <- function(...) mean_se(..., method = "sigmoid")
 sigmoid_mean_ci <- function(...) mean_ci(..., method = "sigmoid")
 isotonic_mean_pointestimate <- function(...) mean_pointestimate(..., method = "isotonic")
+isotonic_mean_se <- function(...) mean_se(..., method = "isotonic")
 isotonic_mean_ci <- function(...) mean_ci(..., method = "isotonic")

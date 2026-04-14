@@ -1,9 +1,8 @@
 ---
 title: "ppiAIPW Quickstart"
-output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{ppiAIPW Quickstart}
-  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEngine{knitr::knitr}
   %\VignetteEncoding{UTF-8}
 ---
 

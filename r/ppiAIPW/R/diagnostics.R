@@ -82,7 +82,7 @@ calibration_diagnostics <- function(obj, Y, Yhat, X = NULL, w = NULL, num_bins =
     if (model$x_dim > 0L && is.null(X_2d)) {
       stop("X is required for calibration diagnostics when the fitted model uses prognostic covariates.", call. = FALSE)
     }
-    reference_covariates <- if (model$x_dim > 0L) colMeans(weights * X_2d) else NULL
+    reference_covariates <- if (model$x_dim > 0L) colMeans(weight_matrix(weights, nrow(X_2d), ncol(X_2d)) * X_2d) else NULL
     calibrated_labeled <- reshape_to_2d(predict(model, pair$Yhat_2d, X = X_2d), "calibrated_labeled")
   } else {
     reference_covariates <- NULL
@@ -118,7 +118,7 @@ calibration_diagnostics <- function(obj, Y, Yhat, X = NULL, w = NULL, num_bins =
     method = model$method,
     n_outputs = ncol(pair$Y_2d),
     n_labeled = nrow(pair$Y_2d),
-    num_bins = min(num_bins, nrow(pair$Y_2d)),
+    num_bins = as.integer(min(num_bins, nrow(pair$Y_2d))),
     per_output = per_output,
     reference_covariates = reference_covariates
   )

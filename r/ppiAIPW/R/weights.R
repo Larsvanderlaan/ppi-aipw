@@ -8,6 +8,36 @@
 #' @param maxiter Maximum optimizer iterations.
 #' @param return_diagnostics Whether to return a diagnostics list.
 #' @return A weight vector, or a list with weights and diagnostics.
+project_balancing_weights_active_set <- function(constraint_matrix, constraint_rhs, tolerance, maxiter) {
+  n_weights <- ncol(constraint_matrix)
+  active_zero <- rep(FALSE, n_weights)
+  iterations <- 0L
+  while (iterations < maxiter) {
+    iterations <- iterations + 1L
+    free_idx <- which(!active_zero)
+    if (length(free_idx) == 0L) {
+      stop(
+        "Could not compute nonnegative balancing weights with the requested balance moments. Try a lower-dimensional balance representation or target='pooled'.",
+        call. = FALSE
+      )
+    }
+    A_free <- constraint_matrix[, free_idx, drop = FALSE]
+    rhs_gap <- A_free %*% rep(1, length(free_idx)) - constraint_rhs
+    lambda <- MASS::ginv(A_free %*% t(A_free)) %*% rhs_gap
+    weights_free <- as.numeric(rep(1, length(free_idx)) - t(A_free) %*% lambda)
+    if (all(weights_free >= -tolerance)) {
+      weights <- numeric(n_weights)
+      weights[free_idx] <- pmax(weights_free, 0)
+      return(list(weights = weights, iterations = iterations))
+    }
+    active_zero[free_idx[[which.min(weights_free)]]] <- TRUE
+  }
+  stop(
+    "Could not compute nonnegative balancing weights with the requested balance moments. Try a lower-dimensional balance representation or target='pooled'.",
+    call. = FALSE
+  )
+}
+
 compute_two_sample_balancing_weights <- function(X_labeled, X_unlabeled,
                                                  target = "pooled",
                                                  include_intercept = TRUE,
@@ -21,6 +51,9 @@ compute_two_sample_balancing_weights <- function(X_labeled, X_unlabeled,
       sprintf("X_labeled and X_unlabeled must have the same number of columns. Got %d and %d.", ncol(X_labeled_2d), ncol(X_unlabeled_2d)),
       call. = FALSE
     )
+  }
+  if (nrow(X_labeled_2d) == 0L || nrow(X_unlabeled_2d) == 0L) {
+    stop("Both labeled and unlabeled samples must be nonempty.", call. = FALSE)
   }
   resolved_target <- tolower(target[[1]])
   if (!resolved_target %in% c("pooled", "unlabeled")) {
@@ -69,67 +102,46 @@ compute_two_sample_balancing_weights <- function(X_labeled, X_unlabeled,
     return(weights)
   }
 
-  objective_factory <- function(penalty) {
-    function(weights) {
-      weighted_mean <- colMeans(weights * Z_labeled)
-      balance_error <- weighted_mean - target_mean
-      0.5 * sum((weights - 1)^2) + penalty * sum(balance_error^2)
-    }
-  }
-
-  best <- NULL
-  penalties <- c(1e2, 1e4, 1e6, 1e8)
-  for (penalty in penalties) {
-    fit <- try(
-      stats::optim(
-        par = rep(1, n_labeled),
-        fn = objective_factory(penalty),
-        method = "L-BFGS-B",
-        lower = rep(0, n_labeled),
-        control = list(maxit = maxiter)
-      ),
-      silent = TRUE
-    )
-    if (inherits(fit, "try-error") || is.null(fit$par)) {
-      next
-    }
-    weights <- as.numeric(fit$par)
-    weighted_mean_labeled <- colMeans(weights * Z_labeled)
-    balance_error <- weighted_mean_labeled - target_mean
-    max_abs_balance_error <- max(abs(balance_error))
-    best <- list(
-      weights = weights,
-      diagnostics = list(
-        target = resolved_target,
-        include_intercept = include_intercept,
-        n_labeled = n_labeled,
-        n_unlabeled = n_unlabeled,
-        n_balance_functions = ncol(Z_labeled),
-        target_mean = target_mean,
-        weighted_labeled_mean = weighted_mean_labeled,
-        balance_error = balance_error,
-        max_abs_balance_error = max_abs_balance_error,
-        min_weight = min(weights),
-        max_weight = max(weights),
-        optimizer_success = isTRUE(fit$convergence == 0L),
-        optimizer_status = fit$convergence,
-        optimizer_message = if (!is.null(fit$message)) fit$message else "",
-        optimizer_iterations = if (!is.null(fit$counts[["function"]])) fit$counts[["function"]] else NA_integer_
-      )
-    )
-    if (max_abs_balance_error <= max(tolerance, 1e-5)) {
-      break
-    }
-  }
-
-  if (is.null(best) || best$diagnostics$max_abs_balance_error > max(tolerance, 1e-5)) {
+  constraint_matrix <- t(Z_labeled)
+  constraint_rhs <- n_labeled * target_mean
+  fit <- project_balancing_weights_active_set(
+    constraint_matrix = constraint_matrix,
+    constraint_rhs = constraint_rhs,
+    tolerance = tolerance,
+    maxiter = maxiter
+  )
+  weights <- fit$weights
+  weighted_mean_labeled <- colMeans(weights * Z_labeled)
+  balance_error <- weighted_mean_labeled - target_mean
+  max_abs_balance_error <- max(abs(balance_error))
+  if (max_abs_balance_error > tolerance) {
     stop(
-      "Could not compute nonnegative balancing weights with the requested balance moments. Try a lower-dimensional balance representation or target='pooled'.",
+      sprintf(
+        "Could not achieve the requested balance tolerance with nonnegative weights. Max absolute balance error was %.3e.",
+        max_abs_balance_error
+      ),
       call. = FALSE
     )
   }
+  diagnostics <- list(
+    target = resolved_target,
+    include_intercept = include_intercept,
+    n_labeled = n_labeled,
+    n_unlabeled = n_unlabeled,
+    n_balance_functions = ncol(Z_labeled),
+    target_mean = target_mean,
+    weighted_labeled_mean = weighted_mean_labeled,
+    balance_error = balance_error,
+    max_abs_balance_error = max_abs_balance_error,
+    min_weight = min(weights),
+    max_weight = max(weights),
+    optimizer_success = TRUE,
+    optimizer_status = 0L,
+    optimizer_message = "active_set_projection",
+    optimizer_iterations = fit$iterations
+  )
   if (isTRUE(return_diagnostics)) {
-    return(best)
+    return(list(weights = weights, diagnostics = diagnostics))
   }
-  best$weights
+  weights
 }

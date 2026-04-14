@@ -121,6 +121,14 @@ construct_weight_vector <- function(n_obs, existing_weight = NULL, vectorized = 
   weights
 }
 
+weight_matrix <- function(w, n_rows, n_cols) {
+  w_arr <- as.numeric(w)
+  if (length(w_arr) != n_rows) {
+    stop(sprintf("Expected %d weights, got %d.", n_rows, length(w_arr)), call. = FALSE)
+  }
+  matrix(w_arr, nrow = n_rows, ncol = n_cols)
+}
+
 validate_pair_inputs <- function(Y, Yhat) {
   Y_2d <- reshape_to_2d(Y, "Y")
   Yhat_2d <- reshape_to_2d(Yhat, "Yhat")
@@ -169,18 +177,18 @@ sigmoid <- function(z) {
 }
 
 weighted_mean <- function(x, w) {
-  colMeans(w * x)
+  colMeans(weight_matrix(w, nrow(x), ncol(x)) * x)
 }
 
 weighted_var <- function(x, w) {
   centered <- sweep(x, 2L, weighted_mean(x, w), "-", check.margin = FALSE)
-  colMeans(w * centered^2)
+  colMeans(weight_matrix(w, nrow(x), ncol(x)) * centered^2)
 }
 
 weighted_cov <- function(x, y, w) {
   x_centered <- sweep(x, 2L, weighted_mean(x, w), "-", check.margin = FALSE)
   y_centered <- sweep(y, 2L, weighted_mean(y, w), "-", check.margin = FALSE)
-  colMeans(w * x_centered * y_centered)
+  colMeans(weight_matrix(w, nrow(x), ncol(x)) * x_centered * y_centered)
 }
 
 z_interval <- function(pointestimate, standard_error, alpha, alternative = "two-sided") {

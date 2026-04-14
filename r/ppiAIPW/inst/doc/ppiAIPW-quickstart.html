@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>ppiAIPW Quickstart</title>
+</head>
+<body>
+  <h1>ppiAIPW Quickstart</h1>
+  <p><code>ppiAIPW</code> exposes a functional API for semi-supervised mean inference.</p>
+  <pre><code>library(ppiAIPW)
+
+set.seed(1)
+Y <- rnorm(80)
+Yhat <- Y + rnorm(80, sd = 0.35)
+Yhat_unlabeled <- rnorm(200)
+
+result <- mean_inference(
+  Y,
+  Yhat,
+  Yhat_unlabeled,
+  method = "monotone_spline",
+  alpha = 0.1
+)
+
+print(result)
+summary(result)</code></pre>
+  <p>Use <code>mean_pointestimate()</code>, <code>mean_se()</code>, and <code>mean_ci()</code> when you only need one output.</p>
+</body>
+</html>
