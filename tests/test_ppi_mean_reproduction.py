@@ -250,6 +250,7 @@ def test_smoke_run_writes_expected_outputs(tmp_path: Path) -> None:
     assert (output_dir / "table_galaxies_mean.csv").exists()
     assert (output_dir / "fig_galaxies_mean_relative_efficiency.pdf").exists()
     assert (output_dir / "fig_galaxies_mean_coverage.pdf").exists()
+    assert (output_dir / "fig_galaxies_mean_mse_vs_ppi.pdf").exists()
 
     summary = pd.read_csv(output_dir / "summary.csv")
     assert set(summary["estimator"]) == {
@@ -279,8 +280,11 @@ def test_smoke_run_writes_expected_outputs(tmp_path: Path) -> None:
         "rmse",
         "coverage",
         "rel_eff_vs_ppi",
+        "mse_ratio_vs_ppi",
     }
     assert expected_columns.issubset(summary.columns)
+    ppi_rows = summary[summary["estimator"] == "ppi"]
+    np.testing.assert_allclose(ppi_rows["mse_ratio_vs_ppi"], 1.0)
 
 
 def test_reproduce_script_smoke_exports_paper_assets(tmp_path: Path) -> None:

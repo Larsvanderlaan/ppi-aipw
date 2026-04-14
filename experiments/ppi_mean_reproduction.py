@@ -780,12 +780,25 @@ def summarize_results(raw_df: pd.DataFrame) -> pd.DataFrame:
         .rename(columns={"emp_variance": "emp_variance_ppi"})
         .drop_duplicates()
     )
+    ppi_mse = (
+        summary[summary["estimator"] == "ppi"][
+            ["dataset", "n_labeled", "n_unlabeled", "mse"]
+        ]
+        .rename(columns={"mse": "mse_ppi"})
+        .drop_duplicates()
+    )
     summary = summary.merge(
         ppi_variance,
         on=["dataset", "n_labeled", "n_unlabeled"],
         how="left",
     )
+    summary = summary.merge(
+        ppi_mse,
+        on=["dataset", "n_labeled", "n_unlabeled"],
+        how="left",
+    )
     summary["rel_eff_vs_ppi"] = summary["emp_variance_ppi"] / summary["emp_variance"]
+    summary["mse_ratio_vs_ppi"] = summary["mse"] / summary["mse_ppi"]
     return summary
 
 
@@ -883,7 +896,7 @@ def plot_dataset_metric(
         if metric == "coverage":
             alpha = float(frame["alpha"].iloc[0])
             ax.axhline(1.0 - alpha, color="black", linestyle="--", linewidth=1)
-        if metric == "rel_eff_vs_ppi":
+        if metric in {"mse_ratio_vs_ppi", "rel_eff_vs_ppi"}:
             ax.axhline(1.0, color="black", linestyle="--", linewidth=1)
         ax.set_xlim(frame["n_labeled"].min(), frame["n_labeled"].max())
         ax.set_title(dataset_name)
@@ -900,7 +913,7 @@ def plot_overall_metric_grid(summary_df: pd.DataFrame, output_dir: Path) -> None
     metrics = [
         ("mean_bias", "Bias", "bias"),
         ("emp_variance", "Variance", "variance"),
-        ("mse", "MSE", "mse"),
+        ("mse_ratio_vs_ppi", "MSE / PPI MSE", "mse_vs_ppi"),
         ("coverage", "Coverage", "coverage"),
         ("rel_eff_vs_ppi", "Rel. eff. vs PPI", "relative_efficiency"),
     ]
@@ -927,7 +940,7 @@ def plot_overall_metric_grid(summary_df: pd.DataFrame, output_dir: Path) -> None
             if metric == "coverage":
                 alpha = float(frame["alpha"].iloc[0])
                 ax.axhline(1.0 - alpha, color="black", linestyle="--", linewidth=1)
-            if metric == "rel_eff_vs_ppi":
+            if metric in {"mse_ratio_vs_ppi", "rel_eff_vs_ppi"}:
                 ax.axhline(1.0, color="black", linestyle="--", linewidth=1)
             ax.set_xlim(frame["n_labeled"].min(), frame["n_labeled"].max())
             if row_idx == 0:
@@ -964,7 +977,7 @@ def plot_overall_metric_grid(summary_df: pd.DataFrame, output_dir: Path) -> None
 def plot_main_text_grid(summary_df: pd.DataFrame, output_dir: Path) -> None:
     summary_df = summary_df[summary_df["estimator"].isin(MAIN_TEXT_ESTIMATOR_ORDER)].copy()
     metrics = [
-        ("mse", "MSE"),
+        ("mse_ratio_vs_ppi", "MSE / PPI MSE"),
         ("rel_eff_vs_ppi", "Rel. eff. vs PPI"),
         ("coverage", "Coverage"),
     ]
@@ -999,7 +1012,7 @@ def plot_main_text_grid(summary_df: pd.DataFrame, output_dir: Path) -> None:
             if metric == "coverage":
                 alpha = float(frame["alpha"].iloc[0])
                 ax.axhline(1.0 - alpha, color="black", linestyle="--", linewidth=1)
-            if metric == "rel_eff_vs_ppi":
+            if metric in {"mse_ratio_vs_ppi", "rel_eff_vs_ppi"}:
                 ax.axhline(1.0, color="black", linestyle="--", linewidth=1)
             ax.set_xlim(frame["n_labeled"].min(), frame["n_labeled"].max())
             if row_idx == 0:
@@ -1133,6 +1146,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     plot_dataset_metric(summary_df, args.output_dir, "mean_bias", "Bias", "bias")
     plot_dataset_metric(summary_df, args.output_dir, "emp_variance", "Variance", "variance")
     plot_dataset_metric(summary_df, args.output_dir, "mse", "MSE", "mse")
+    plot_dataset_metric(summary_df, args.output_dir, "mse_ratio_vs_ppi", "MSE / PPI MSE", "mse_vs_ppi")
     plot_dataset_metric(summary_df, args.output_dir, "rel_eff_vs_ppi", "Rel. eff. vs PPI", "relative_efficiency")
     plot_dataset_metric(summary_df, args.output_dir, "coverage", "Coverage", "coverage")
     plot_main_text_grid(summary_df, args.output_dir)
