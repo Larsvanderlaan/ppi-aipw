@@ -566,6 +566,162 @@ pre {
   border-top-style: dashed;
 }
 
+.equation-card {
+  margin-top: 18px;
+  padding: 20px 22px;
+  border-radius: 24px;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(215, 242, 235, 0.42)),
+    rgba(255, 255, 255, 0.78);
+}
+
+.pseudo-equation {
+  margin: 0;
+  font-family: "Source Serif 4", Georgia, serif;
+  font-size: clamp(1.5rem, 3.2vw, 2.2rem);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.equation-note {
+  margin: 12px 0 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.mini-equation {
+  margin: 10px 0 0;
+  font-family: "Source Serif 4", Georgia, serif;
+  font-size: 1.2rem;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.theory-visual {
+  margin-top: 20px;
+  padding: 18px;
+  border-radius: 24px;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.85), rgba(255, 227, 191, 0.34)),
+    rgba(255, 255, 255, 0.75);
+}
+
+.theory-visual h3 {
+  margin: 0 0 8px;
+}
+
+.theory-visual p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.theory-diagram {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: 16px;
+}
+
+.diagram-caption {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  line-height: 1.68;
+}
+
+.diagram-kicker {
+  display: inline-block;
+  margin-bottom: 8px;
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.diagram-panel {
+  fill: rgba(255, 255, 255, 0.92);
+  stroke: rgba(22, 50, 61, 0.12);
+  stroke-width: 1.5;
+}
+
+.diagram-panel-strong {
+  fill: rgba(215, 242, 235, 0.82);
+  stroke: rgba(13, 138, 122, 0.24);
+  stroke-width: 1.5;
+}
+
+.diagram-panel-warm {
+  fill: rgba(255, 227, 191, 0.88);
+  stroke: rgba(255, 181, 98, 0.36);
+  stroke-width: 1.5;
+}
+
+.diagram-line {
+  stroke: rgba(22, 50, 61, 0.28);
+  stroke-width: 2.2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.diagram-line-dashed {
+  stroke-dasharray: 7 8;
+}
+
+.diagram-accent {
+  stroke: var(--accent);
+}
+
+.diagram-warm {
+  stroke: #d28d3d;
+}
+
+.diagram-text {
+  fill: var(--ink);
+  font-family: "Space Grotesk", "Avenir Next", "Trebuchet MS", sans-serif;
+  font-size: 16px;
+}
+
+.diagram-text-small {
+  fill: var(--muted);
+  font-family: "Space Grotesk", "Avenir Next", "Trebuchet MS", sans-serif;
+  font-size: 13px;
+}
+
+.diagram-text-strong {
+  font-weight: 700;
+}
+
+.theory-note {
+  margin-top: 18px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--muted);
+  line-height: 1.68;
+}
+
+.takeaway-card ul,
+.theory-note ul {
+  margin: 12px 0 0;
+  padding-left: 18px;
+}
+
+.takeaway-card li,
+.theory-note li {
+  color: var(--muted);
+  line-height: 1.68;
+}
+
 .curve-backdrop {
   fill: rgba(255, 253, 249, 0.92);
   stroke: rgba(22, 50, 61, 0.08);
@@ -791,5 +947,9 @@ pre {
   .curve-canvas,
   .curve-x-label {
     grid-column: 1;
+  }
+
+  .pseudo-equation {
+    font-size: 1.35rem;
   }
 }

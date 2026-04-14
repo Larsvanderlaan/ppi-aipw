@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ppi_aipw theory</title>
+    <meta
+      name="description"
+      content="Simple practitioner guide to AIPW, calibration, PPI, PPI++, and efficiency in semisupervised mean inference."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./site.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <nav class="topbar">
+          <div class="brand"><a href="./index.html">ppi_aipw</a></div>
+          <div class="toplinks">
+            <a href="./index.html">Python</a>
+            <a href="./r.html">R Package</a>
+            <a href="#estimator">Estimator</a>
+            <a href="#family">AIPW Class</a>
+            <a href="#calibration">Calibration</a>
+            <a href="#references">References</a>
+          </div>
+          <a class="paper-link" href="./paper.pdf">
+            <span class="paper-link-icon" aria-hidden="true"></span>
+            <span>Paper PDF</span>
+          </a>
+        </nav>
+
+        <div class="hero-grid">
+          <section class="hero-copy">
+            <p class="eyebrow">Theory</p>
+            <h1>How the estimator works in simple terms.</h1>
+            <p class="lede">
+              In the small-labeled, large-unlabeled setting, predictions can
+              improve precision, but they should not be trusted blindly. AIPW
+              uses those predictions and then adds a labeled-sample correction,
+              so you get the efficiency benefit of a good score together with a
+              built-in safeguard against prediction error.
+            </p>
+            <div class="hero-actions">
+              <a class="button button-primary" href="./index.html#quickstart">Quickstart</a>
+              <a class="button button-secondary" href="./r.html">R Package</a>
+              <a class="button button-secondary" href="./paper.pdf">Paper PDF</a>
+            </div>
+          </section>
+
+          <aside class="hero-panel">
+            <div class="panel-card gradient-card">
+              <p class="panel-label">Core Recipe</p>
+              <div class="default-stack">
+                <div>
+                  <span class="stack-name">Use predictions</span>
+                  <strong>Average a score over labeled and unlabeled covariates</strong>
+                </div>
+                <div>
+                  <span class="stack-name">Correct with labels</span>
+                  <strong>Add back the average residual</strong>
+                </div>
+              </div>
+              <p class="panel-note">
+                The score drives efficiency. The labeled correction keeps the
+                estimator anchored to observed outcomes.
+              </p>
+            </div>
+            <div class="panel-card code-card">
+              <p class="panel-label">Main Idea</p>
+              <p class="panel-note">
+                AIPW is not one special formula with one special prediction
+                model. It is a broad template, and you are free to choose the
+                score <code>f(X)</code> that enters it.
+              </p>
+            </div>
+          </aside>
+        </div>
+      </header>
+
+      <main>
+        <section class="section" id="estimator">
+          <div class="section-heading split">
+            <div>
+              <p class="eyebrow">Estimator</p>
+              <h2>The estimator in one line</h2>
+            </div>
+            <p class="section-side-note">
+              One part averages a score over labeled and unlabeled covariates.
+              The other part corrects it using the rows where outcomes are observed.
+            </p>
+          </div>
+
+          <div class="equation-card">
+            <p class="pseudo-equation">
+              estimate = pooled average of a score + average
+              labeled correction
+            </p>
+            <p class="equation-note">
+              The score term uses all the covariate information you have. The
+              correction term measures how far that score misses the truth on
+              labeled rows and adds the discrepancy back. That is why the
+              estimator stays approximately unbiased even when predictions are
+              imperfect.
+            </p>
+          </div>
+
+          <div class="argument-grid">
+            <article class="argument-card">
+              <h3>Notation</h3>
+              <p>
+                Let the labeled sample be
+                <code>(X_1, Y_1), ..., (X_n, Y_n)</code> and the unlabeled
+                sample be <code>X~_1, ..., X~_N</code>. Here
+                <code>f(X)</code> is the score we choose to plug into AIPW.
+              </p>
+            </article>
+            <article class="argument-card">
+              <h3>AIPW for a chosen score</h3>
+              <p>
+                A simple semisupervised AIPW estimator for the mean can be
+                written as:
+              </p>
+              <p class="mini-equation">
+                θ̂(f) = (1 / (n + N))
+                [∑<sub>i=1</sub><sup>n</sup> f(X<sub>i</sub>) +
+                ∑<sub>j=1</sub><sup>N</sup> f(X~<sub>j</sub>)]
+                + (1 / n) ∑<sub>i=1</sub><sup>n</sup> [Y<sub>i</sub> - f(X<sub>i</sub>)]
+              </p>
+            </article>
+            <article class="argument-card">
+              <h3>Why this form matters</h3>
+              <p>
+                The first part is a pooled plug-in average of the score over
+                labeled and unlabeled covariates. The second part is the
+                labeled residual correction. Once you see that template, many familiar
+                semisupervised estimators become special cases of the same
+                object.
+              </p>
+            </article>
+          </div>
+
+          <div class="theory-visual">
+            <span class="diagram-kicker">Schematic 1</span>
+            <h3>Pooled score average plus labeled residual correction</h3>
+            <p>
+              The unlabeled sample contributes scale and precision. The labeled
+              sample tells you how much to correct.
+            </p>
+            <svg
+              class="theory-diagram"
+              viewBox="0 0 860 320"
+              role="img"
+              aria-label="AIPW decomposition diagram"
+            >
+              <defs>
+                <marker id="theoryArrowA" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#16323d"></path>
+                </marker>
+              </defs>
+              <rect class="diagram-panel-strong" x="30" y="70" width="250" height="92" rx="26"></rect>
+              <rect class="diagram-panel" x="30" y="190" width="250" height="92" rx="26"></rect>
+              <rect class="diagram-panel-warm" x="560" y="125" width="270" height="102" rx="28"></rect>
+              <path class="diagram-line" d="M 280 116 C 380 116, 430 126, 560 160" marker-end="url(#theoryArrowA)"></path>
+              <path class="diagram-line" d="M 280 236 C 385 236, 430 214, 560 192" marker-end="url(#theoryArrowA)"></path>
+              <text class="diagram-text diagram-text-strong" x="58" y="104">Large unlabeled sample</text>
+              <text class="diagram-text" x="58" y="130">Contributes to the pooled</text>
+              <text class="diagram-text" x="58" y="152">average of f(X)</text>
+              <text class="diagram-text diagram-text-strong" x="58" y="224">Small labeled sample</text>
+              <text class="diagram-text" x="58" y="250">Contributes to the pooled</text>
+              <text class="diagram-text" x="58" y="272">average and the residual correction</text>
+              <text class="diagram-text diagram-text-strong" x="590" y="164">Final semisupervised estimate</text>
+              <text class="diagram-text" x="590" y="190">pooled score average</text>
+              <text class="diagram-text" x="590" y="212">plus labeled correction</text>
+              <text class="diagram-text-small" x="314" y="98">uses covariate information broadly</text>
+              <text class="diagram-text-small" x="314" y="252">repairs systematic score error</text>
+            </svg>
+            <p class="diagram-caption">
+              A good score helps the pooled plug-in term. The second term is the safety
+              mechanism: it keeps the estimate tied to observed outcomes rather
+              than to raw model output alone.
+            </p>
+          </div>
+        </section>
+
+        <section class="section" id="family">
+          <div class="section-heading split">
+            <div>
+              <p class="eyebrow">AIPW Class</p>
+              <h2>AIPW is a class, not one estimator</h2>
+            </div>
+            <p class="section-side-note">
+              You are free to choose the score <code>f(X)</code>. Different
+              choices give different AIPW estimators.
+            </p>
+          </div>
+
+          <div class="argument-grid">
+            <article class="argument-card">
+              <h3>You choose the score</h3>
+              <p>
+                The score <code>f(X)</code> can be a raw prediction, a linear
+                recalibration, a monotone calibration map, or another
+                data-adaptive score. AIPW supplies the correction template
+                around it.
+              </p>
+            </article>
+            <article class="argument-card">
+              <h3>Better scores improve efficiency</h3>
+              <p>
+                If the score is closer to the true outcome regression
+                <code>mu_0(X) = E[Y | X]</code>, then the residual correction is
+                smaller and the final estimator is typically more efficient.
+              </p>
+            </article>
+            <article class="argument-card">
+              <h3>Efficiency is the practical goal</h3>
+              <p>
+                In practice, this means tighter intervals and better use of the
+                labeled sample. The best score is the one that predicts the
+                outcome level well, not just the ranking.
+              </p>
+            </article>
+          </div>
+
+          <div class="equation-card">
+            <p class="panel-label">Efficiency Target</p>
+            <p class="equation-note">
+              At the population level, the most efficient score is the one that
+              makes the large-sample variance of the AIPW estimator as small as
+              possible. Up to a centering constant, that means choosing
+              <code>f</code> to make
+              <code>E<sub>0</sub>[(Y - f(X))<sup>2</sup>]</code> small. When the
+              score class allows an intercept, this can be written as:
+            </p>
+            <p class="mini-equation">
+              f* ∈ arg min<sub>f ∈ G</sub> E<sub>0</sub>[(Y - f(X))<sup>2</sup>].
+            </p>
+            <p class="equation-note">
+              So the efficiency story is simple: inside the class you are
+              willing to use, choose the score that predicts the outcome best.
+              That is why better prediction and better efficiency line up here.
+            </p>
+          </div>
+
+          <div class="theory-note">
+            This is why AIPW is a class of estimators rather than a single
+            formula. We can optimize over a family of scores
+            <code>f(X)</code>, including data-adaptive ones. In practice, that
+            means we can search over scaled scores, linear recalibrations,
+            spline or isotonic calibrators, or richer machine-learning
+            regression classes.
+          </div>
+        </section>
+
+        <section class="section" id="ppi">
+          <div class="section-heading split">
+            <div>
+              <p class="eyebrow">PPI and PPI++</p>
+              <h2>Where PPI and PPI++ fit</h2>
+            </div>
+            <p class="section-side-note">
+              These are particular choices inside the broader AIPW family, not
+              unrelated estimators.
+            </p>
+          </div>
+
+          <div class="argument-grid">
+            <article class="argument-card">
+              <h3>PPI</h3>
+              <p>
+                If <code>m(X)</code> is the raw prediction score, then plain
+                PPI uses the raw score in the unlabeled-only plug-in form:
+              </p>
+              <p class="mini-equation">
+                θ̂<sub>PPI</sub> = (1 / N) ∑<sub>j=1</sub><sup>N</sup> m(X~<sub>j</sub>)
+                + (1 / n) ∑<sub>i=1</sub><sup>n</sup> [Y<sub>i</sub> - m(X<sub>i</sub>)]
+              </p>
+              <p>
+                In words: average the raw score on the unlabeled sample, then
+                add a labeled mean correction.
+              </p>
+            </article>
+            <article class="argument-card">
+              <h3>PPI++</h3>
+              <p>
+                PPI++ is the one-score efficiency-maximized version: it keeps
+                the AIPW structure but rescales the raw score.
+              </p>
+              <p class="mini-equation">
+                θ̂<sub>PPI++</sub> = θ̂(λ̂ m)
+              </p>
+              <p>
+                The scale factor <code>lambda</code> is chosen from the labeled
+                data to make the final estimator more efficient.
+              </p>
+            </article>
+            <article class="argument-card">
+              <h3>Empirical efficiency maximization</h3>
+              <p>
+                In the one-score case, this means choosing
+                <code>lambda</code> to minimize the estimated influence-function
+                variance over the scaling class <code>{lambda m(X)}</code>. A
+                compact summary is:
+              </p>
+              <p class="mini-equation">
+                λ̂ = arg min<sub>λ</sub> σ̂<sup>2</sup>(lambda m)
+              </p>
+            </article>
+          </div>
+
+          <div class="theory-visual">
+            <span class="diagram-kicker">Schematic 2</span>
+            <h3>One AIPW template, several score choices</h3>
+            <p>
+              The outer estimator stays the same. What changes is the score
+              that goes into it.
+            </p>
+            <svg
+              class="theory-diagram"
+              viewBox="0 0 920 360"
+              role="img"
+              aria-label="AIPW estimator family diagram with PPI and PPI++"
+            >
+              <defs>
+                <marker id="theoryArrowB" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#16323d"></path>
+                </marker>
+              </defs>
+              <rect class="diagram-panel-strong" x="280" y="28" width="360" height="78" rx="28"></rect>
+              <text class="diagram-text diagram-text-strong" x="366" y="61">AIPW template</text>
+              <text class="diagram-text" x="322" y="86">choose a score f(X), then add labeled correction</text>
+
+              <path class="diagram-line" d="M 460 106 L 460 150" marker-end="url(#theoryArrowB)"></path>
+
+              <rect class="diagram-panel" x="40" y="176" width="186" height="114" rx="24"></rect>
+              <rect class="diagram-panel-warm" x="256" y="176" width="186" height="114" rx="24"></rect>
+              <rect class="diagram-panel" x="472" y="176" width="186" height="114" rx="24"></rect>
+              <rect class="diagram-panel-strong" x="688" y="176" width="192" height="114" rx="24"></rect>
+
+              <path class="diagram-line" d="M 460 150 C 370 150, 270 158, 134 176" marker-end="url(#theoryArrowB)"></path>
+              <path class="diagram-line" d="M 460 150 C 430 150, 390 158, 350 176" marker-end="url(#theoryArrowB)"></path>
+              <path class="diagram-line" d="M 460 150 C 490 150, 530 158, 566 176" marker-end="url(#theoryArrowB)"></path>
+              <path class="diagram-line" d="M 460 150 C 550 150, 650 158, 784 176" marker-end="url(#theoryArrowB)"></path>
+
+              <text class="diagram-text diagram-text-strong" x="88" y="210">Raw score</text>
+              <text class="diagram-text" x="88" y="236">f(X) = m(X)</text>
+              <text class="diagram-text-small" x="62" y="264">Plain PPI is mean correction on</text>
+              <text class="diagram-text-small" x="62" y="282">the raw prediction scale.</text>
+
+              <text class="diagram-text diagram-text-strong" x="298" y="210">Efficiency-scaled score</text>
+              <text class="diagram-text" x="300" y="236">f(X) = lambda m(X)</text>
+              <text class="diagram-text-small" x="286" y="264">PPI++ chooses lambda to reduce</text>
+              <text class="diagram-text-small" x="286" y="282">empirical variance.</text>
+
+              <text class="diagram-text diagram-text-strong" x="522" y="210">Linear calibration</text>
+              <text class="diagram-text" x="520" y="236">f(X) = a + b m(X)</text>
+              <text class="diagram-text-small" x="496" y="264">Simple affine recalibration with</text>
+              <text class="diagram-text-small" x="496" y="282">the same AIPW wrapper.</text>
+
+              <text class="diagram-text diagram-text-strong" x="718" y="210">Monotone calibration</text>
+              <text class="diagram-text" x="724" y="236">f(X) = g(m(X))</text>
+              <text class="diagram-text-small" x="712" y="264">Flexible score improvement that</text>
+              <text class="diagram-text-small" x="712" y="282">still plugs into AIPW.</text>
+            </svg>
+            <p class="diagram-caption">
+              PPI is the raw-score member of the family. PPI++ is the
+              efficiency-scaled one-score version. Rubin and van der Laan (2008)
+              give the empirical efficiency-maximization idea behind that scale
+              choice. In this one-score setting, PPI++ is asymptotically
+              equivalent to linear calibration, even though the finite-sample
+              estimators are not identical.
+            </p>
+          </div>
+
+          <div class="theory-note">
+            A gentle way to think about empirical efficiency maximization is:
+            keep the AIPW wrapper fixed, then tune the score inside it. In the
+            one-score scaling class this is the same first-order path as linear
+            calibration. In richer classes, it says to choose the score that
+            gives the smallest limiting variance. In classes with an intercept,
+            this is the same as choosing the score with the smallest labeled
+            squared prediction error.
+          </div>
+        </section>
+
+        <section class="section" id="calibration">
+          <div class="section-heading split">
+            <div>
+              <p class="eyebrow">Calibration</p>
+              <h2>Why calibration helps</h2>
+            </div>
+            <p class="section-side-note">
+              Ranking is useful, but the scale also matters because we average
+              the score.
+            </p>
+          </div>
+
+          <div class="argument-grid">
+            <article class="argument-card">
+              <h3>Calibration improves the score</h3>
+              <p>
+                A score can rank units well but still be numerically off. If it
+                is too compressed, too steep, or shifted, its average is less
+                informative than it could be. Calibration makes the score more
+                faithful to the outcome scale.
+              </p>
+            </article>
+            <article class="argument-card">
+              <h3>Mean calibration keeps the estimator aligned</h3>
+              <p>
+                After calibration, the average score on labeled rows is aligned
+                with the observed outcome level. That is why the plug-in view
+                and the AIPW correction view agree rather than pulling toward
+                different targets.
+              </p>
+            </article>
+            <article class="argument-card">
+              <h3>Quality and safety move together</h3>
+              <p>
+                Calibration can improve efficiency by giving AIPW a better
+                score, while the labeled residual correction continues to guard
+                against remaining error. Linear and monotone calibration are
+                two practical ways to do this.
+              </p>
+            </article>
+          </div>
+
+          <div class="theory-note">
+            Starting from a raw score <code>m(X)</code>, calibration replaces it
+            by a transformed score <code>g(m(X))</code>. The ideal
+            one-dimensional target is <code>E[Y | m(X)]</code>: that is the
+            best squared-error predictor available from the original score
+            alone. So calibration is trying to make the score as predictive as
+            possible without asking for new features or retraining the original
+            model.
+          </div>
+
+          <div class="equation-card">
+            <p class="panel-label">Why Mean Calibration Is Enough</p>
+            <p class="equation-note">
+              Write the target mean as <code>theta_0 = E_0[Y]</code>. If a
+              calibrated score satisfies the mean-calibration condition
+            </p>
+            <p class="mini-equation">
+              E<sub>0</sub>[Y - f(X)] = 0,
+            </p>
+            <p class="equation-note">
+              then automatically
+            </p>
+            <p class="mini-equation">
+              E<sub>0</sub>[f(X)] = E<sub>0</sub>[Y] = theta_0.
+            </p>
+            <p class="equation-note">
+              So the pooled plug-in estimator
+              <code>(1 / (n + N)) [∑ f(X<sub>i</sub>) + ∑ f(X~<sub>j</sub>)]</code>
+              is targeting the right mean by itself. The AIPW version keeps the
+              extra labeled correction term
+              <code>(1 / n) ∑ [Y<sub>i</sub> - f(X<sub>i</sub>)]</code>,
+              which is centered at zero under mean calibration and acts as a
+              safeguard in finite samples or when calibration is imperfect.
+            </p>
+          </div>
+
+          <div class="theory-visual">
+            <span class="diagram-kicker">Schematic 3</span>
+            <h3>From a mis-scaled score to a better estimator input</h3>
+            <p>
+              Calibration is not just cosmetic. It changes the score that the
+              estimator averages.
+            </p>
+            <svg
+              class="theory-diagram"
+              viewBox="0 0 920 360"
+              role="img"
+              aria-label="Calibration before and after schematic"
+            >
+              <defs>
+                <marker id="theoryArrowC" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#16323d"></path>
+                </marker>
+              </defs>
+              <rect class="diagram-panel" x="30" y="42" width="320" height="230" rx="28"></rect>
+              <rect class="diagram-panel-strong" x="392" y="42" width="320" height="230" rx="28"></rect>
+              <rect class="diagram-panel-warm" x="726" y="106" width="164" height="100" rx="24"></rect>
+
+              <line class="diagram-line diagram-line-dashed" x1="82" y1="230" x2="292" y2="88"></line>
+              <path class="diagram-line diagram-warm" d="M 88 216 C 140 182, 176 184, 206 144 C 230 114, 254 108, 292 106"></path>
+
+              <line class="diagram-line diagram-line-dashed" x1="444" y1="230" x2="654" y2="88"></line>
+              <path class="diagram-line diagram-accent" d="M 450 218 C 500 190, 548 160, 598 126 C 622 110, 636 100, 654 94"></path>
+
+              <path class="diagram-line" d="M 712 156 L 726 156" marker-end="url(#theoryArrowC)"></path>
+
+              <text class="diagram-text diagram-text-strong" x="64" y="78">Before calibration</text>
+              <text class="diagram-text-small" x="64" y="102">score has useful ranking but the wrong scale</text>
+              <text class="diagram-text-small" x="90" y="248">raw prediction</text>
+              <text class="diagram-text-small" x="228" y="86">ideal alignment</text>
+
+              <text class="diagram-text diagram-text-strong" x="426" y="78">After calibration</text>
+              <text class="diagram-text-small" x="426" y="102">score is closer to the outcome scale</text>
+              <text class="diagram-text-small" x="450" y="248">calibrated score</text>
+              <text class="diagram-text-small" x="590" y="86">ideal alignment</text>
+
+              <text class="diagram-text diagram-text-strong" x="750" y="140">Better efficiency</text>
+              <text class="diagram-text" x="748" y="164">+</text>
+              <text class="diagram-text" x="768" y="164">mean-calibrated score</text>
+              <text class="diagram-text-small" x="748" y="188">plugin and correction views align</text>
+            </svg>
+            <p class="diagram-caption">
+              Once the calibrated score has the right average relationship to
+              observed outcomes on labeled data, averaging that score and
+              viewing it through the AIPW correction lens are two ways of
+              describing the same estimator.
+            </p>
+          </div>
+        </section>
+
+        <section class="section" id="learning">
+          <div class="section-heading split">
+            <div>
+              <p class="eyebrow">Flexible Learning</p>
+              <h2>Why data-adaptive learning is allowed</h2>
+            </div>
+            <p class="section-side-note">
+              You do not have to hand-build a tiny parametric score just to
+              stay on safe inferential ground.
+            </p>
+          </div>
+
+          <div class="argument-grid">
+            <article class="argument-card">
+              <h3>Use flexible scores when they help</h3>
+              <p>
+                The score <code>f(X)</code> can be learned with modern machine
+                learning if that gives a better approximation to
+                <code>mu_0(X)</code>. Better approximation usually means better
+                efficiency.
+              </p>
+            </article>
+            <article class="argument-card">
+              <h3>The correction protects you</h3>
+              <p>
+                AIPW is robust because the labeled residual term corrects the
+                prediction layer. That is why flexible outcome learning can be
+                used without turning the estimator into a naive plug-in
+                average.
+              </p>
+            </article>
+            <article class="argument-card">
+              <h3>Cross-fitting is the practical backup</h3>
+              <p>
+                If the labeled-sample fitting is very aggressive, split the
+                labeled data into folds, fit the score on one fold, and apply
+                the correction on another. That cross-fitting step avoids
+                overusing the same labels.
+              </p>
+            </article>
+          </div>
+
+          <div class="theory-note">
+            A brief technical note: one classical route is to keep the fitting
+            class sufficiently controlled on the labeled sample. A more modern
+            route is cross-fitting, which is often the cleaner choice when the
+            score is learned with more flexible machine-learning tools.
+          </div>
+        </section>
+
+        <section class="section" id="takeaway">
+          <div class="section-heading split">
+            <div>
+              <p class="eyebrow">Takeaway</p>
+              <h2>What this means in practice</h2>
+            </div>
+            <p class="section-side-note">
+              Think of the estimator as a safe wrapper around a score you are
+              trying to improve.
+            </p>
+          </div>
+
+          <div class="takeaway-grid">
+            <article class="takeaway-card">
+              <h3>Practical takeaway</h3>
+              <ul>
+                <li>AIPW is the safe wrapper.</li>
+                <li><code>f(X)</code> is the efficiency lever.</li>
+                <li>Calibration is one way to improve that lever.</li>
+                <li>PPI and PPI++ are specific choices inside this broader workflow.</li>
+              </ul>
+            </article>
+            <article class="takeaway-card">
+              <h3>Next step</h3>
+              <p>
+                If you want the API details, head back to the
+                <a href="./index.html#quickstart">Python quickstart</a> or the
+                <a href="./r.html">R package page</a>. If you want the formal
+                development, open the <a href="./paper.pdf">paper PDF</a>.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="references">
+          <div class="section-heading">
+            <p class="eyebrow">References</p>
+            <h2>Selected references</h2>
+            <p>
+              This page is a simplified overview. The formal theory and full
+              citations are in the paper, but the references below are the key
+              landmarks for the ideas summarized here.
+            </p>
+          </div>
+
+          <div class="reference-card">
+            <div class="reference-links">
+              <a href="./paper.pdf">Open paper PDF</a>
+              <a href="./index.html#quickstart">Python quickstart</a>
+              <a href="./r.html">R package</a>
+            </div>
+            <ul>
+              <li>Robins, Rotnitzky, and Zhao (1994). Augmented inverse-probability weighting for missing-data regression problems.</li>
+              <li>Rubin and van der Laan (2008). Empirical efficiency maximization for locally efficient covariate adjustment.</li>
+              <li>van der Laan and Rubin (2006). Targeted maximum likelihood and the broader debiased / semiparametric viewpoint.</li>
+              <li>Zheng and van der Laan (2010). Cross-fitted targeted learning as a route to valid inference with flexible nuisance fitting.</li>
+              <li>Angelopoulos, Bates, Fannjiang, Jordan, and Zrnic (2023). Prediction-powered inference.</li>
+              <li>Angelopoulos, Duchi, and Zrnic (2023). PPI++.</li>
+            </ul>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
