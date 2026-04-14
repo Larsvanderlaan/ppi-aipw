@@ -375,6 +375,10 @@ pre {
   gap: 16px;
 }
 
+.argument-grid-two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .argument-card,
 .takeaway-card,
 .info-box,
