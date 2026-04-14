@@ -158,9 +158,8 @@
               <p>
                 The first part is a pooled plug-in average of the score over
                 labeled and unlabeled covariates. The second part is the
-                labeled residual correction. Once you see that template, many familiar
-                semisupervised estimators become special cases of the same
-                object.
+                labeled residual correction. Many familiar semisupervised
+                estimators are just special cases of this template.
               </p>
             </article>
           </div>
@@ -201,9 +200,8 @@
               <text class="diagram-text-small" x="314" y="252">repairs systematic score error</text>
             </svg>
             <p class="diagram-caption">
-              A good score helps the pooled plug-in term. The second term is the safety
-              mechanism: it keeps the estimate tied to observed outcomes rather
-              than to raw model output alone.
+              A good score helps the pooled plug-in term. The correction term
+              keeps the estimate tied to observed outcomes.
             </p>
           </div>
         </section>
@@ -215,8 +213,7 @@
               <h2>AIPW is a class, not one estimator</h2>
             </div>
             <p class="section-side-note">
-              You are free to choose the score \(f(X)\). Different
-              choices give different AIPW estimators.
+              The score choice controls efficiency.
             </p>
           </div>
 
@@ -241,9 +238,9 @@
             <article class="argument-card">
               <h3>Efficiency is the practical goal</h3>
               <p>
-                In practice, this means tighter intervals and better use of the
-                labeled sample. The best score is the one that predicts the
-                outcome level well, not just the ranking.
+                In practice, this means tighter intervals. The best score is
+                the one that predicts the outcome level well, not just the
+                ranking.
               </p>
             </article>
           </div>
@@ -299,7 +296,7 @@
 \]
               </div>
               <p>
-                Same correction term as PPI, but it also uses the labeled
+                It uses the same correction term as PPI, but keeps the labeled
                 covariates in the plug-in average.
               </p>
             </article>
@@ -319,14 +316,10 @@
 \]
               </div>
               <p>
-                In words: average the raw score on the unlabeled sample, then
-                add a labeled mean correction.
-              </p>
-              <p>
                 Within the common AIPW family, this is equivalent to using the
                 rescaled score \(f(X)=m(X)/(1-\rho)\). So if \(m(X)\) is
-                already close to the right outcome scale, PPI can push that
-                score away from the best prediction target.
+                already close to the right outcome scale, PPI can push it in
+                the wrong direction.
               </p>
             </article>
             <article class="argument-card">
@@ -424,7 +417,7 @@
               Standard AIPW is the raw-score baseline. PPI is an inefficient
               variant that drops the labeled-sample plug-in contribution. PPI++
               is AIPW with empirical efficiency maximization over the scaling
-              class, in the sense of Rubin and van der Laan (2008).
+              class.
             </p>
           </div>
         </section>
@@ -436,8 +429,7 @@
               <h2>Why calibration helps</h2>
             </div>
             <p class="section-side-note">
-              Ranking is useful, but the scale also matters because we average
-              the score.
+              Ranking helps, but the scale matters too because we average the score.
             </p>
           </div>
 
@@ -446,9 +438,8 @@
               <h3>Calibration improves the score</h3>
               <p>
                 A score can rank units well but still be numerically off. If it
-                is too compressed, too steep, or shifted, its average is less
-                informative than it could be. Calibration makes the score more
-                faithful to the outcome scale.
+                is too compressed, too steep, or shifted, calibration makes it
+                more faithful to the outcome scale.
               </p>
             </article>
             <article class="argument-card">
@@ -456,8 +447,7 @@
               <p>
                 After calibration, the average score on labeled rows is aligned
                 with the observed outcome level. That is why the plug-in view
-                and the AIPW correction view agree rather than pulling toward
-                different targets.
+                and the AIPW correction view agree.
               </p>
             </article>
             <article class="argument-card">
@@ -465,8 +455,7 @@
               <p>
                 Calibration can improve efficiency by giving AIPW a better
                 score, while the labeled residual correction continues to guard
-                against remaining error. Linear and monotone calibration are
-                two practical ways to do this.
+                against remaining error.
               </p>
             </article>
           </div>
@@ -508,7 +497,7 @@ E_0[f(X)] = E_0[Y] = \theta_0.
               extra labeled correction term
               \(\frac{1}{n}\sum_{i=1}^{n}\{Y_i-f(X_i)\}\),
               which is centered at zero under mean calibration and acts as a
-              safeguard in finite samples or when calibration is imperfect.
+              safeguard in finite samples.
             </p>
           </div>
 
@@ -559,8 +548,7 @@ E_0[f(X)] = E_0[Y] = \theta_0.
             </svg>
             <p class="diagram-caption">
               Once the calibrated score has the right average relationship to
-              observed outcomes on labeled data, averaging that score and
-              viewing it through the AIPW correction lens are two ways of
+              observed outcomes on labeled data, the plug-in and AIPW views are
               describing the same estimator.
             </p>
           </div>
@@ -609,10 +597,9 @@ E_0[f(X)] = E_0[Y] = \theta_0.
           </div>
 
           <div class="theory-note">
-            A brief technical note: one classical route is to keep the fitting
-            class sufficiently controlled on the labeled sample. A more modern
-            route is cross-fitting, which is often the cleaner choice when the
-            score is learned with more flexible machine-learning tools.
+            For simpler fits, standard regularity conditions are often enough.
+            For more aggressive machine learning, cross-fitting is the usual
+            safeguard.
           </div>
         </section>
 

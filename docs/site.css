@@ -597,6 +597,7 @@ pre {
   line-height: 1.45;
   letter-spacing: -0.01em;
   color: var(--ink);
+  width: 100%;
   overflow-x: auto;
 }
 
@@ -608,6 +609,12 @@ pre {
 .mini-equation mjx-container[jax="SVG"] > svg {
   max-width: 100%;
   height: auto !important;
+}
+
+.argument-card,
+.equation-card,
+.theory-note {
+  overflow: hidden;
 }
 
 .theory-visual {
