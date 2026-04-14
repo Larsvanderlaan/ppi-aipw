@@ -4,7 +4,7 @@ Many modern applications involve a small labeled dataset, a much larger unlabele
 
 `ppi_aipw` is designed for this setting. It uses AIPW (Robins et al., 1994) as a safe and statistically efficient baseline for semisupervised mean inference when outcomes are missing completely at random. AIPW remains valid even when the prediction model is misspecified because it is doubly robust. The package then goes beyond mean-bias correction by adding calibration methods that improve the reliability of the prediction score itself, which can yield more efficient semisupervised inference when the raw predictions are miscalibrated.
 
-(Package Website)[https://larsvanderlaan.github.io/ppi-aipw/]
+[Package Website](https://larsvanderlaan.github.io/ppi-aipw/)
 ## What calibration means here
 
 From an ML perspective, calibration means the prediction scale is trustworthy, not just the ranking. If a model outputs values near `0.8`, we want outcomes near `0.8` on average for cases scored around `0.8`.
