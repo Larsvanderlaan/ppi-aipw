@@ -472,7 +472,7 @@ pre {
 
 .case-study-figure {
   margin: 18px 0 0;
-  padding: 14px;
+  padding: 10px 10px 12px;
   border-radius: 20px;
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.74);
@@ -487,11 +487,11 @@ pre {
 
 .case-study-figure figcaption {
   margin: 10px auto 0;
-  max-width: 34ch;
+  max-width: 28ch;
   color: var(--muted);
-  font-size: 0.95rem;
-  line-height: 1.6;
-  text-align: left;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  text-align: center;
 }
 
 .method-tabs,

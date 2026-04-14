@@ -123,7 +123,7 @@ def save_case_study_figure(spec: CaseStudySpec) -> tuple[Path, Path]:
         (spec.smooth_label, comparison_diagnostics_for_scores(y_labeled, smooth_scores), "#9467bd"),
     ]
 
-    fig, ax = plt.subplots(1, 1, figsize=(6.8, 5.6))
+    fig, ax = plt.subplots(1, 1, figsize=(7.4, 4.9))
     all_grid = np.concatenate([curve.per_output[0].grid_scores for _, curve, _ in curves])
     all_fit = np.concatenate([curve.per_output[0].fitted_curve for _, curve, _ in curves])
     lo = float(min(np.min(all_grid), np.min(all_fit)))
@@ -135,16 +135,24 @@ def save_case_study_figure(spec: CaseStudySpec) -> tuple[Path, Path]:
     ax.set_xlabel("Score value")
     ax.set_ylabel("Observed outcome")
     ax.grid(alpha=0.12)
-    ax.legend(frameon=True, fontsize=10.5, loc="upper left")
+    ax.legend(
+        frameon=True,
+        fontsize=9.8,
+        loc="upper left",
+        ncol=2,
+        columnspacing=1.0,
+        handlelength=1.8,
+        borderpad=0.5,
+    )
 
     # The webpage already supplies the benchmark title and explanation, so let
     # the exported image spend its area on the plot itself.
-    fig.subplots_adjust(left=0.15, right=0.98, top=0.98, bottom=0.14)
+    fig.subplots_adjust(left=0.11, right=0.985, top=0.985, bottom=0.14)
 
     docs_png = DOCS_ASSETS / f"{spec.docs_stem}.png"
     out_pdf = OUTPUT_DIR / f"{spec.docs_stem}.pdf"
-    fig.savefig(docs_png, dpi=220, bbox_inches="tight")
-    fig.savefig(out_pdf, bbox_inches="tight")
+    fig.savefig(docs_png, dpi=220, bbox_inches="tight", pad_inches=0.02)
+    fig.savefig(out_pdf, bbox_inches="tight", pad_inches=0.02)
     plt.close(fig)
     return docs_png, out_pdf
 
