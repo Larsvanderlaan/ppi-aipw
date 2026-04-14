@@ -440,10 +440,14 @@ E_0[f(X)] = E_0[Y] = \theta_0.
 \]
             </div>
             <p class="equation-note">
-              So the pooled plug-in mean targets the right estimand. AIPW
-              keeps the extra correction term
-              \(\frac{1}{n}\sum_{i=1}^{n}\{Y_i-f(X_i)\}\), which is centered
-              at zero under mean calibration and helps in finite samples.
+              So the pooled plug-in mean targets the right estimand. For many
+              calibrated methods, the extra correction term
+              \(\frac{1}{n}\sum_{i=1}^{n}\{Y_i-f(X_i)\}\) is exactly zero, or
+              numerically very close to zero, on the sample used to fit the
+              calibration. In those cases the plug-in and AIPW forms are
+              effectively the same. When calibration is only approximate or
+              fitting and evaluation are separated, the correction need not
+              vanish and remains a safety layer.
             </p>
           </div>
 
@@ -467,15 +471,15 @@ E_0[f(X)] = E_0[Y] = \theta_0.
               </defs>
               <rect class="diagram-panel" x="42" y="42" width="320" height="230" rx="28"></rect>
               <rect class="diagram-panel-strong" x="398" y="42" width="320" height="230" rx="28"></rect>
-              <rect class="diagram-panel-warm" x="760" y="110" width="150" height="92" rx="24"></rect>
+              <rect class="diagram-panel-warm" x="736" y="110" width="190" height="92" rx="24"></rect>
 
               <line class="diagram-line diagram-line-dashed" x1="94" y1="230" x2="304" y2="88"></line>
-              <path class="diagram-line diagram-warm" d="M 100 214 C 134 198, 164 174, 198 170 C 226 166, 246 150, 268 122 C 282 104, 294 98, 304 98"></path>
+              <path class="diagram-line diagram-warm" d="M 100 220 C 136 206, 164 192, 194 184 C 222 176, 242 150, 262 122 C 278 102, 292 92, 304 92"></path>
 
               <line class="diagram-line diagram-line-dashed" x1="450" y1="230" x2="660" y2="88"></line>
               <path class="diagram-line diagram-accent" d="M 456 218 C 506 190, 554 160, 604 126 C 628 110, 642 100, 660 94"></path>
 
-              <path class="diagram-line" d="M 718 156 L 760 156" marker-end="url(#theoryArrowC)"></path>
+              <path class="diagram-line" d="M 718 156 L 736 156" marker-end="url(#theoryArrowC)"></path>
 
               <text class="diagram-text diagram-text-strong" x="76" y="78">Before calibration</text>
               <text class="diagram-text-small" x="76" y="102">good ranking, wrong scale</text>
@@ -487,8 +491,8 @@ E_0[f(X)] = E_0[Y] = \theta_0.
               <text class="diagram-text-small" x="456" y="248">calibrated score</text>
               <text class="diagram-text-small" x="594" y="86">ideal fit</text>
 
-              <text class="diagram-text diagram-text-strong" x="782" y="142">Better efficiency</text>
-              <text class="diagram-text-small" x="782" y="168">mean-calibrated score</text>
+              <text class="diagram-text diagram-text-strong" x="760" y="142">Better efficiency</text>
+              <text class="diagram-text-small" x="760" y="168">mean-calibrated score</text>
             </svg>
             <p class="diagram-caption">
               Once the score is mean-calibrated, the plug-in and AIPW views
