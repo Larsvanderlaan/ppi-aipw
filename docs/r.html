@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ppiAIPW for R</title>
+    <meta
+      name="description"
+      content="Native R package for semisupervised mean inference with AIPW, calibration, diagnostics, and causal inference."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./site.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <nav class="topbar">
+          <div class="brand"><a href="./index.html">ppi_aipw</a></div>
+          <div class="toplinks">
+            <a href="./index.html">Python</a>
+            <a href="#install">Install</a>
+            <a href="#quickstart">Quickstart</a>
+            <a href="#vignettes">Vignettes</a>
+            <a href="./causal.html">Causal Inference</a>
+          </div>
+          <a class="paper-link" href="./paper.pdf">
+            <span class="paper-link-icon" aria-hidden="true"></span>
+            <span>Paper PDF</span>
+          </a>
+        </nav>
+
+        <div class="hero-grid">
+          <section class="hero-copy">
+            <p class="eyebrow">R Package</p>
+            <h1>Native R access to semisupervised mean inference with AIPW and calibration.</h1>
+            <p class="lede">
+              <code>ppiAIPW</code> brings the same overall workflow to R with a
+              plain functional API, lightweight S3 result objects, calibration
+              diagnostics, weighting utilities, and a causal wrapper for
+              arm-specific means and Wald ATEs.
+            </p>
+            <div class="hero-actions">
+              <a class="button button-primary" href="#quickstart">R Quickstart</a>
+              <a class="button button-secondary" href="https://github.com/Larsvanderlaan/ppi-aipw/tree/main/r/ppiAIPW">Open Package Source</a>
+            </div>
+          </section>
+
+          <aside class="hero-panel">
+            <div class="panel-card gradient-card">
+              <p class="panel-label">Main Entry Point</p>
+              <div class="default-stack">
+                <div>
+                  <span class="stack-name">Function</span>
+                  <strong><code>mean_inference(...)</code></strong>
+                </div>
+                <div>
+                  <span class="stack-name">Default Method</span>
+                  <strong><code>method="monotone_spline"</code></strong>
+                </div>
+              </div>
+              <p class="panel-note">
+                Functional, console-friendly, and aimed at biostats, epi, and
+                applied ML workflows in R.
+              </p>
+            </div>
+            <div class="panel-card code-card">
+              <p class="panel-label">Minimal Example</p>
+              <pre><code>library(ppiAIPW)
+
+result = mean_inference(
+    Y,
+    Yhat,
+    Yhat_unlabeled,
+    method = "monotone_spline",
+    alpha = 0.1
+)
+
+print(result)
+summary(result)</code></pre>
+            </div>
+          </aside>
+        </div>
+      </header>
+
+      <main>
+        <section class="section" id="install">
+          <div class="section-heading split">
+            <div>
+              <p class="eyebrow">Install</p>
+              <h2>Install the R package from GitHub or from a local checkout</h2>
+            </div>
+            <p class="section-side-note">
+              The R package lives in the repository subdirectory
+              <code>r/ppiAIPW</code>, so GitHub installs should target that
+              subdirectory explicitly.
+            </p>
+          </div>
+
+          <div class="argument-grid">
+            <article class="argument-card">
+              <h3>GitHub install with <code>remotes</code></h3>
+              <pre><code>remotes::install_github(
+  "Larsvanderlaan/ppi-aipw",
+  subdir = "r/ppiAIPW"
+)</code></pre>
+            </article>
+            <article class="argument-card">
+              <h3>GitHub install with <code>pak</code></h3>
+              <pre><code>pak::pak("Larsvanderlaan/ppi-aipw/r/ppiAIPW")</code></pre>
+            </article>
+            <article class="argument-card">
+              <h3>Local source install</h3>
+              <pre><code>R CMD INSTALL r/ppiAIPW</code></pre>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="quickstart">
+          <div class="section-heading">
+            <p class="eyebrow">Quickstart</p>
+            <h2>Start with <code>mean_inference(...)</code></h2>
+            <p>
+              The R package follows the same conceptual API as the Python
+              package, but with R-native functional usage and S3 result objects.
+              Use <code>mean_inference(...)</code> when you want the point
+              estimate, standard error, confidence interval, fitted calibrator,
+              and diagnostics together.
+            </p>
+          </div>
+
+          <div class="panel-card code-card">
+            <pre><code>library(ppiAIPW)
+
+result = mean_inference(
+    Y,
+    Yhat,
+    Yhat_unlabeled,
+    method = "monotone_spline",
+    alpha = 0.1
+)
+
+estimate = result$pointestimate
+standard_error = result$se
+lower = result$ci[[1]]
+upper = result$ci[[2]]
+
+summary(result)</code></pre>
+          </div>
+
+          <div class="argument-grid">
+            <article class="argument-card">
+              <h3><code>mean_pointestimate()</code></h3>
+              <p>Return only the point estimate when you do not need the full result object.</p>
+            </article>
+            <article class="argument-card">
+              <h3><code>mean_se()</code> and <code>mean_ci()</code></h3>
+              <p>Pull out uncertainty summaries directly for scripting or reporting pipelines.</p>
+            </article>
+            <article class="argument-card">
+              <h3><code>method="auto"</code></h3>
+              <p>Choose among <code>"aipw"</code>, <code>"linear"</code>, <code>"monotone_spline"</code>, and <code>"isotonic"</code> by cross-validated influence-function variance.</p>
+            </article>
+            <article class="argument-card">
+              <h3><code>calibration_diagnostics()</code></h3>
+              <p>Inspect binned labeled-sample calibration and plot the fitted curve from a result or fitted model.</p>
+            </article>
+            <article class="argument-card">
+              <h3><code>causal_inference()</code></h3>
+              <p>Estimate arm-specific means and control-vs-treatment ATEs from predicted potential outcomes in one R call.</p>
+            </article>
+            <article class="argument-card">
+              <h3><code>compute_two_sample_balancing_weights()</code></h3>
+              <p>Construct nonnegative labeled-sample balancing weights for two-sample mean problems.</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="vignettes">
+          <div class="section-heading split">
+            <div>
+              <p class="eyebrow">Vignettes</p>
+              <h2>Three starting points for R users</h2>
+            </div>
+            <p class="section-side-note">
+              These documents live in the package source and install with the
+              package, so they can be opened locally after installation.
+            </p>
+          </div>
+
+          <div class="takeaway-grid">
+            <article class="takeaway-card">
+              <h3>Quickstart</h3>
+              <p>
+                <a href="https://github.com/Larsvanderlaan/ppi-aipw/blob/main/r/ppiAIPW/vignettes/ppiAIPW-quickstart.Rmd"><code>ppiAIPW-quickstart.Rmd</code></a>
+                gives the main estimation workflow and core result-object usage.
+              </p>
+            </article>
+            <article class="takeaway-card">
+              <h3>Causal inference</h3>
+              <p>
+                <a href="https://github.com/Larsvanderlaan/ppi-aipw/blob/main/r/ppiAIPW/vignettes/ppiAIPW-causal.Rmd"><code>ppiAIPW-causal.Rmd</code></a>
+                shows arm means and ATEs from the causal wrapper.
+              </p>
+            </article>
+            <article class="takeaway-card">
+              <h3>Calibration diagnostics</h3>
+              <p>
+                <a href="https://github.com/Larsvanderlaan/ppi-aipw/blob/main/r/ppiAIPW/vignettes/ppiAIPW-diagnostics.Rmd"><code>ppiAIPW-diagnostics.Rmd</code></a>
+                covers labeled-sample calibration summaries and plots.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="parity">
+          <div class="section-heading split">
+            <div>
+              <p class="eyebrow">Parity</p>
+              <h2>Close to the Python package, but designed for R users</h2>
+            </div>
+            <p class="section-side-note">
+              The target is close functional parity and the same practical
+              workflow, not byte-for-byte identical optimizer traces.
+            </p>
+          </div>
+
+          <div class="argument-grid">
+            <article class="argument-card">
+              <h3>What is shared</h3>
+              <p>The same mean-inference problem setup, the same major method families, the same default recommendation, and the same causal convenience layer.</p>
+            </article>
+            <article class="argument-card">
+              <h3>What feels different in R</h3>
+              <p>Functions return list-like S3 objects with <code>print()</code>, <code>summary()</code>, and <code>plot()</code> methods instead of Python result classes.</p>
+            </article>
+            <article class="argument-card">
+              <h3>When to use this page</h3>
+              <p>If your team works in RMarkdown, Quarto, or standard R analysis scripts and wants a native package rather than a Python bridge.</p>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

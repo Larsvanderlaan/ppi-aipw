@@ -1,0 +1,26 @@
+---
+title: "Calibration Diagnostics"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Calibration Diagnostics}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r}
+library(ppiAIPW)
+
+set.seed(3)
+Y <- rbinom(100, 1, 0.5)
+Yhat <- pmin(pmax(plogis(qlogis(0.1 + 0.8 * Y + runif(100, -0.6, 0.6))), 0.01), 0.99)
+Yhat_unlabeled <- runif(300, 0.01, 0.99)
+
+result <- mean_inference(Y, Yhat, Yhat_unlabeled, method = "isotonic")
+diag_obj <- calibration_diagnostics(result, Y, Yhat)
+
+print(diag_obj)
+plot_calibration(diag_obj)
+```
+
+Diagnostics are built from the labeled sample and can be computed from either a
+fitted `ppi_mean_result` or a reusable calibration model.
