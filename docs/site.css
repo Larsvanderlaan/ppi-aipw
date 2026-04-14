@@ -486,10 +486,12 @@ pre {
 }
 
 .case-study-figure figcaption {
-  margin-top: 10px;
+  margin: 10px auto 0;
+  max-width: 34ch;
   color: var(--muted);
   font-size: 0.95rem;
   line-height: 1.6;
+  text-align: left;
 }
 
 .method-tabs,
