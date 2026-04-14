@@ -37,12 +37,12 @@
         <div class="hero-grid">
           <section class="hero-copy">
             <p class="eyebrow">R Package</p>
-            <h1>Native R access to semisupervised mean inference with AIPW and calibration.</h1>
+            <h1>Native R package for semisupervised mean inference with AIPW and calibration.</h1>
             <p class="lede">
-              <code>ppiAIPW</code> brings the same overall workflow to R with a
-              plain functional API, lightweight S3 result objects, calibration
-              diagnostics, weighting utilities, and a causal wrapper for
-              arm-specific means and Wald ATEs.
+              <code>ppiAIPW</code> takes labeled outcomes, labeled predictions,
+              and unlabeled predictions, and returns point estimates, standard
+              errors, confidence intervals, calibration diagnostics, and a
+              Wald causal wrapper.
             </p>
             <div class="hero-actions">
               <a class="button button-primary" href="#quickstart">R Quickstart</a>
@@ -64,8 +64,7 @@
                 </div>
               </div>
               <p class="panel-note">
-                Functional, console-friendly, and aimed at biostats, epi, and
-                applied ML workflows in R.
+                Functions first, with lightweight S3 result objects.
               </p>
             </div>
             <div class="panel-card code-card">
@@ -125,11 +124,9 @@ summary(result)</code></pre>
             <p class="eyebrow">Quickstart</p>
             <h2>Start with <code>mean_inference(...)</code></h2>
             <p>
-              The R package follows the same conceptual API as the Python
-              package, but with R-native functional usage and S3 result objects.
-              Use <code>mean_inference(...)</code> when you want the point
-              estimate, standard error, confidence interval, fitted calibrator,
-              and diagnostics together.
+              Use <code>mean_inference(...)</code> when you want the estimate,
+              standard error, confidence interval, fitted calibrator, and
+              diagnostics in one call.
             </p>
           </div>
 
@@ -163,19 +160,19 @@ summary(result)</code></pre>
             </article>
             <article class="argument-card">
               <h3><code>method="auto"</code></h3>
-              <p>Choose among <code>"aipw"</code>, <code>"linear"</code>, <code>"monotone_spline"</code>, and <code>"isotonic"</code> by cross-validated influence-function variance.</p>
+              <p>Choose among <code>"aipw"</code>, <code>"linear"</code>, <code>"monotone_spline"</code>, and <code>"isotonic"</code>.</p>
             </article>
             <article class="argument-card">
               <h3><code>calibration_diagnostics()</code></h3>
-              <p>Inspect binned labeled-sample calibration and plot the fitted curve from a result or fitted model.</p>
+              <p>Inspect labeled-sample calibration from a result or fitted model.</p>
             </article>
             <article class="argument-card">
               <h3><code>causal_inference()</code></h3>
-              <p>Estimate arm-specific means and control-vs-treatment ATEs from predicted potential outcomes in one R call.</p>
+              <p>Estimate arm means and control-vs-treatment ATEs from predicted potential outcomes.</p>
             </article>
             <article class="argument-card">
               <h3><code>compute_two_sample_balancing_weights()</code></h3>
-              <p>Construct nonnegative labeled-sample balancing weights for two-sample mean problems.</p>
+              <p>Construct nonnegative labeled-sample balancing weights.</p>
             </article>
           </div>
         </section>
@@ -220,27 +217,27 @@ summary(result)</code></pre>
         <section class="section" id="parity">
           <div class="section-heading split">
             <div>
-              <p class="eyebrow">Parity</p>
-              <h2>Close to the Python package, but designed for R users</h2>
+              <p class="eyebrow">Notes</p>
+              <h2>R interface, same core workflow</h2>
             </div>
             <p class="section-side-note">
-              The target is close functional parity and the same practical
-              workflow, not byte-for-byte identical optimizer traces.
+              The R package keeps the same core workflow as the Python package,
+              with an R-native interface.
             </p>
           </div>
 
           <div class="argument-grid">
             <article class="argument-card">
-              <h3>What is shared</h3>
-              <p>The same mean-inference problem setup, the same major method families, the same default recommendation, and the same causal convenience layer.</p>
+              <h3>Core API</h3>
+              <p><code>mean_inference()</code>, <code>mean_pointestimate()</code>, <code>mean_se()</code>, <code>mean_ci()</code>, diagnostics, weights, and the causal wrapper are all available in R.</p>
             </article>
             <article class="argument-card">
-              <h3>What feels different in R</h3>
-              <p>Functions return list-like S3 objects with <code>print()</code>, <code>summary()</code>, and <code>plot()</code> methods instead of Python result classes.</p>
+              <h3>Result objects</h3>
+              <p>Functions return S3 objects with <code>print()</code>, <code>summary()</code>, and <code>plot()</code> methods.</p>
             </article>
             <article class="argument-card">
-              <h3>When to use this page</h3>
-              <p>If your team works in RMarkdown, Quarto, or standard R analysis scripts and wants a native package rather than a Python bridge.</p>
+              <h3>Install path</h3>
+              <p>The package lives in <code>r/ppiAIPW</code>, so GitHub installs should use the repository subdirectory.</p>
             </article>
           </div>
         </section>
