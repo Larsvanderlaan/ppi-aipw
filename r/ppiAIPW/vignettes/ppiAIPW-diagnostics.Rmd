@@ -21,5 +21,15 @@ print(diag_obj)
 plot_calibration(diag_obj)
 ```
 
-Diagnostics are built from the labeled sample and can be computed from either a
-fitted `ppi_mean_result` or a reusable calibration model.
+Diagnostics are computed from labeled outcomes, but by default they use
+out-of-fold calibrated scores for a more honest visual check. Use
+`diagnostic_mode = "in_sample"` only when you want a purely descriptive
+fit-on-fit view. Diagnostics can be computed from either a fitted
+`ppi_mean_result` or a reusable calibration model.
+
+Interpret the plot as follows:
+
+- the fitted curve is the score-to-outcome map implied by the fitted calibrator
+- the filled raw-score points place each bin's mean outcome at that bin's mean raw score
+- the open calibrated-score points place that same bin mean outcome at the corresponding mean calibrated score
+- horizontal movement toward the identity line means recalibration improved the score scale

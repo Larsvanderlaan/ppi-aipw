@@ -470,6 +470,28 @@ pre {
   opacity: 1;
 }
 
+.case-study-figure {
+  margin: 18px 0 0;
+  padding: 14px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.case-study-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 14px;
+}
+
+.case-study-figure figcaption {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
 .method-tabs,
 .toggle-row {
   display: flex;

@@ -93,7 +93,7 @@ against the null value `0`. You can override the test target if needed:
 print(result.summary(null=1.0))
 ```
 
-If you want a labeled-sample calibration check after fitting, use:
+If you want an optional honest out-of-fold calibration check after fitting, use:
 
 ```python
 from ppi_aipw import calibration_diagnostics
@@ -101,9 +101,19 @@ from ppi_aipw import calibration_diagnostics
 diagnostics = calibration_diagnostics(result, Y, Yhat, num_bins=10)
 ```
 
-This returns structured bin-level diagnostics and the fitted calibration curve.
-If you want a quick plot, use `plot_calibration(diagnostics, ...)`. Plotting is
-optional and requires `matplotlib`.
+By default this uses out-of-fold calibrated scores on the labeled sample. If
+you want a purely descriptive fit-on-fit view instead, pass
+`diagnostic_mode="in_sample"`. The returned object stores bin-level summaries
+and the fitted calibration curve. If you want a quick plot, use
+`plot_calibration(diagnostics, ...)`. Plotting is optional and requires
+`matplotlib`.
+
+When you read the plot:
+
+- the fitted curve is the score-to-outcome map implied by the fitted calibrator
+- the filled raw-score points place each bin's mean outcome at that bin's mean raw score
+- the hollow calibrated-score points place that same bin mean outcome at the corresponding mean calibrated score
+- horizontal movement toward the identity line means recalibration improved the score scale
 
 ## What The Arguments Mean
 

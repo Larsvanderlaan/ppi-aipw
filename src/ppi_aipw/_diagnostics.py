@@ -4,8 +4,9 @@ from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
+from sklearn.model_selection import KFold
 
-from ._api import MeanInferenceResult, PrognosticLinearModel
+from ._api import MeanInferenceResult, PrognosticLinearModel, _fit_and_calibrate, _fit_prognostic_linear
 from ._calibration import CalibrationModel
 from ._utils import construct_weight_vector, reshape_to_2d, validate_pair_inputs
 
@@ -27,10 +28,12 @@ class CalibrationCurveDiagnostics:
 @dataclass(frozen=True)
 class CalibrationDiagnostics:
     method: str
+    diagnostic_mode: str
     n_outputs: int
     n_labeled: int
     num_bins: int
     per_output: tuple[CalibrationCurveDiagnostics, ...]
+    effective_num_folds: int | None = None
     reference_covariates: np.ndarray | None = None
 
 
@@ -61,6 +64,20 @@ def _resolve_model(
 
 def _weighted_average(x: np.ndarray, weights: np.ndarray) -> float:
     return float(np.average(np.asarray(x, dtype=float), weights=np.asarray(weights, dtype=float)))
+
+
+def _normalize_diagnostic_mode(diagnostic_mode: str) -> str:
+    mode = diagnostic_mode.lower().replace("-", "_")
+    aliases = {
+        "out_of_fold": "out_of_fold",
+        "oof": "out_of_fold",
+        "in_sample": "in_sample",
+        "insample": "in_sample",
+    }
+    try:
+        return aliases[mode]
+    except KeyError as exc:
+        raise ValueError("diagnostic_mode must be 'out_of_fold' or 'in_sample'.") from exc
 
 
 def _bin_diagnostics(
@@ -107,32 +124,90 @@ def calibration_diagnostics(
     *,
     X: np.ndarray | None = None,
     w: np.ndarray | None = None,
+    diagnostic_mode: str = "out_of_fold",
+    num_folds: int = 10,
     num_bins: int = 10,
 ) -> CalibrationDiagnostics:
-    """Builds labeled-sample calibration diagnostics for a fitted result or model."""
+    """Builds calibration diagnostics for a fitted result or model.
+
+    By default, diagnostics use out-of-fold labeled predictions for a more
+    honest calibration check. Set ``diagnostic_mode="in_sample"`` if you want
+    a purely descriptive fit-on-fit view instead.
+    """
 
     if num_bins < 1:
         raise ValueError("num_bins must be at least 1.")
+    if num_folds < 2:
+        raise ValueError("num_folds must be at least 2.")
 
     model = _resolve_model(obj)
+    diagnostic_mode = _normalize_diagnostic_mode(diagnostic_mode)
     Y_2d, Yhat_2d = validate_pair_inputs(Y, Yhat)
     weights = construct_weight_vector(Y_2d.shape[0], w, vectorized=False)
     X_2d = _coerce_covariates(X, n_obs=Y_2d.shape[0])
 
-    if isinstance(model, PrognosticLinearModel):
-        if model.x_dim > 0:
-            if X_2d is None:
-                raise ValueError(
-                    "X is required for calibration diagnostics when the fitted model uses prognostic covariates."
-                )
+    if isinstance(model, PrognosticLinearModel) and model.x_dim > 0 and X_2d is None:
+        raise ValueError(
+            "X is required for calibration diagnostics when the fitted model uses prognostic covariates."
+        )
+
+    def _predict_with_model(current_model: CalibrationModel | PrognosticLinearModel) -> tuple[np.ndarray, np.ndarray | None]:
+        if isinstance(current_model, PrognosticLinearModel):
+            if current_model.x_dim > 0:
+                assert X_2d is not None
+                reference_covariates_local = np.average(X_2d, axis=0, weights=weights)
+                calibrated_labeled_local = np.asarray(current_model.predict(Yhat_2d, X=X_2d), dtype=float)
+            else:
+                reference_covariates_local = None
+                calibrated_labeled_local = np.asarray(current_model.predict(Yhat_2d), dtype=float)
+        else:
+            reference_covariates_local = None
+            calibrated_labeled_local = np.asarray(current_model.predict(Yhat_2d), dtype=float)
+        return calibrated_labeled_local, reference_covariates_local
+
+    if diagnostic_mode == "in_sample":
+        calibrated_labeled, reference_covariates = _predict_with_model(model)
+        effective_num_folds = None
+    else:
+        n_splits = min(int(num_folds), Y_2d.shape[0])
+        if n_splits < 2:
+            raise ValueError(
+                "out_of_fold calibration diagnostics require at least two labeled observations."
+            )
+        splitter = KFold(n_splits=n_splits, shuffle=True, random_state=0)
+        calibrated_labeled = np.zeros_like(Y_2d, dtype=float)
+        if isinstance(model, PrognosticLinearModel) and model.x_dim > 0:
+            assert X_2d is not None
             reference_covariates = np.average(X_2d, axis=0, weights=weights)
-            calibrated_labeled = np.asarray(model.predict(Yhat_2d, X=X_2d), dtype=float)
         else:
             reference_covariates = None
-            calibrated_labeled = np.asarray(model.predict(Yhat_2d), dtype=float)
-    else:
-        reference_covariates = None
-        calibrated_labeled = np.asarray(model.predict(Yhat_2d), dtype=float)
+
+        for train_idx, val_idx in splitter.split(Y_2d):
+            train_weight = None if w is None else np.asarray(w, dtype=float).reshape(-1)[train_idx]
+            if isinstance(model, PrognosticLinearModel):
+                _, _, _, pred_val, _ = _fit_prognostic_linear(
+                    Y_2d[train_idx],
+                    Yhat_2d[train_idx],
+                    Yhat_2d[val_idx],
+                    X=None if X_2d is None else X_2d[train_idx],
+                    X_unlabeled=None if X_2d is None else X_2d[val_idx],
+                    w=train_weight,
+                )
+            else:
+                _, _, _, pred_val, _ = _fit_and_calibrate(
+                    Y_2d[train_idx],
+                    Yhat_2d[train_idx],
+                    Yhat_2d[val_idx],
+                    method=model.method,
+                    w=train_weight,
+                    X=None,
+                    X_unlabeled=None,
+                    isocal_backend=str(model.metadata.get("isocal_backend") or "xgboost"),
+                    isocal_max_depth=int(model.metadata.get("isocal_max_depth", 20)),
+                    isocal_min_child_weight=float(model.metadata.get("isocal_min_child_weight", 10.0)),
+                )
+            calibrated_labeled[val_idx] = np.asarray(pred_val, dtype=float)
+        effective_num_folds = n_splits
 
     per_output: list[CalibrationCurveDiagnostics] = []
     for idx in range(Y_2d.shape[1]):
@@ -179,10 +254,12 @@ def calibration_diagnostics(
 
     return CalibrationDiagnostics(
         method=model.method,
+        diagnostic_mode=diagnostic_mode,
         n_outputs=Y_2d.shape[1],
         n_labeled=Y_2d.shape[0],
         num_bins=min(num_bins, Y_2d.shape[0]),
         per_output=tuple(per_output),
+        effective_num_folds=effective_num_folds,
         reference_covariates=reference_covariates,
     )
 
@@ -195,7 +272,14 @@ def plot_calibration(
     show_identity: bool = True,
     show_bins: bool = True,
 ) -> Any:
-    """Plots a calibration curve from :func:`calibration_diagnostics` output."""
+    """Plots a calibration diagnostic from :func:`calibration_diagnostics` output.
+
+    The fitted curve is the score-to-outcome map implied by the fitted
+    calibrator. The filled raw-score points place each bin's mean outcome at
+    that bin's mean raw score. The hollow calibrated-score points place the
+    same bin mean outcome at the corresponding mean calibrated score, so their
+    horizontal shift shows how recalibration moves the score scale.
+    """
 
     try:
         import matplotlib.pyplot as plt
@@ -231,7 +315,7 @@ def plot_calibration(
             record.bin_mean_outcome,
             color="C1",
             s=35,
-            label="Binned outcome vs raw score",
+            label="Bin mean outcome at raw score",
         )
         ax.scatter(
             record.bin_mean_calibrated_score,
@@ -240,12 +324,14 @@ def plot_calibration(
             edgecolors="C2",
             s=35,
             linewidths=1.5,
-            label="Binned outcome vs calibrated score",
+            label="Same bin outcome at calibrated score",
         )
 
-    ax.set_xlabel("Prediction score")
+    ax.set_xlabel("Score value")
     ax.set_ylabel("Observed outcome")
     title = f"{diagnostics.method} calibration"
+    if diagnostics.diagnostic_mode == "out_of_fold":
+        title += " (out-of-fold)"
     if diagnostics.n_outputs > 1:
         title += f" (output {output_index})"
     ax.set_title(title)

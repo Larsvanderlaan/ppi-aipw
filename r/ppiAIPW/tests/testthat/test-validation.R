@@ -90,5 +90,6 @@ test_that("calibration diagnostics validate num_bins and object types", {
   model <- fit_calibrator(y, yhat, method = "linear")
 
   expect_error(calibration_diagnostics(model, y, yhat, num_bins = 0), "at least 1")
+  expect_error(calibration_diagnostics(model, y, yhat, num_folds = 1), "at least 2")
   expect_error(calibration_diagnostics(list(), y, yhat), "Expected a ppi_mean_result")
 })

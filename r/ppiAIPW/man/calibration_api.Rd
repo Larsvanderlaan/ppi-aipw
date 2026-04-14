@@ -6,7 +6,7 @@
 \title{Calibration helpers and diagnostics}
 \description{
 Fit reusable calibration models, apply them to labeled and unlabeled scores,
-and inspect calibration diagnostics on the labeled sample.
+and inspect honest out-of-fold calibration diagnostics by default.
 }
 \usage{
 fit_calibrator(
@@ -22,7 +22,10 @@ calibrate_predictions(
   return_model = FALSE
 )
 
-calibration_diagnostics(obj, Y, Yhat, X = NULL, w = NULL, num_bins = 10)
+calibration_diagnostics(
+  obj, Y, Yhat, X = NULL, w = NULL,
+  diagnostic_mode = "out_of_fold", num_folds = 10, num_bins = 10
+)
 
 plot_calibration(diagnostics, output_index = 1L, show_identity = TRUE, show_bins = TRUE, ...)
 }
@@ -36,6 +39,9 @@ plot_calibration(diagnostics, output_index = 1L, show_identity = TRUE, show_bins
   \item{return_model}{If \code{TRUE}, also return the fitted calibration model.}
   \item{obj}{A \code{ppi_mean_result}, \code{ppi_calibration_model}, or \code{ppi_prognostic_linear_model}.}
   \item{X}{Optional labeled-sample covariates for prognostic-linear diagnostics.}
+  \item{diagnostic_mode}{Either \code{"out_of_fold"} for an honest held-out diagnostic
+  view or \code{"in_sample"} for a descriptive fit-on-fit view.}
+  \item{num_folds}{Number of folds used when \code{diagnostic_mode = "out_of_fold"}.}
   \item{num_bins}{Number of bins used by \code{calibration_diagnostics()}.}
   \item{diagnostics}{A \code{ppi_calibration_diagnostics} object.}
   \item{output_index}{Output coordinate to plot for multi-output models.}
@@ -46,6 +52,6 @@ plot_calibration(diagnostics, output_index = 1L, show_identity = TRUE, show_bins
   \code{fit_calibrator()} returns a reusable fitted model. \code{calibrate_predictions()}
   returns calibrated labeled and unlabeled predictions, optionally with the
   model. \code{calibration_diagnostics()} returns a
-  \code{ppi_calibration_diagnostics} object, and \code{plot_calibration()}
-  draws a base R diagnostic plot.
+  \code{ppi_calibration_diagnostics} object with out-of-fold labeled diagnostics
+  by default, and \code{plot_calibration()} draws a base R diagnostic plot.
 }

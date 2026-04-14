@@ -153,9 +153,10 @@ print(result.summary())</code></pre>
               </p>
               <p>
                 For a quick human-readable Wald summary, use
-                <code>result.summary()</code>. For labeled-sample calibration
-                checks, use <code>calibration_diagnostics(result, Y, Yhat)</code>,
-                and optionally <code>plot_calibration(...)</code> if
+                <code>result.summary()</code>. If you want an optional honest
+                out-of-fold calibration check after fitting, use
+                <code>calibration_diagnostics(result, Y, Yhat)</code>, and
+                optionally <code>plot_calibration(...)</code> if
                 <code>matplotlib</code> is installed.
               </p>
             </div>

@@ -213,8 +213,15 @@ Result object:
 
 Calibration diagnostics helpers:
 
-- `calibration_diagnostics(result_or_model, Y, Yhat, ...)`: structured labeled-sample calibration diagnostics
+- `calibration_diagnostics(result_or_model, Y, Yhat, diagnostic_mode="out_of_fold", num_folds=10, ...)`: optional honest held-out calibration diagnostics
 - `plot_calibration(diagnostics, ...)`: optional plotting helper built on those diagnostics; install `matplotlib` or the optional `plot` extra if you want the plotting convenience
+
+How to read the diagnostic plot:
+
+- the fitted curve is the score-to-outcome map implied by the fitted calibrator
+- the raw-score points place each bin's mean outcome at that bin's mean raw score
+- the calibrated-score points place that same bin mean outcome at the bin's mean calibrated score
+- horizontal movement toward the identity line means the recalibrated score is on a better scale
 
 Causal API:
 

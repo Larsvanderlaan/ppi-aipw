@@ -1400,9 +1400,11 @@ def test_calibration_diagnostics_linear_returns_expected_structure() -> None:
     diagnostics = calibration_diagnostics(model, y, yhat, num_bins=3)
 
     assert diagnostics.method == "linear"
+    assert diagnostics.diagnostic_mode == "out_of_fold"
     assert diagnostics.n_outputs == 1
     assert diagnostics.n_labeled == 4
     assert diagnostics.num_bins == 3
+    assert diagnostics.effective_num_folds == 4
     assert len(diagnostics.per_output) == 1
     record = diagnostics.per_output[0]
     assert record.raw_labeled_scores.shape == (4,)
@@ -1426,6 +1428,32 @@ def test_calibration_diagnostics_weighted_bins_use_labeled_weights() -> None:
     np.testing.assert_allclose(record.bin_mean_outcome[0], 0.75, atol=1e-12)
 
 
+def test_calibration_diagnostics_in_sample_mode_matches_fitted_model_predictions() -> None:
+    rng = np.random.default_rng(777)
+    y = rng.normal(size=30)
+    yhat = y + rng.normal(scale=0.3, size=30)
+    model = fit_calibrator(y, yhat, method="linear")
+
+    diagnostics = calibration_diagnostics(model, y, yhat, diagnostic_mode="in_sample", num_bins=4)
+
+    assert diagnostics.diagnostic_mode == "in_sample"
+    assert diagnostics.effective_num_folds is None
+    np.testing.assert_allclose(
+        diagnostics.per_output[0].calibrated_labeled_scores,
+        np.asarray(model.predict(yhat), dtype=float),
+        atol=1e-12,
+    )
+
+
+def test_calibration_diagnostics_validate_num_folds() -> None:
+    y = np.array([0.0, 1.0, 0.0, 1.0], dtype=float)
+    yhat = np.array([0.1, 0.3, 0.7, 0.9], dtype=float)
+    model = fit_calibrator(y, yhat, method="linear")
+
+    with pytest.raises(ValueError, match="num_folds must be at least 2"):
+        calibration_diagnostics(model, y, yhat, num_folds=1)
+
+
 def test_calibration_diagnostics_supports_nonlinear_monotone_method() -> None:
     x = np.linspace(0.0, 1.0, 40)
     y = 0.15 + 0.65 * x**2
@@ -1437,7 +1465,6 @@ def test_calibration_diagnostics_supports_nonlinear_monotone_method() -> None:
 
     assert diagnostics.method == "monotone_spline"
     assert np.all(np.diff(record.fitted_curve) >= -1e-8)
-    assert np.all(np.diff(record.bin_mean_calibrated_score) >= -1e-8)
 
 
 def test_calibration_diagnostics_accepts_mean_inference_result() -> None:
@@ -1508,6 +1535,7 @@ def test_plot_calibration_returns_axes_and_uses_output_index() -> None:
     returned_ax = plot_calibration(diagnostics, output_index=1, ax=ax)
 
     assert returned_ax is ax
+    assert "out-of-fold" in ax.get_title()
     assert "output 1" in ax.get_title()
     plt.close(fig)
 

@@ -39,14 +39,18 @@ bin_diagnostics <- function(raw_scores, calibrated_scores, outcomes, weights, nu
 }
 
 new_calibration_diagnostics <- function(method, n_outputs, n_labeled, num_bins, per_output,
+                                        diagnostic_mode,
+                                        effective_num_folds = NULL,
                                         reference_covariates = NULL) {
   structure(
     list(
       method = method,
+      diagnostic_mode = diagnostic_mode,
       n_outputs = n_outputs,
       n_labeled = n_labeled,
       num_bins = num_bins,
       per_output = per_output,
+      effective_num_folds = effective_num_folds,
       reference_covariates = reference_covariates
     ),
     class = "ppi_calibration_diagnostics"
@@ -55,39 +59,103 @@ new_calibration_diagnostics <- function(method, n_outputs, n_labeled, num_bins, 
 
 print.ppi_calibration_diagnostics <- function(x, ...) {
   cat(sprintf(
-    "ppi_calibration_diagnostics(method='%s', n_outputs=%d, n_labeled=%d, num_bins=%d)\n",
-    x$method, x$n_outputs, x$n_labeled, x$num_bins
+    "ppi_calibration_diagnostics(method='%s', diagnostic_mode='%s', n_outputs=%d, n_labeled=%d, num_bins=%d)\n",
+    x$method, x$diagnostic_mode, x$n_outputs, x$n_labeled, x$num_bins
   ))
   invisible(x)
 }
 
-#' Calibration diagnostics on the labeled sample
+normalize_diagnostic_mode <- function(diagnostic_mode) {
+  mode <- gsub("-", "_", tolower(as.character(diagnostic_mode[[1]])))
+  if (mode %in% c("out_of_fold", "oof")) {
+    return("out_of_fold")
+  }
+  if (mode %in% c("in_sample", "insample")) {
+    return("in_sample")
+  }
+  stop("diagnostic_mode must be 'out_of_fold' or 'in_sample'.", call. = FALSE)
+}
+
+#' Calibration diagnostics for fitted calibration models
 #'
 #' @param obj A fitted result or model.
 #' @param Y Observed outcomes.
 #' @param Yhat Labeled-sample predictions.
 #' @param X Optional covariates for prognostic-linear diagnostics.
 #' @param w Optional labeled-sample weights.
+#' @param diagnostic_mode Either `"out_of_fold"` for honest out-of-fold diagnostics
+#'   or `"in_sample"` for descriptive fit-on-fit diagnostics.
+#' @param num_folds Number of folds used when `diagnostic_mode = "out_of_fold"`.
 #' @param num_bins Number of bins.
 #' @return A `ppi_calibration_diagnostics` object.
-calibration_diagnostics <- function(obj, Y, Yhat, X = NULL, w = NULL, num_bins = 10) {
+calibration_diagnostics <- function(obj, Y, Yhat, X = NULL, w = NULL,
+                                    diagnostic_mode = "out_of_fold",
+                                    num_folds = 10,
+                                    num_bins = 10) {
   if (num_bins < 1L) {
     stop("num_bins must be at least 1.", call. = FALSE)
   }
+  if (num_folds < 2L) {
+    stop("num_folds must be at least 2.", call. = FALSE)
+  }
   model <- resolve_model(obj)
+  diagnostic_mode <- normalize_diagnostic_mode(diagnostic_mode)
   pair <- validate_pair_inputs(Y, Yhat)
   weights <- construct_weight_vector(nrow(pair$Y_2d), w, vectorized = FALSE)
   X_2d <- if (is.null(X)) NULL else coerce_covariates(X, nrow(pair$Y_2d), "X")
-  if (inherits(model, "ppi_prognostic_linear_model")) {
-    if (model$x_dim > 0L && is.null(X_2d)) {
-      stop("X is required for calibration diagnostics when the fitted model uses prognostic covariates.", call. = FALSE)
-    }
-    reference_covariates <- if (model$x_dim > 0L) colMeans(weight_matrix(weights, nrow(X_2d), ncol(X_2d)) * X_2d) else NULL
-    calibrated_labeled <- reshape_to_2d(predict(model, pair$Yhat_2d, X = X_2d), "calibrated_labeled")
+
+  if (inherits(model, "ppi_prognostic_linear_model") && model$x_dim > 0L && is.null(X_2d)) {
+    stop("X is required for calibration diagnostics when the fitted model uses prognostic covariates.", call. = FALSE)
+  }
+
+  if (inherits(model, "ppi_prognostic_linear_model") && model$x_dim > 0L) {
+    reference_covariates <- colMeans(weight_matrix(weights, nrow(X_2d), ncol(X_2d)) * X_2d)
   } else {
     reference_covariates <- NULL
-    calibrated_labeled <- reshape_to_2d(predict(model, pair$Yhat_2d), "calibrated_labeled")
   }
+
+  if (identical(diagnostic_mode, "in_sample")) {
+    if (inherits(model, "ppi_prognostic_linear_model")) {
+      calibrated_labeled <- reshape_to_2d(predict(model, pair$Yhat_2d, X = X_2d), "calibrated_labeled")
+    } else {
+      calibrated_labeled <- reshape_to_2d(predict(model, pair$Yhat_2d), "calibrated_labeled")
+    }
+    effective_num_folds <- NULL
+  } else {
+    n_splits <- min(as.integer(num_folds), nrow(pair$Y_2d))
+    if (n_splits < 2L) {
+      stop("out_of_fold calibration diagnostics require at least two labeled observations.", call. = FALSE)
+    }
+    splits <- kfold_splits(nrow(pair$Y_2d), n_splits = n_splits, seed = 0L)
+    calibrated_labeled <- matrix(NA_real_, nrow(pair$Y_2d), ncol(pair$Y_2d))
+    for (split in splits) {
+      w_train <- if (is.null(w)) NULL else as.numeric(w)[split$train]
+      if (inherits(model, "ppi_prognostic_linear_model")) {
+        fitted <- fit_prognostic_linear(
+          Y = pair$Y_2d[split$train, , drop = FALSE],
+          Yhat = pair$Yhat_2d[split$train, , drop = FALSE],
+          Yhat_unlabeled = pair$Yhat_2d[split$val, , drop = FALSE],
+          X = if (is.null(X_2d)) NULL else X_2d[split$train, , drop = FALSE],
+          X_unlabeled = if (is.null(X_2d)) NULL else X_2d[split$val, , drop = FALSE],
+          w = w_train
+        )
+      } else {
+        fitted <- fit_and_calibrate(
+          Y = pair$Y_2d[split$train, , drop = FALSE],
+          Yhat = pair$Yhat_2d[split$train, , drop = FALSE],
+          Yhat_unlabeled = pair$Yhat_2d[split$val, , drop = FALSE],
+          method = model$method,
+          w = w_train,
+          isocal_backend = if (!is.null(model$metadata$isocal_backend)) model$metadata$isocal_backend else "weighted_pava",
+          isocal_max_depth = if (!is.null(model$metadata$isocal_max_depth)) model$metadata$isocal_max_depth else 20,
+          isocal_min_child_weight = if (!is.null(model$metadata$isocal_min_child_weight)) model$metadata$isocal_min_child_weight else 10
+        )
+      }
+      calibrated_labeled[split$val, ] <- fitted$pred_unlabeled
+    }
+    effective_num_folds <- n_splits
+  }
+
   per_output <- vector("list", ncol(pair$Y_2d))
   for (j in seq_len(ncol(pair$Y_2d))) {
     raw_scores <- pair$Yhat_2d[, j]
@@ -116,10 +184,12 @@ calibration_diagnostics <- function(obj, Y, Yhat, X = NULL, w = NULL, num_bins =
   }
   new_calibration_diagnostics(
     method = model$method,
+    diagnostic_mode = diagnostic_mode,
     n_outputs = ncol(pair$Y_2d),
     n_labeled = nrow(pair$Y_2d),
     num_bins = as.integer(min(num_bins, nrow(pair$Y_2d))),
     per_output = per_output,
+    effective_num_folds = effective_num_folds,
     reference_covariates = reference_covariates
   )
 }
@@ -139,9 +209,22 @@ plot.ppi_calibration_diagnostics <- function(x, output_index = 1L, show_identity
     NA_real_,
     xlim = c(x_min, x_max),
     ylim = c(y_min, y_max),
-    xlab = "Prediction score",
+    xlab = "Score value",
     ylab = "Observed outcome",
-    main = if (x$n_outputs > 1L) sprintf("%s calibration (output %d)", x$method, idx) else sprintf("%s calibration", x$method)
+    main = if (x$n_outputs > 1L) {
+      sprintf(
+        "%s calibration%s (output %d)",
+        x$method,
+        if (identical(x$diagnostic_mode, "out_of_fold")) " (out-of-fold)" else "",
+        idx
+      )
+    } else {
+      sprintf(
+        "%s calibration%s",
+        x$method,
+        if (identical(x$diagnostic_mode, "out_of_fold")) " (out-of-fold)" else ""
+      )
+    }
   )
   if (isTRUE(show_identity)) {
     lo <- min(x_min, y_min)
@@ -154,6 +237,44 @@ plot.ppi_calibration_diagnostics <- function(x, output_index = 1L, show_identity
     graphics::points(record$bin_mean_raw_score, record$bin_mean_outcome, pch = 16, col = "firebrick")
     graphics::points(record$bin_mean_calibrated_score, record$bin_mean_outcome, pch = 1, col = "darkgreen")
   }
+  legend_labels <- c()
+  legend_lty <- c()
+  legend_lwd <- c()
+  legend_pch <- c()
+  legend_col <- c()
+  if (isTRUE(show_identity)) {
+    legend_labels <- c(legend_labels, "Identity")
+    legend_lty <- c(legend_lty, 2)
+    legend_lwd <- c(legend_lwd, 1)
+    legend_pch <- c(legend_pch, NA_integer_)
+    legend_col <- c(legend_col, "grey60")
+  }
+  legend_labels <- c(legend_labels, "Fitted calibration")
+  legend_lty <- c(legend_lty, 1)
+  legend_lwd <- c(legend_lwd, 2)
+  legend_pch <- c(legend_pch, NA_integer_)
+  legend_col <- c(legend_col, "steelblue")
+  if (isTRUE(show_bins)) {
+    legend_labels <- c(
+      legend_labels,
+      "Bin mean outcome at raw score",
+      "Same bin outcome at calibrated score"
+    )
+    legend_lty <- c(legend_lty, NA_integer_, NA_integer_)
+    legend_lwd <- c(legend_lwd, NA_integer_, NA_integer_)
+    legend_pch <- c(legend_pch, 16, 1)
+    legend_col <- c(legend_col, "firebrick", "darkgreen")
+  }
+  graphics::legend(
+    "topleft",
+    legend = legend_labels,
+    lty = legend_lty,
+    lwd = legend_lwd,
+    pch = legend_pch,
+    col = legend_col,
+    bty = "n",
+    cex = 0.85
+  )
   invisible(x)
 }
 

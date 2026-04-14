@@ -49,9 +49,11 @@ test_that("calibration diagnostics return expected structure", {
   diagnostics <- calibration_diagnostics(model, y, yhat, num_bins = 3)
 
   expect_identical(diagnostics$method, "linear")
+  expect_identical(diagnostics$diagnostic_mode, "out_of_fold")
   expect_identical(diagnostics$n_outputs, 1L)
   expect_identical(diagnostics$n_labeled, 4L)
   expect_identical(diagnostics$num_bins, 3L)
+  expect_identical(diagnostics$effective_num_folds, 4L)
   expect_length(diagnostics$per_output, 1)
   record <- diagnostics$per_output[[1]]
   expect_length(record$raw_labeled_scores, 4)
@@ -81,6 +83,28 @@ test_that("calibration diagnostics respect labeled weights and support nonlinear
 
   expect_identical(nonlinear_diag$method, "monotone_spline")
   expect_true(all(diff(nonlinear_diag$per_output[[1]]$fitted_curve) >= -1e-8))
+})
+
+test_that("in-sample calibration diagnostics match the fitted model exactly", {
+  y <- c(0, 0.25, 0.8, 1)
+  yhat <- c(0.1, 0.35, 0.55, 0.9)
+  model <- fit_calibrator(y, yhat, method = "linear")
+
+  diagnostics <- calibration_diagnostics(
+    model,
+    y,
+    yhat,
+    diagnostic_mode = "in_sample",
+    num_bins = 4
+  )
+
+  expect_identical(diagnostics$diagnostic_mode, "in_sample")
+  expect_null(diagnostics$effective_num_folds)
+  expect_equal(
+    diagnostics$per_output[[1]]$calibrated_labeled_scores,
+    as.numeric(predict(model, yhat)),
+    tolerance = 1e-12
+  )
 })
 
 test_that("calibration diagnostics accept mean results and prognostic models require X", {
@@ -118,5 +142,11 @@ test_that("plot calibration runs without error", {
   yhat <- y + matrix(rnorm(60, sd = 0.25), ncol = 2)
   diagnostics <- calibration_diagnostics(fit_calibrator(y, yhat, method = "linear"), y, yhat, num_bins = 4)
 
+  plot_path <- tempfile(fileext = ".pdf")
+  grDevices::pdf(plot_path)
+  on.exit({
+    grDevices::dev.off()
+    unlink(plot_path)
+  }, add = TRUE)
   expect_invisible(plot_calibration(diagnostics, output_index = 1))
 })
