@@ -61,6 +61,9 @@ test_that("calibration diagnostics return expected structure", {
   expect_length(record$observed_outcomes, 4)
   expect_equal(sum(record$bin_counts), 4)
   expect_equal(length(record$grid_scores), length(record$fitted_curve))
+  expect_true(is.finite(record$blp$slope))
+  expect_true(is.finite(record$blp$slope_se))
+  expect_identical(record$blp$slope_null, 1.0)
 })
 
 test_that("calibration diagnostics respect labeled weights and support nonlinear models", {
@@ -85,6 +88,32 @@ test_that("calibration diagnostics respect labeled weights and support nonlinear
   expect_true(all(diff(nonlinear_diag$per_output[[1]]$fitted_curve) >= -1e-8))
 })
 
+test_that("calibration diagnostics BLP uses labeled weights", {
+  y <- c(0, 1, 1.4, 2)
+  yhat <- c(0.1, 0.3, 0.8, 0.9)
+  w <- c(1, 5, 1, 1)
+  model <- fit_calibrator(y, yhat, method = "linear")
+
+  diagnostics <- calibration_diagnostics(
+    model,
+    y,
+    yhat,
+    w = w,
+    diagnostic_mode = "in_sample",
+    num_bins = 2
+  )
+  record <- diagnostics$per_output[[1]]
+  weights <- w / sum(w) * length(w)
+  coef <- coef(stats::lm.wfit(
+    x = cbind(1, record$calibrated_labeled_scores),
+    y = y,
+    w = weights
+  ))
+
+  expect_equal(record$blp$intercept, unname(coef[[1]]), tolerance = 1e-12)
+  expect_equal(record$blp$slope, unname(coef[[2]]), tolerance = 1e-12)
+})
+
 test_that("in-sample calibration diagnostics match the fitted model exactly", {
   y <- c(0, 0.25, 0.8, 1)
   yhat <- c(0.1, 0.35, 0.55, 0.9)
@@ -105,6 +134,31 @@ test_that("in-sample calibration diagnostics match the fitted model exactly", {
     as.numeric(predict(model, yhat)),
     tolerance = 1e-12
   )
+})
+
+test_that("calibration diagnostics BLP follows the diagnostic calibrated scores", {
+  set.seed(778)
+  y <- rnorm(40)
+  yhat <- y + rnorm(40, sd = 0.4)
+  model <- fit_calibrator(y, yhat, method = "linear")
+
+  in_sample <- calibration_diagnostics(model, y, yhat, diagnostic_mode = "in_sample", num_bins = 4)
+  out_of_fold <- calibration_diagnostics(model, y, yhat, diagnostic_mode = "out_of_fold", num_bins = 4)
+
+  for (diagnostics in list(in_sample, out_of_fold)) {
+    record <- diagnostics$per_output[[1]]
+    coef <- coef(stats::lm(
+      record$observed_outcomes ~ record$calibrated_labeled_scores
+    ))
+    expect_equal(record$blp$intercept, unname(coef[[1]]), tolerance = 1e-10)
+    expect_equal(record$blp$slope, unname(coef[[2]]), tolerance = 1e-10)
+  }
+
+  expect_false(isTRUE(all.equal(
+    in_sample$per_output[[1]]$calibrated_labeled_scores,
+    out_of_fold$per_output[[1]]$calibrated_labeled_scores,
+    tolerance = 1e-12
+  )))
 })
 
 test_that("calibration diagnostics accept mean results and prognostic models require X", {
@@ -134,6 +188,21 @@ test_that("calibration diagnostics accept mean results and prognostic models req
   expect_error(calibration_diagnostics(prognostic_result, y2, yhat2), "X is required")
   prognostic_diag <- calibration_diagnostics(prognostic_result, y2, yhat2, X = x)
   expect_length(prognostic_diag$reference_covariates, 2)
+})
+
+test_that("calibration diagnostics summary reports BLP slope", {
+  set.seed(124)
+  y <- rnorm(35)
+  yhat <- y + rnorm(35, sd = 0.25)
+  model <- fit_calibrator(y, yhat, method = "linear")
+
+  diagnostics <- calibration_diagnostics(model, y, yhat, num_bins = 4)
+  summary_text <- paste(capture.output(summary(diagnostics)), collapse = "\n")
+
+  expect_match(summary_text, "ppi_calibration_diagnostics summary")
+  expect_match(summary_text, "blp_slope_null: 1")
+  expect_match(summary_text, "calibrated_blp_slope:")
+  expect_match(summary_text, "p_value=")
 })
 
 test_that("plot calibration runs without error", {

@@ -99,12 +99,14 @@ If you want an optional honest out-of-fold calibration check after fitting, use:
 from ppi_aipw import calibration_diagnostics
 
 diagnostics = calibration_diagnostics(result, Y, Yhat, num_bins=10)
+print(diagnostics.summary())
 ```
 
 By default this uses out-of-fold calibrated scores on the labeled sample. If
 you want a purely descriptive fit-on-fit view instead, pass
 `diagnostic_mode="in_sample"`. The returned object stores bin-level summaries
-and the fitted calibration curve. If you want a quick plot, use
+and the fitted calibration curve, plus a calibrated-BLP slope diagnostic
+against the default null `slope = 1`. If you want a quick plot, use
 `plot_calibration(diagnostics, ...)`. Plotting is optional and requires
 `matplotlib`.
 

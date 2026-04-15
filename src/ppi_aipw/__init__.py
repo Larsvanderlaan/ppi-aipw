@@ -129,10 +129,17 @@ from ._api import (
 )
 from ._calibration import CalibrationModel, calibrate_predictions, fit_calibrator
 from ._causal import CausalInferenceResult, causal_inference
-from ._diagnostics import CalibrationCurveDiagnostics, CalibrationDiagnostics, calibration_diagnostics, plot_calibration
+from ._diagnostics import (
+    CalibrationBLPDiagnostics,
+    CalibrationCurveDiagnostics,
+    CalibrationDiagnostics,
+    calibration_diagnostics,
+    plot_calibration,
+)
 from ._weights import compute_two_sample_balancing_weights
 
 __all__ = [
+    "CalibrationBLPDiagnostics",
     "CalibrationModel",
     "CalibrationCurveDiagnostics",
     "CalibrationDiagnostics",

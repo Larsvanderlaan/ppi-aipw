@@ -53,5 +53,6 @@ plot_calibration(diagnostics, output_index = 1L, show_identity = TRUE, show_bins
   returns calibrated labeled and unlabeled predictions, optionally with the
   model. \code{calibration_diagnostics()} returns a
   \code{ppi_calibration_diagnostics} object with out-of-fold labeled diagnostics
-  by default, and \code{plot_calibration()} draws a base R diagnostic plot.
+  by default; use \code{summary(diagnostics)} for a compact calibrated-BLP slope
+  summary, and \code{plot_calibration()} draws a base R diagnostic plot.
 }

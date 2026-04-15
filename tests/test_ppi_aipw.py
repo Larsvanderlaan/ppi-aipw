@@ -1413,6 +1413,10 @@ def test_calibration_diagnostics_linear_returns_expected_structure() -> None:
     assert record.bin_counts.sum() == 4
     assert record.grid_scores.ndim == 1
     assert record.fitted_curve.shape == record.grid_scores.shape
+    assert np.isfinite(record.blp.slope)
+    assert np.isfinite(record.blp.slope_se)
+    assert len(record.blp.slope_ci) == 2
+    assert record.blp.slope_null == 1.0
 
 
 def test_calibration_diagnostics_weighted_bins_use_labeled_weights() -> None:
@@ -1426,6 +1430,29 @@ def test_calibration_diagnostics_weighted_bins_use_labeled_weights() -> None:
 
     assert record.bin_counts.tolist() == [2, 2]
     np.testing.assert_allclose(record.bin_mean_outcome[0], 0.75, atol=1e-12)
+
+
+def test_calibration_diagnostics_blp_uses_labeled_weights() -> None:
+    y = np.array([0.0, 1.0, 1.4, 2.0], dtype=float)
+    yhat = np.array([0.1, 0.3, 0.8, 0.9], dtype=float)
+    w = np.array([1.0, 5.0, 1.0, 1.0], dtype=float)
+    model = fit_calibrator(y, yhat, method="linear")
+
+    diagnostics = calibration_diagnostics(
+        model,
+        y,
+        yhat,
+        w=w,
+        diagnostic_mode="in_sample",
+        num_bins=2,
+    )
+    record = diagnostics.per_output[0]
+    design = np.column_stack([np.ones_like(y), record.calibrated_labeled_scores])
+    sqrt_weight = np.sqrt(w / w.sum() * y.shape[0])
+    coef, _, _, _ = np.linalg.lstsq(design * sqrt_weight[:, None], y * sqrt_weight, rcond=None)
+
+    np.testing.assert_allclose(record.blp.intercept, coef[0], atol=1e-12)
+    np.testing.assert_allclose(record.blp.slope, coef[1], atol=1e-12)
 
 
 def test_calibration_diagnostics_in_sample_mode_matches_fitted_model_predictions() -> None:
@@ -1442,6 +1469,28 @@ def test_calibration_diagnostics_in_sample_mode_matches_fitted_model_predictions
         diagnostics.per_output[0].calibrated_labeled_scores,
         np.asarray(model.predict(yhat), dtype=float),
         atol=1e-12,
+    )
+
+
+def test_calibration_diagnostics_blp_tracks_calibrated_scores_by_mode() -> None:
+    rng = np.random.default_rng(778)
+    y = rng.normal(size=40)
+    yhat = y + rng.normal(scale=0.4, size=40)
+    model = fit_calibrator(y, yhat, method="linear")
+
+    in_sample = calibration_diagnostics(model, y, yhat, diagnostic_mode="in_sample", num_bins=4)
+    out_of_fold = calibration_diagnostics(model, y, yhat, diagnostic_mode="out_of_fold", num_bins=4)
+
+    for diagnostics in (in_sample, out_of_fold):
+        record = diagnostics.per_output[0]
+        design = np.column_stack([np.ones_like(y), record.calibrated_labeled_scores])
+        coef, _, _, _ = np.linalg.lstsq(design, y, rcond=None)
+        np.testing.assert_allclose(record.blp.intercept, coef[0], atol=1e-10)
+        np.testing.assert_allclose(record.blp.slope, coef[1], atol=1e-10)
+
+    assert not np.allclose(
+        in_sample.per_output[0].calibrated_labeled_scores,
+        out_of_fold.per_output[0].calibrated_labeled_scores,
     )
 
 
@@ -1518,6 +1567,23 @@ def test_calibration_diagnostics_supports_multioutput() -> None:
     assert diagnostics.n_outputs == 2
     assert len(diagnostics.per_output) == 2
     assert diagnostics.per_output[1].fitted_curve.ndim == 1
+    assert np.isfinite(diagnostics.per_output[0].blp.slope)
+    assert np.isfinite(diagnostics.per_output[1].blp.slope)
+
+
+def test_calibration_diagnostics_summary_reports_blp_slope() -> None:
+    rng = np.random.default_rng(124)
+    y = rng.normal(size=35)
+    yhat = y + rng.normal(scale=0.25, size=35)
+    model = fit_calibrator(y, yhat, method="linear")
+
+    diagnostics = calibration_diagnostics(model, y, yhat, num_bins=4)
+    summary = diagnostics.summary()
+
+    assert "CalibrationDiagnostics summary" in summary
+    assert "blp_slope_null: 1" in summary
+    assert "calibrated_blp_slope:" in summary
+    assert "p_value=" in summary
 
 
 def test_plot_calibration_returns_axes_and_uses_output_index() -> None:

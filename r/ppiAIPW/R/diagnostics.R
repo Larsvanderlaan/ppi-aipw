@@ -76,6 +76,116 @@ normalize_diagnostic_mode <- function(diagnostic_mode) {
   stop("diagnostic_mode must be 'out_of_fold' or 'in_sample'.", call. = FALSE)
 }
 
+fit_blp_diagnostics <- function(outcomes, calibrated_scores, weights) {
+  outcomes <- as.numeric(outcomes)
+  calibrated_scores <- as.numeric(calibrated_scores)
+  weights <- as.numeric(weights)
+  predictor_centered <- calibrated_scores - stats::weighted.mean(calibrated_scores, w = weights)
+
+  if (all(isTRUE(all.equal(predictor_centered, rep(0, length(predictor_centered)), tolerance = 1e-12)))) {
+    intercept <- stats::weighted.mean(outcomes, w = weights)
+    residuals <- outcomes - intercept
+    intercept_var <- sum((weights * residuals)^2) / (sum(weights)^2)
+    intercept_se <- sqrt(max(intercept_var, 0))
+    intercept_ci <- z_interval(intercept, intercept_se, alpha = 0.05, alternative = "two-sided")
+    return(list(
+      intercept = intercept,
+      slope = NA_real_,
+      intercept_se = intercept_se,
+      slope_se = NA_real_,
+      intercept_ci = c(intercept_ci$lower[[1]], intercept_ci$upper[[1]]),
+      slope_ci = c(NA_real_, NA_real_),
+      slope_null = 1.0,
+      slope_wald_t = NA_real_,
+      slope_p_value = NA_real_
+    ))
+  }
+
+  design <- cbind(1, calibrated_scores)
+  fit <- stats::lm.wfit(x = design, y = outcomes, w = weights)
+  coef <- as.numeric(fit$coefficients)
+  residuals <- as.numeric(fit$residuals)
+  xtwx <- crossprod(design, weights * design)
+  xtwx_inv <- solve(xtwx)
+  design_weighted_resid <- design * (weights * residuals)
+  meat <- crossprod(design_weighted_resid)
+  covariance <- xtwx_inv %*% meat %*% xtwx_inv
+  se <- sqrt(pmax(diag(covariance), 0))
+  ci <- z_interval(coef, se, alpha = 0.05, alternative = "two-sided")
+  slope_stats <- compute_wald_statistics(
+    pointestimate = coef[[2]],
+    standard_error = se[[2]],
+    null = 1.0,
+    alternative = "two-sided"
+  )
+  list(
+    intercept = coef[[1]],
+    slope = coef[[2]],
+    intercept_se = se[[1]],
+    slope_se = se[[2]],
+    intercept_ci = c(ci$lower[[1]], ci$upper[[1]]),
+    slope_ci = c(ci$lower[[2]], ci$upper[[2]]),
+    slope_null = 1.0,
+    slope_wald_t = slope_stats$t_stat[[1]],
+    slope_p_value = slope_stats$p_value[[1]]
+  )
+}
+
+summary.ppi_calibration_diagnostics <- function(object, null = 1, alternative = "two-sided", ...) {
+  null_value <- as.numeric(null)
+  if (length(null_value) != 1L || !is.finite(null_value)) {
+    stop("summary.ppi_calibration_diagnostics expects a single finite null value.", call. = FALSE)
+  }
+  alt <- normalize_alternative(alternative)
+  lines <- c(
+    "ppi_calibration_diagnostics summary",
+    sprintf("method: %s", object$method),
+    sprintf("diagnostic_mode: %s", object$diagnostic_mode),
+    sprintf("n_outputs: %d", object$n_outputs),
+    sprintf("n_labeled: %d", object$n_labeled),
+    sprintf("num_bins: %d", object$num_bins),
+    sprintf("blp_slope_null: %s", trimws(summary_value(null_value))),
+    sprintf("blp_slope_alternative: %s", alt)
+  )
+  if (!is.null(object$effective_num_folds)) {
+    lines <- c(lines, sprintf("effective_num_folds: %d", object$effective_num_folds))
+  }
+  for (i in seq_along(object$per_output)) {
+    blp <- object$per_output[[i]]$blp
+    stats_obj <- compute_wald_statistics(
+      pointestimate = blp$slope,
+      standard_error = blp$slope_se,
+      null = null_value,
+      alternative = alt
+    )
+    ci <- z_interval(blp$slope, blp$slope_se, alpha = 0.05, alternative = alt)
+    prefix <- if (object$n_outputs == 1L) {
+      "calibrated_blp_slope"
+    } else {
+      sprintf("output[%d] calibrated_blp_slope", i - 1L)
+    }
+    lines <- c(lines, sprintf(
+      "%s: estimate=%s, se=%s, ci=(%s, %s), wald_t=%s, p_value=%s",
+      prefix,
+      summary_value(blp$slope),
+      summary_value(blp$slope_se),
+      summary_value(ci$lower[[1]]),
+      summary_value(ci$upper[[1]]),
+      summary_value(stats_obj$t_stat[[1]]),
+      summary_value(stats_obj$p_value[[1]])
+    ))
+  }
+  structure(
+    list(lines = lines, text = paste(lines, collapse = "\n")),
+    class = "summary_ppi_calibration_diagnostics"
+  )
+}
+
+print.summary_ppi_calibration_diagnostics <- function(x, ...) {
+  cat(x$text, "\n")
+  invisible(x)
+}
+
 #' Calibration diagnostics for fitted calibration models
 #'
 #' @param obj A fitted result or model.
@@ -179,7 +289,8 @@ calibration_diagnostics <- function(obj, Y, Yhat, X = NULL, w = NULL,
       bin_mean_outcome = bins$bin_mean_outcome,
       bin_counts = bins$bin_counts,
       grid_scores = grid_scores,
-      fitted_curve = fitted_curve
+      fitted_curve = fitted_curve,
+      blp = fit_blp_diagnostics(outcomes, calibrated_scores, weights)
     )
   }
   new_calibration_diagnostics(

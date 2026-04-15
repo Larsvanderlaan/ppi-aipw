@@ -219,6 +219,7 @@ Calibration diagnostics helpers:
 
 - `calibration_diagnostics(result_or_model, Y, Yhat, diagnostic_mode="out_of_fold", num_folds=10, ...)`: optional honest held-out calibration diagnostics
 - `plot_calibration(diagnostics, ...)`: optional plotting helper built on those diagnostics; install `matplotlib` or the optional `plot` extra if you want the plotting convenience
+- `diagnostics.summary()`: compact calibrated-BLP slope summary with coefficient, CI, and p-value against the default calibration null `slope = 1`
 
 How to read the diagnostic plot:
 

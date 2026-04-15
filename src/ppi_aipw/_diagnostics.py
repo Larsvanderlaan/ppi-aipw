@@ -6,9 +6,29 @@ from typing import Any
 import numpy as np
 from sklearn.model_selection import KFold
 
-from ._api import MeanInferenceResult, PrognosticLinearModel, _fit_and_calibrate, _fit_prognostic_linear
+from ._api import (
+    MeanInferenceResult,
+    PrognosticLinearModel,
+    _compute_wald_statistics,
+    _fit_and_calibrate,
+    _fit_prognostic_linear,
+    _summary_value,
+)
 from ._calibration import CalibrationModel
-from ._utils import construct_weight_vector, reshape_to_2d, validate_pair_inputs
+from ._utils import construct_weight_vector, reshape_to_2d, validate_pair_inputs, z_interval
+
+
+@dataclass(frozen=True)
+class CalibrationBLPDiagnostics:
+    intercept: float
+    slope: float
+    intercept_se: float
+    slope_se: float
+    intercept_ci: tuple[float, float]
+    slope_ci: tuple[float, float]
+    slope_null: float
+    slope_wald_t: float
+    slope_p_value: float
 
 
 @dataclass(frozen=True)
@@ -23,6 +43,7 @@ class CalibrationCurveDiagnostics:
     bin_counts: np.ndarray
     grid_scores: np.ndarray
     fitted_curve: np.ndarray
+    blp: CalibrationBLPDiagnostics
 
 
 @dataclass(frozen=True)
@@ -35,6 +56,65 @@ class CalibrationDiagnostics:
     per_output: tuple[CalibrationCurveDiagnostics, ...]
     effective_num_folds: int | None = None
     reference_covariates: np.ndarray | None = None
+
+    def __repr__(self) -> str:
+        return (
+            "CalibrationDiagnostics("
+            f"method={self.method!r}, "
+            f"diagnostic_mode={self.diagnostic_mode!r}, "
+            f"n_outputs={self.n_outputs}, "
+            f"n_labeled={self.n_labeled}, "
+            f"num_bins={self.num_bins}"
+            ")"
+        )
+
+    def summary(
+        self,
+        *,
+        null: float = 1.0,
+        alternative: str = "two-sided",
+    ) -> str:
+        null_arr = np.asarray(null, dtype=float).reshape(-1)
+        if null_arr.size != 1:
+            raise ValueError("CalibrationDiagnostics.summary currently expects a scalar null.")
+
+        lines = [
+            "CalibrationDiagnostics summary",
+            f"method: {self.method}",
+            f"diagnostic_mode: {self.diagnostic_mode}",
+            f"n_outputs: {self.n_outputs}",
+            f"n_labeled: {self.n_labeled}",
+            f"num_bins: {self.num_bins}",
+            f"blp_slope_null: {_summary_value(float(null_arr[0]))}",
+            f"blp_slope_alternative: {alternative}",
+        ]
+        if self.effective_num_folds is not None:
+            lines.append(f"effective_num_folds: {self.effective_num_folds}")
+
+        for idx, record in enumerate(self.per_output):
+            _, wald_t, p_value = _compute_wald_statistics(
+                record.blp.slope,
+                record.blp.slope_se,
+                null=float(null_arr[0]),
+                alternative=alternative,
+            )
+            lower, upper = z_interval(
+                np.array([record.blp.slope], dtype=float),
+                np.array([record.blp.slope_se], dtype=float),
+                alpha=0.05,
+                alternative=alternative,
+            )
+            prefix = "calibrated_blp_slope" if self.n_outputs == 1 else f"output[{idx}] calibrated_blp_slope"
+            lines.append(
+                (
+                    f"{prefix}: estimate={_summary_value(record.blp.slope)}, "
+                    f"se={_summary_value(record.blp.slope_se)}, "
+                    f"ci=({_summary_value(float(lower[0]))}, {_summary_value(float(upper[0]))}), "
+                    f"wald_t={_summary_value(float(wald_t[0]))}, "
+                    f"p_value={_summary_value(float(p_value[0]))}"
+                )
+            )
+        return "\n".join(lines)
 
 
 def _coerce_covariates(
@@ -78,6 +158,75 @@ def _normalize_diagnostic_mode(diagnostic_mode: str) -> str:
         return aliases[mode]
     except KeyError as exc:
         raise ValueError("diagnostic_mode must be 'out_of_fold' or 'in_sample'.") from exc
+
+
+def _fit_blp_diagnostics(
+    outcomes: np.ndarray,
+    calibrated_scores: np.ndarray,
+    weights: np.ndarray,
+) -> CalibrationBLPDiagnostics:
+    outcomes = np.asarray(outcomes, dtype=float).reshape(-1)
+    calibrated_scores = np.asarray(calibrated_scores, dtype=float).reshape(-1)
+    weights = np.asarray(weights, dtype=float).reshape(-1)
+
+    predictor_centered = calibrated_scores - np.average(calibrated_scores, weights=weights)
+    if np.all(np.isclose(predictor_centered, 0.0)):
+        intercept = float(np.average(outcomes, weights=weights))
+        design_intercept = np.ones((outcomes.shape[0], 1), dtype=float)
+        xtwx = design_intercept.T @ (weights[:, None] * design_intercept)
+        resid = outcomes - intercept
+        meat = (design_intercept * (weights * resid)[:, None]).T @ (
+            design_intercept * (weights * resid)[:, None]
+        )
+        intercept_var = float((np.linalg.pinv(xtwx) @ meat @ np.linalg.pinv(xtwx))[0, 0])
+        intercept_se = float(np.sqrt(max(intercept_var, 0.0)))
+        intercept_ci = z_interval(
+            np.array([intercept], dtype=float),
+            np.array([intercept_se], dtype=float),
+            alpha=0.05,
+            alternative="two-sided",
+        )
+        return CalibrationBLPDiagnostics(
+            intercept=intercept,
+            slope=float("nan"),
+            intercept_se=intercept_se,
+            slope_se=float("nan"),
+            intercept_ci=(float(intercept_ci[0][0]), float(intercept_ci[1][0])),
+            slope_ci=(float("nan"), float("nan")),
+            slope_null=1.0,
+            slope_wald_t=float("nan"),
+            slope_p_value=float("nan"),
+        )
+
+    design = np.column_stack([np.ones(outcomes.shape[0]), calibrated_scores])
+    sqrt_weight = np.sqrt(weights)
+    coef, _, _, _ = np.linalg.lstsq(design * sqrt_weight[:, None], outcomes * sqrt_weight, rcond=None)
+    resid = outcomes - design @ coef
+    xtwx = design.T @ (weights[:, None] * design)
+    xtwx_inv = np.linalg.pinv(xtwx)
+    meat = (design * (weights * resid)[:, None]).T @ (design * (weights * resid)[:, None])
+    covariance = xtwx_inv @ meat @ xtwx_inv
+    variance = np.maximum(np.diag(covariance), 0.0)
+    se = np.sqrt(variance)
+    lower, upper = z_interval(coef, se, alpha=0.05, alternative="two-sided")
+    _, slope_t, slope_p_value = _compute_wald_statistics(
+        coef[1],
+        se[1],
+        null=1.0,
+        alternative="two-sided",
+    )
+
+    return CalibrationBLPDiagnostics(
+        intercept=float(coef[0]),
+        slope=float(coef[1]),
+        intercept_se=float(se[0]),
+        slope_se=float(se[1]),
+        intercept_ci=(float(lower[0]), float(upper[0])),
+        slope_ci=(float(lower[1]), float(upper[1])),
+        slope_null=1.0,
+        slope_wald_t=float(slope_t[0]),
+        slope_p_value=float(slope_p_value[0]),
+    )
 
 
 def _bin_diagnostics(
@@ -249,6 +398,7 @@ def calibration_diagnostics(
                 bin_counts=bin_counts,
                 grid_scores=grid_scores,
                 fitted_curve=fitted_curve,
+                blp=_fit_blp_diagnostics(outcomes, calibrated_scores, weights),
             )
         )
 
