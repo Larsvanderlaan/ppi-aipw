@@ -47,6 +47,10 @@ For local development from this checkout:
 python -m pip install -e .
 ```
 
+All numeric inputs to the Python mean, calibration, diagnostics, weighting, and
+causal APIs must be finite. `NaN` and `Inf` values are rejected with clear
+validation errors.
+
 Most users should start with:
 
 ```python

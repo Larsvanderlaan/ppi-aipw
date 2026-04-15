@@ -95,3 +95,30 @@ test_that("causal inference validates unsupported inputs", {
   expect_error(causal_inference(dat$Y, dat$A, dat$Yhat_potential[, 1, drop = FALSE], treatment_levels = c(0, 1)), "number of treatment_levels")
   expect_error(causal_inference(dat$Y, rep(0, length(dat$A)), dat$Yhat_potential[, 1, drop = FALSE]), "at least two observed treatment arms")
 })
+
+test_that("causal inference rejects nonfinite inputs", {
+  dat <- make_causal_data(seed = 6, n = 80, treatment_levels = c(0, 1))
+
+  bad_y <- dat$Y
+  bad_y[[1]] <- NA_real_
+  expect_error(causal_inference(bad_y, dat$A, dat$Yhat_potential), "Y must contain only finite values")
+
+  bad_a <- as.numeric(dat$A)
+  bad_a[[1]] <- NaN
+  expect_error(causal_inference(dat$Y, bad_a, dat$Yhat_potential), "A must contain only finite values")
+
+  bad_potential <- dat$Yhat_potential
+  bad_potential[1, 1] <- Inf
+  expect_error(causal_inference(dat$Y, dat$A, bad_potential), "Yhat_potential must contain only finite values")
+
+  bad_w <- rep(1, length(dat$Y))
+  bad_w[[1]] <- NA_real_
+  expect_error(causal_inference(dat$Y, dat$A, dat$Yhat_potential, w = bad_w), "Weights must contain only finite values")
+
+  bad_x <- dat$X
+  bad_x[1, 1] <- Inf
+  expect_error(
+    causal_inference(dat$Y, dat$A, dat$Yhat_potential, X = bad_x, method = "prognostic_linear"),
+    "X must contain only finite values"
+  )
+})

@@ -111,6 +111,12 @@ print(result.summary())</code></pre>
             The returned result object also has <code>summary()</code> for a
             compact Wald summary of the arm means and treatment effects.
           </p>
+          <p class="panel-note">
+            All numeric inputs must be finite. The package rejects
+            <code>NaN</code> and <code>Inf</code> values in outcomes,
+            potential-outcome predictions, covariates, and weights with clear
+            validation errors.
+          </p>
         </section>
 
         <section class="section" id="inputs">

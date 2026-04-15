@@ -30,6 +30,10 @@ print(result)
 summary(result)
 ```
 
+All numeric inputs must be finite. The package rejects `NaN`, `NA`, and `Inf`
+values in outcomes, potential-outcome predictions, covariates, and weights
+with clear validation errors.
+
 The causal wrapper treats each arm-specific mean as a semi-supervised mean problem
 under the hood, then forms control-vs-treatment ATEs from the arm estimates and
 their Wald covariance.

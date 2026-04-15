@@ -171,6 +171,12 @@ print(result.summary())</code></pre>
                 optionally <code>plot_calibration(...)</code> if
                 <code>matplotlib</code> is installed.
               </p>
+              <p>
+                All numeric inputs must be finite. The package rejects
+                <code>NaN</code> and <code>Inf</code> values in outcomes,
+                predictions, covariates, and weights with clear validation
+                errors.
+              </p>
             </div>
 
           <div class="argument-grid">

@@ -50,4 +50,12 @@ test_that("balancing weights validate basic inputs", {
   expect_error(compute_two_sample_balancing_weights(matrix(numeric(0), ncol = 1), matrix(1, ncol = 1)), "nonempty")
   expect_error(compute_two_sample_balancing_weights(matrix(1:4, ncol = 2), matrix(1:3, ncol = 1)), "same number of columns")
   expect_error(compute_two_sample_balancing_weights(matrix(1:4, ncol = 1), matrix(1:2, ncol = 1), target = "bad"), "target")
+  expect_error(
+    compute_two_sample_balancing_weights(matrix(c(0, NA, 2), ncol = 1), matrix(c(1, 2), ncol = 1)),
+    "X_labeled must contain only finite values"
+  )
+  expect_error(
+    compute_two_sample_balancing_weights(matrix(c(0, 1, 2), ncol = 1), matrix(c(1, Inf), ncol = 1)),
+    "X_unlabeled must contain only finite values"
+  )
 })

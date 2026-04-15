@@ -2,14 +2,18 @@ name: Publish to PyPI
 
 on:
   push:
+    branches:
+      - main
+      - "codex/**"
     tags:
       - "v*"
+  pull_request:
   release:
     types: [published]
   workflow_dispatch:
 
 jobs:
-  build:
+  checks:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -19,12 +23,78 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.x"
+          python-version: "3.11"
+
+      - uses: r-lib/actions/setup-r@v2
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt build twine
+          python -m pip install -e .
+
+      - name: Run Python tests
+        run: python -m pytest -q
+
+      - name: Install R test dependency
+        run: Rscript -e "install.packages('testthat', repos='https://cloud.r-project.org')"
+
+      - name: Run R tests
+        run: |
+          R CMD INSTALL r/ppiAIPW
+          Rscript -e "library(testthat); library(ppiAIPW); testthat::test_dir('r/ppiAIPW/tests/testthat', reporter='summary')"
+
+  build:
+    needs: checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt build twine
 
       - name: Build distributions
+        run: python -m build --no-isolation
+
+      - name: Check distributions
+        run: python -m twine check dist/*
+
+      - name: Fresh wheel smoke test
         run: |
-          python -m pip install --upgrade pip build
-          python -m build
+          python -m venv /tmp/ppi-aipw-smoke
+          /tmp/ppi-aipw-smoke/bin/pip install dist/*.whl
+          /tmp/ppi-aipw-smoke/bin/python - <<'PY'
+          import numpy as np
+          from ppi_aipw import calibration_diagnostics, causal_inference, mean_inference
+
+          rng = np.random.default_rng(123)
+          y = rng.normal(size=24)
+          yhat = y + rng.normal(scale=0.25, size=24)
+          yhat_unlabeled = rng.normal(size=60)
+
+          result = mean_inference(y, yhat, yhat_unlabeled, method="monotone_spline", alpha=0.1)
+          diagnostics = calibration_diagnostics(result, y, yhat, num_bins=4)
+          assert np.isfinite(float(result.pointestimate))
+          assert diagnostics.n_labeled == y.shape[0]
+
+          a = rng.integers(0, 2, size=40)
+          mu0 = rng.normal(size=40)
+          mu1 = mu0 + 0.5
+          y_causal = np.where(a == 1, mu1, mu0) + rng.normal(scale=0.2, size=40)
+          yhat_potential = np.column_stack([mu0, mu1])
+          causal = causal_inference(y_causal, a, yhat_potential, method="linear", alpha=0.1)
+          assert 1 in causal.ate
+          assert np.isfinite(float(causal.ate[1]))
+          PY
 
       - uses: actions/upload-artifact@v4
         with:
@@ -32,6 +102,7 @@ jobs:
           path: dist/
 
   publish:
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'release'
     needs: build
     runs-on: ubuntu-latest
     environment:

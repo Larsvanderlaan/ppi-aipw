@@ -6,10 +6,26 @@ import numpy as np
 from scipy.stats import norm
 
 
-def reshape_to_2d(x: np.ndarray) -> np.ndarray:
+def validate_finite_array(
+    x: np.ndarray,
+    *,
+    name: str,
+) -> np.ndarray:
+    arr = np.asarray(x, dtype=float)
+    if not np.all(np.isfinite(arr)):
+        raise ValueError(f"{name} must contain only finite values.")
+    return arr
+
+
+def reshape_to_2d(
+    x: np.ndarray,
+    *,
+    name: str = "array",
+) -> np.ndarray:
     x = np.asarray(x, dtype=float)
     if x.ndim == 0:
         raise ValueError("Expected a one- or two-dimensional array, got a scalar.")
+    x = validate_finite_array(x, name=name)
     return x.reshape(-1, 1) if x.ndim == 1 else x.copy()
 
 
@@ -34,11 +50,16 @@ def construct_weight_vector(
         weights = np.asarray(existing_weight, dtype=float).reshape(-1)
         if weights.shape != (n_obs,):
             raise ValueError(f"Expected weights with shape {(n_obs,)}, got {weights.shape}.")
+        if not np.all(np.isfinite(weights)):
+            raise ValueError("Weights must contain only finite values.")
         if np.any(weights < 0):
             raise ValueError("Weights must be nonnegative.")
         if not np.any(weights > 0):
             raise ValueError("At least one weight must be strictly positive.")
-        weights = weights / weights.sum() * n_obs
+        weight_sum = float(weights.sum())
+        if not np.isfinite(weight_sum) or weight_sum <= 0.0:
+            raise ValueError("Weights must sum to a finite positive value.")
+        weights = weights / weight_sum * n_obs
 
     if vectorized:
         weights = weights[:, None]
@@ -50,9 +71,9 @@ def validate_mean_inputs(
     Yhat: np.ndarray,
     Yhat_unlabeled: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    Y_2d = reshape_to_2d(np.asarray(Y, dtype=float))
-    Yhat_2d = reshape_to_2d(np.asarray(Yhat, dtype=float))
-    Yhat_unlabeled_2d = reshape_to_2d(np.asarray(Yhat_unlabeled, dtype=float))
+    Y_2d = reshape_to_2d(np.asarray(Y, dtype=float), name="Y")
+    Yhat_2d = reshape_to_2d(np.asarray(Yhat, dtype=float), name="Yhat")
+    Yhat_unlabeled_2d = reshape_to_2d(np.asarray(Yhat_unlabeled, dtype=float), name="Yhat_unlabeled")
 
     if Y_2d.shape != Yhat_2d.shape:
         raise ValueError(
@@ -73,8 +94,8 @@ def validate_pair_inputs(
     Y: np.ndarray,
     Yhat: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray]:
-    Y_2d = reshape_to_2d(np.asarray(Y, dtype=float))
-    Yhat_2d = reshape_to_2d(np.asarray(Yhat, dtype=float))
+    Y_2d = reshape_to_2d(np.asarray(Y, dtype=float), name="Y")
+    Yhat_2d = reshape_to_2d(np.asarray(Yhat, dtype=float), name="Yhat")
     if Y_2d.shape != Yhat_2d.shape:
         raise ValueError(f"Y and Yhat must have the same shape, got {Y_2d.shape} and {Yhat_2d.shape}.")
     if Y_2d.shape[0] == 0:

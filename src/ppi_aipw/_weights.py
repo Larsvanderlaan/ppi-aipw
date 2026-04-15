@@ -61,8 +61,8 @@ def compute_two_sample_balancing_weights(
     scheme.
     """
 
-    X_labeled_2d = reshape_to_2d(np.asarray(X_labeled, dtype=float))
-    X_unlabeled_2d = reshape_to_2d(np.asarray(X_unlabeled, dtype=float))
+    X_labeled_2d = reshape_to_2d(np.asarray(X_labeled, dtype=float), name="X_labeled")
+    X_unlabeled_2d = reshape_to_2d(np.asarray(X_unlabeled, dtype=float), name="X_unlabeled")
     if X_labeled_2d.shape[1] != X_unlabeled_2d.shape[1]:
         raise ValueError(
             "X_labeled and X_unlabeled must have the same number of columns. "

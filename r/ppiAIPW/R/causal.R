@@ -97,7 +97,7 @@ validate_outcome_vector <- function(Y) {
   if (length(Y_arr) == 0L) {
     stop("Y must be nonempty.", call. = FALSE)
   }
-  Y_arr
+  validate_finite_numeric(Y_arr, "Y")
 }
 
 validate_weight_vector <- function(w, n_obs) {
@@ -108,6 +108,7 @@ validate_weight_vector <- function(w, n_obs) {
   if (length(weights) != n_obs) {
     stop(sprintf("Expected weights with length %d, got %d.", n_obs, length(weights)), call. = FALSE)
   }
+  validate_finite_numeric(weights, "Weights")
   if (any(weights < 0)) {
     stop("Weights must be nonnegative.", call. = FALSE)
   }
@@ -130,8 +131,14 @@ validate_covariate_matrix <- function(X, n_obs) {
 
 resolve_potential_outcome_inputs <- function(A, Yhat_potential, treatment_levels = NULL) {
   A_arr <- as.vector(A)
+  if (is.numeric(A_arr)) {
+    validate_finite_numeric(A_arr, "A")
+  } else if (any(is.na(A_arr))) {
+    stop("A must not contain missing values.", call. = FALSE)
+  }
   potential_matrix <- as.matrix(Yhat_potential)
   storage.mode(potential_matrix) <- "double"
+  validate_finite_numeric(potential_matrix, "Yhat_potential")
   if (nrow(potential_matrix) != length(A_arr)) {
     stop("Yhat_potential must have the same number of rows as Y and A.", call. = FALSE)
   }
