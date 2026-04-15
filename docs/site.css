@@ -267,6 +267,15 @@ pre {
   font-size: 0.92rem;
 }
 
+.hero-pills a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.hero-pills a:hover {
+  text-decoration: underline;
+}
+
 .hero-panel {
   display: grid;
   gap: 18px;
