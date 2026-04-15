@@ -26,6 +26,10 @@ test_that("mean API validates basic inputs and methods", {
   expect_error(mean_inference(y, yhat, yhat_u, inference = "bad"), "inference")
   expect_error(mean_inference(y, yhat, yhat_u, w = c(1, 1, 1)), "Expected weights")
   expect_error(mean_inference(y, yhat, yhat_u, w = c(-1, 1, 1, 1)), "nonnegative")
+  expect_error(mean_inference(c(1, NA, 3, 4), yhat, yhat_u), "Y must contain only finite values")
+  expect_error(mean_inference(y, c(0.9, 2.1, Inf, 4.2), yhat_u), "Yhat must contain only finite values")
+  expect_error(mean_inference(y, yhat, c(1, NaN, 3)), "Yhat_unlabeled must contain only finite values")
+  expect_error(mean_inference(y, yhat, yhat_u, w = c(1, NA, 1, 1)), "Weights must contain only finite values")
 })
 
 test_that("fit_calibrator validates special methods and supports data frame inputs", {
@@ -65,6 +69,30 @@ test_that("prognostic linear models validate prediction shapes", {
   expect_match(print_text, "ppi_prognostic_linear_model")
   expect_error(predict(model, yhat[1:3], X = x[1:2, ]), "same number of rows")
   expect_error(predict(model, yhat[1:3], X = matrix(rnorm(9), ncol = 3)), "Expected X to have")
+})
+
+test_that("prognostic and calibration APIs reject nonfinite covariates and predictions", {
+  set.seed(2004)
+  x <- matrix(rnorm(80), ncol = 2)
+  x_u <- matrix(rnorm(160), ncol = 2)
+  y <- 1 + 0.4 * x[, 1] - 0.2 * x[, 2] + rnorm(40, sd = 0.2)
+  yhat <- y + rnorm(40, sd = 0.1)
+  yhat_u <- 1 + 0.4 * x_u[, 1] - 0.2 * x_u[, 2] + rnorm(80, sd = 0.1)
+
+  x_bad <- x
+  x_bad[1, 1] <- Inf
+  x_u_bad <- x_u
+  x_u_bad[1, 1] <- NA_real_
+
+  expect_error(
+    mean_inference(y, yhat, yhat_u, X = x_bad, X_unlabeled = x_u, method = "prognostic_linear"),
+    "X must contain only finite values"
+  )
+  expect_error(
+    mean_inference(y, yhat, yhat_u, X = x, X_unlabeled = x_u_bad, method = "prognostic_linear"),
+    "X_unlabeled must contain only finite values"
+  )
+  expect_error(fit_calibrator(y, replace(yhat, 1, Inf), method = "linear"), "Yhat must contain only finite values")
 })
 
 test_that("auto selection diagnostics include candidate scores and efficiency candidate", {

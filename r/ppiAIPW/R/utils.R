@@ -54,6 +54,13 @@ normalize_alternative <- function(alternative) {
   stop("alternative must be 'two-sided', 'larger', or 'smaller'.", call. = FALSE)
 }
 
+validate_finite_numeric <- function(x, name) {
+  if (any(!is.finite(x))) {
+    stop(sprintf("%s must contain only finite values.", name), call. = FALSE)
+  }
+  x
+}
+
 reshape_to_2d <- function(x, name = deparse(substitute(x))) {
   if (is.data.frame(x)) {
     x <- as.matrix(x)
@@ -63,6 +70,7 @@ reshape_to_2d <- function(x, name = deparse(substitute(x))) {
     if (length(x) == 0L) {
       stop(sprintf("%s must be nonempty.", name), call. = FALSE)
     }
+    x <- validate_finite_numeric(x, name)
     return(matrix(x, ncol = 1L))
   }
   x <- as.matrix(x)
@@ -70,6 +78,7 @@ reshape_to_2d <- function(x, name = deparse(substitute(x))) {
   if (nrow(x) == 0L) {
     stop(sprintf("%s must be nonempty.", name), call. = FALSE)
   }
+  x <- validate_finite_numeric(x, name)
   x
 }
 
@@ -102,18 +111,23 @@ construct_weight_vector <- function(n_obs, existing_weight = NULL, vectorized = 
   } else {
     weights <- as.numeric(existing_weight)
     if (length(weights) != n_obs) {
-      stop(
+        stop(
         sprintf("Expected weights with length %d, got %d.", n_obs, length(weights)),
         call. = FALSE
       )
     }
+    validate_finite_numeric(weights, "Weights")
     if (any(weights < 0)) {
       stop("Weights must be nonnegative.", call. = FALSE)
     }
     if (!any(weights > 0)) {
       stop("At least one weight must be strictly positive.", call. = FALSE)
     }
-    weights <- weights / sum(weights) * n_obs
+    weight_sum <- sum(weights)
+    if (!is.finite(weight_sum) || weight_sum <= 0) {
+      stop("Weights must sum to a finite positive value.", call. = FALSE)
+    }
+    weights <- weights / weight_sum * n_obs
   }
   if (vectorized) {
     weights <- matrix(weights, ncol = 1L)

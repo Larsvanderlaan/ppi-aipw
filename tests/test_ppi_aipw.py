@@ -1851,3 +1851,63 @@ def test_invalid_inference_and_jackknife_validation_raise_clear_errors() -> None
             jackknife_folds=2,
             random_state=0,
         )
+
+
+def test_mean_and_calibration_inputs_reject_nonfinite_values() -> None:
+    y = np.array([0.0, 1.0, 2.0], dtype=float)
+    yhat = np.array([0.1, 1.1, 2.1], dtype=float)
+    yhat_unlabeled = np.array([0.5, 0.7], dtype=float)
+    x = np.array([[0.0], [1.0], [2.0]], dtype=float)
+    x_unlabeled = np.array([[0.3], [0.4]], dtype=float)
+
+    with pytest.raises(ValueError, match="Y must contain only finite values"):
+        mean_inference(np.array([0.0, np.nan, 2.0]), yhat, yhat_unlabeled, method="linear")
+
+    with pytest.raises(ValueError, match="Yhat must contain only finite values"):
+        mean_inference(y, np.array([0.1, np.inf, 2.1]), yhat_unlabeled, method="linear")
+
+    with pytest.raises(ValueError, match="Yhat_unlabeled must contain only finite values"):
+        mean_inference(y, yhat, np.array([0.5, np.nan]), method="linear")
+
+    with pytest.raises(ValueError, match="Weights must contain only finite values"):
+        mean_inference(y, yhat, yhat_unlabeled, method="linear", w=np.array([1.0, np.nan, 1.0]))
+
+    with pytest.raises(ValueError, match="X must contain only finite values"):
+        mean_inference(
+            y,
+            yhat,
+            yhat_unlabeled,
+            method="prognostic_linear",
+            X=np.array([[0.0], [np.inf], [2.0]]),
+            X_unlabeled=x_unlabeled,
+        )
+
+    with pytest.raises(ValueError, match="X_unlabeled must contain only finite values"):
+        mean_inference(
+            y,
+            yhat,
+            yhat_unlabeled,
+            method="prognostic_linear",
+            X=x,
+            X_unlabeled=np.array([[0.3], [np.nan]]),
+        )
+
+    with pytest.raises(ValueError, match="Yhat must contain only finite values"):
+        fit_calibrator(y, np.array([0.1, np.inf, 2.1]), method="linear")
+
+
+def test_balancing_weights_reject_nonfinite_features() -> None:
+    x_labeled = np.array([[0.0], [1.0], [2.0]], dtype=float)
+    x_unlabeled = np.array([[1.0], [2.0]], dtype=float)
+
+    with pytest.raises(ValueError, match="X_labeled must contain only finite values"):
+        compute_two_sample_balancing_weights(
+            np.array([[0.0], [np.nan], [2.0]], dtype=float),
+            x_unlabeled,
+        )
+
+    with pytest.raises(ValueError, match="X_unlabeled must contain only finite values"):
+        compute_two_sample_balancing_weights(
+            x_labeled,
+            np.array([[1.0], [np.inf]], dtype=float),
+        )

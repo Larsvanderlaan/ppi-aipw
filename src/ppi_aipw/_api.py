@@ -311,7 +311,7 @@ def _coerce_covariates(
 ) -> np.ndarray | None:
     if X is None:
         return None
-    X_2d = reshape_to_2d(np.asarray(X, dtype=float))
+    X_2d = reshape_to_2d(np.asarray(X, dtype=float), name=name)
     if X_2d.shape[0] != n_obs:
         raise ValueError(f"{name} must have {n_obs} rows, got {X_2d.shape[0]}.")
     return X_2d

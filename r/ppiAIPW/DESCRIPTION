@@ -1,7 +1,7 @@
 Package: ppiAIPW
 Type: Package
 Title: Semi-Supervised Mean Inference with AIPW and Calibration
-Version: 0.1.0
+Version: 0.2.2
 Author: Lars van der Laan
 Maintainer: Lars van der Laan <lars@example.com>
 Authors@R: c(

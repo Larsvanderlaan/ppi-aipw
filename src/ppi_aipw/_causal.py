@@ -14,7 +14,7 @@ from ._api import (
     _summary_value,
     _wald_influence_components,
 )
-from ._utils import construct_weight_vector, z_interval
+from ._utils import construct_weight_vector, reshape_to_2d, validate_finite_array, z_interval
 
 
 @dataclass(frozen=True)
@@ -166,7 +166,7 @@ def _validate_outcome_vector(Y: np.ndarray) -> np.ndarray:
         raise ValueError("causal_inference currently supports one-dimensional outcomes only.")
     if Y_arr.shape[0] == 0:
         raise ValueError("Y must be nonempty.")
-    return Y_arr
+    return validate_finite_array(Y_arr, name="Y")
 
 
 def _validate_weight_vector(w: np.ndarray | None, n_obs: int) -> np.ndarray | None:
@@ -175,6 +175,8 @@ def _validate_weight_vector(w: np.ndarray | None, n_obs: int) -> np.ndarray | No
     weights = np.asarray(w, dtype=float).reshape(-1)
     if weights.shape != (n_obs,):
         raise ValueError(f"Expected weights with shape {(n_obs,)}, got {weights.shape}.")
+    if not np.all(np.isfinite(weights)):
+        raise ValueError("Weights must contain only finite values.")
     if np.any(weights < 0):
         raise ValueError("Weights must be nonnegative.")
     if not np.any(weights > 0):
@@ -185,11 +187,7 @@ def _validate_weight_vector(w: np.ndarray | None, n_obs: int) -> np.ndarray | No
 def _validate_covariate_matrix(X: np.ndarray | None, n_obs: int) -> np.ndarray | None:
     if X is None:
         return None
-    X_arr = np.asarray(X, dtype=float)
-    if X_arr.ndim == 1:
-        X_arr = X_arr.reshape(-1, 1)
-    if X_arr.ndim != 2:
-        raise ValueError("X must be one- or two-dimensional.")
+    X_arr = reshape_to_2d(np.asarray(X, dtype=float), name="X")
     if X_arr.shape[0] != n_obs:
         raise ValueError(f"X must have {n_obs} rows, got {X_arr.shape[0]}.")
     return X_arr
@@ -203,6 +201,10 @@ def _resolve_potential_outcome_inputs(
     A_arr = np.asarray(A)
     if A_arr.ndim != 1:
         raise ValueError("A must be a one-dimensional treatment vector.")
+    if np.issubdtype(A_arr.dtype, np.number):
+        validate_finite_array(A_arr, name="A")
+    elif any(item is None for item in A_arr.tolist()):
+        raise ValueError("A must not contain missing values.")
 
     potential_matrix = np.asarray(Yhat_potential, dtype=float)
     if potential_matrix.ndim != 2:
@@ -212,6 +214,7 @@ def _resolve_potential_outcome_inputs(
             "Yhat_potential must have the same number of rows as Y and A. "
             f"Got {potential_matrix.shape[0]} and {A_arr.shape[0]}."
         )
+    validate_finite_array(potential_matrix, name="Yhat_potential")
 
     observed_levels = tuple(dict.fromkeys(A_arr.tolist()))
     if len(observed_levels) < 2:

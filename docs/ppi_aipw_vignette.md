@@ -172,6 +172,12 @@ Argument guide:
 - `isocal_min_child_weight`: `min_child_weight` for the default XGBoost
   isotonic backend; the package default is `10`
 
+Input requirements:
+
+- all numeric inputs must be finite
+- the package rejects `NaN` and `Inf` values in outcomes, predictions,
+  covariates, and weights with clear validation errors
+
 Shape rules:
 
 - for scalar outcomes, use 1D arrays

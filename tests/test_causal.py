@@ -408,3 +408,28 @@ def test_causal_invalid_inputs_raise_clear_errors() -> None:
 
     with pytest.raises(ValueError, match="at least two observed treatment arms"):
         causal_inference(Y, np.zeros_like(A, dtype=int), Yhat_potential)
+
+
+def test_causal_invalid_inputs_reject_nonfinite_values() -> None:
+    Y, A, Yhat_potential = _make_causal_data(seed=6, n=60, treatment_levels=(0, 1))
+
+    with pytest.raises(ValueError, match="Y must contain only finite values"):
+        causal_inference(np.where(np.arange(Y.shape[0]) == 0, np.nan, Y), A, Yhat_potential)
+
+    with pytest.raises(ValueError, match="A must contain only finite values"):
+        causal_inference(Y, A.astype(float) + np.where(np.arange(A.shape[0]) == 0, np.nan, 0.0), Yhat_potential)
+
+    with pytest.raises(ValueError, match="Yhat_potential must contain only finite values"):
+        broken_potential = Yhat_potential.copy()
+        broken_potential[0, 0] = np.inf
+        causal_inference(Y, A, broken_potential)
+
+    with pytest.raises(ValueError, match="Weights must contain only finite values"):
+        weights = np.ones(Y.shape[0], dtype=float)
+        weights[0] = np.nan
+        causal_inference(Y, A, Yhat_potential, w=weights)
+
+    with pytest.raises(ValueError, match="X must contain only finite values"):
+        x = np.column_stack([np.linspace(0.0, 1.0, Y.shape[0]), np.ones(Y.shape[0])])
+        x[0, 0] = np.inf
+        causal_inference(Y, A, Yhat_potential, X=x, method="prognostic_linear")
