@@ -3,7 +3,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PYTHON_BIN="${PYTHON_BIN:-$ROOT_DIR/.venv/bin/python}"
+DEFAULT_VENV_PYTHON="$ROOT_DIR/.venv/bin/python"
+PYTHON_BIN="${PYTHON_BIN:-}"
 OUTPUT_ROOT="$ROOT_DIR/outputs"
 PAPER_ASSETS_DIR="$ROOT_DIR/paper/assets"
 CACHE_DIR="$OUTPUT_ROOT/cache/ppi_datasets"
@@ -38,6 +39,19 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+if [[ -z "$PYTHON_BIN" ]]; then
+  if [[ -x "$DEFAULT_VENV_PYTHON" ]]; then
+    PYTHON_BIN="$DEFAULT_VENV_PYTHON"
+  elif command -v python3 >/dev/null 2>&1; then
+    PYTHON_BIN="$(command -v python3)"
+  elif command -v python >/dev/null 2>&1; then
+    PYTHON_BIN="$(command -v python)"
+  else
+    echo "Could not find a usable Python executable. Set PYTHON_BIN explicitly." >&2
+    exit 1
+  fi
+fi
 
 if [[ ! -x "$PYTHON_BIN" ]]; then
   echo "Could not find Python executable at $PYTHON_BIN" >&2

@@ -295,7 +295,7 @@ def test_reproduce_script_smoke_exports_paper_assets(tmp_path: Path) -> None:
     write_fake_dataset_cache(cache_dir)
 
     env = os.environ.copy()
-    env["PYTHON_BIN"] = str(repo_root / ".venv/bin/python")
+    env["PYTHON_BIN"] = sys.executable
 
     subprocess.run(
         [
