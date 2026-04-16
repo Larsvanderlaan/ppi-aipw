@@ -21,10 +21,6 @@ From a local checkout:
 remotes::install_local("r/ppiAIPW")
 ```
 
-All numeric inputs to the R mean, calibration, diagnostics, weighting, and
-causal APIs must be finite. `NaN`, `NA`, and `Inf` values are rejected with
-clear validation errors.
-
 ## Quickstart
 
 ```r

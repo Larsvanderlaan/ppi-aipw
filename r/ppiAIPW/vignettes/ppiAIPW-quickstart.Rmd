@@ -26,10 +26,6 @@ print(result)
 summary(result)
 ```
 
-All numeric inputs must be finite. The package rejects `NaN`, `NA`, and `Inf`
-values in outcomes, predictions, covariates, and weights with clear validation
-errors.
-
 `ppiAIPW` is built around a simple workflow:
 
 - call `mean_inference()` when you want estimate, SE, interval, and fitted calibrator together
