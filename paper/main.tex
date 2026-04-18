@@ -13,7 +13,7 @@
 \usepackage{booktabs}
 \usepackage{enumitem}
 \usepackage{xcolor}
-\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue,hyperfootnotes=false]{hyperref}
 \usepackage[nameinlink,noabbrev]{cleveref}
 \makeatletter
 \renewcommand{\theHALG@line}{\thealgorithm.\arabic{ALG@line}}
@@ -64,7 +64,7 @@
   fontsize=\small
 }
 
-\title{Prediction-Powered Inference via Calibration}
+\title{Better Prediction-Powered Inference via Calibration}
 
 \author{
 Lars van der Laan\\
@@ -79,14 +79,14 @@ University of California, Berkeley
 \begin{document}
 \maketitle
 \begin{abstract}
-We study semisupervised mean estimation with a small labeled sample, a large unlabeled sample, and an available black-box prediction model that may be miscalibrated. This setting arises in modern randomized trials, biobanks, and other data-rich scientific settings where gold-standard outcomes are expensive but predictions or surrogate scores are widely available. A standard approach is augmented inverse-probability weighting (AIPW) \citep{robins1994estimation}, which uses the prediction model to improve efficiency while remaining valid even when the model is misspecified. We propose a simple strategy: \textit{``predict, calibrate, and average.''} Using the labeled sample, we recalibrate the prediction model and then average the calibrated predictions over the pooled sample. We show that calibration can better align informative predictors with the outcomes they are meant to predict, yielding efficiency gains over AIPW based on the uncalibrated predictions while retaining a simple plug-in form. We implement the calibration step using isotonic regression, a lightweight, tuning-free method that learns the best monotone transformation of the prediction score.
+We study semisupervised mean estimation with a small labeled sample, a large unlabeled sample, and an available black-box prediction model that may be miscalibrated. This setting arises in randomized trials, biobanks, and other data-rich scientific studies where gold-standard outcomes are expensive but predictions or surrogate scores are readily available. Standard prediction-powered estimators such as augmented inverse-probability weighting (AIPW) \citep{robins1994estimation} remain valid even when the prediction model is misspecified, but they can leave efficiency on the table when predictions are poorly calibrated. We propose a simple correction to this workflow: \textit{predict, calibrate, and average}. Using the labeled sample, we recalibrate the prediction model using linear or isotonic regression and then average the calibrated predictions over the pooled sample. This lightweight step is easy to add to existing pipelines, requires no retraining of the original model, preserves the simple plug-in form and validity guarantees of AIPW, and can improve efficiency relative to AIPW based on uncalibrated predictions.
 
-We also clarify how our approach relates to recent prediction-powered inference (PPI) methods. We show that the PPI estimator of \citet{ppi2023} is generally less efficient than AIPW for accurate models, while PPI++ of \citet{angelopoulos2023ppi} is AIPW with empirical-efficiency maximization \citep{rubin2008empirical} and is first-order equivalent to linear calibration \citep{mincer1969evaluation} and classical prognostic-score regression adjustment \citep{hansen2008prognostic}. Consistent with this perspective, calibration-based estimators often improve on PPI and remain competitive with or outperform AIPW and PPI++ in simulations and real-data experiments. We implement the proposed methods in an accompanying \texttt{Python} package, \href{https://larsvanderlaan.github.io/ppi-aipw/}{\texttt{ppi\_aipw}}.
+We also clarify how our approach relates to recent prediction-powered inference (PPI) methods. We show that the original PPI estimator of \citet{ppi2023} is a special case of classical AIPW \citep{robins1994estimation} and can be less efficient when the prediction model is accurate, because it does not fully use labeled-sample covariate information. We further show that PPI++ of \citet{angelopoulos2023ppi} is AIPW with empirical-efficiency maximization \citep{rubin2008empirical} and is first-order equivalent to linear calibration \citep{mincer1969evaluation} and classical prognostic-score regression adjustment \citep{hansen2008prognostic}. Thus, PPI methods are best viewed as part of a broader class of familiar semiparametric and regression-adjustment methods. Consistent with this perspective, calibration-based estimators often improve on the classical PPI estimator and remain competitive with or outperform AIPW and PPI++ in simulations and real-data experiments. We implement the proposed methods in an accompanying \texttt{Python} package, \href{https://larsvanderlaan.github.io/ppi-aipw/}{\texttt{ppi\_aipw}}.
 \end{abstract}
  
 \section{Introduction}
 
-We study semisupervised mean estimation with one labeled dataset \(\{(X_i, Y_i)\}_{i=1}^n\) and one unlabeled dataset \(\{\widetilde X_i\}_{i=1}^N\), where outcomes are observed only for a subset sampled completely at random. This is a classical missing-outcome problem: we observe rich covariate information for many individuals, but the outcome of interest is available only for a smaller subset. The goal is to use the larger unlabeled sample to improve estimation of a population mean while still accounting for the fact that predictions are imperfect. This setting has long been studied in missing-data and semiparametric statistics, where methods such as AIPW, TMLE, and related debiased estimators already allow flexible machine-learning predictors to be used with valid inference \citep{robins1994estimation,vanderlaanunified,van2006targeted,vanderLaanRose2011,DoubleML}. More recently, similar ideas have reappeared in the machine-learning literature under the name prediction-powered inference \citep{ppi2023,angelopoulos2023ppi,crossppi2024}. Related problems also arise in covariate adjustment for randomized trials, where machine-learning predictors trained on rich auxiliary data can improve precision in small samples \citep{hansen2008prognostic,rubin2008empirical,moore2009covariate,lin2013agnostic,schuler2022increasing,demirel2024prediction}.
+We study semisupervised mean estimation with one labeled dataset \(\{(X_i, Y_i)\}_{i=1}^n\) and one unlabeled dataset \(\{\widetilde X_i\}_{i=1}^N\), where outcomes are observed only for a subset sampled completely at random. This is a classical missing-outcome problem: we observe rich covariate information for many individuals, but the outcome of interest is available only for a smaller subset. The goal is to use the larger unlabeled sample to improve estimation of a population mean while still accounting for the fact that predictions are imperfect. This setting has long been studied in missing-data and semiparametric statistics, where methods such as AIPW, TMLE, and related debiased estimators already allow flexible machine-learning predictors to be used with valid inference \citep{robins1994estimation,vanderlaanunified,van2006targeted,vanderLaanRose2011,DoubleML}. More recently, similar ideas have reappeared in the machine-learning literature under the name prediction-powered inference \citep{ppi2023,angelopoulos2023ppi,crossppi2024}. Related problems also arise in covariate adjustment for randomized trials, where machine-learning predictors trained on rich auxiliary data can improve precision in small samples \citep{hansen2008prognostic,rubin2008empirical,moore2009covariate,lin2013agnostic,schuler2022increasing,demirel2024prediction,jin2026prognostic}.
 
 
 In many applications, the bottleneck is not covariates or predictions, but gold-standard outcomes. A randomized trial may have a prognostic model trained on historical data \citep{schuler2022increasing}, a biobank analysis may use a phenotype predictor built from EHR or omics measurements \citep{hong2019semisupervised,zhang2019phecap}, and a computational biology pipeline may use predictions to supplement slow or expensive experimental measurements at scale \citep{ppi2023,crossppi2024}. In each case, investigators want to use these abundant predictions to estimate a population mean or treatment-arm mean more precisely, without treating the predictions as error-free.
@@ -343,7 +343,10 @@ where \(D_f^L\) and \(D_f^U\) are given in \eqref{eq:if-class-L}--\eqref{eq:if-c
 \]
 \end{proposition}
 
-This characterization shows that the AIPW class provides the relevant first-order benchmark in this model. We now illustrate how several estimators that are not always presented in AIPW form---namely regression adjustment, balancing-weight adjustment, and TMLE---can nonetheless be viewed as finite-sample or asymptotic equivalents of AIPW estimators \citep{rotnitzky2025note,van2006targeted}, while sometimes offering better finite-sample performance.
+This characterization shows that the AIPW class provides the relevant first-order benchmark in this model. We now illustrate how several estimators that are not always presented in AIPW form---namely regression adjustment, balancing-weight adjustment, and TMLE---can nonetheless be viewed as finite-sample or asymptotic equivalents of AIPW estimators \citep{rotnitzky2025note,van2006targeted}, while sometimes offering better finite-sample performance \citep{porter2011relative, jin2026prognostic, van2025automatic}.
+
+ 
+
 
 \begin{remark}[Plug-in approaches to bias correction and TMLE] \label{remark::plugin}
 
@@ -397,7 +400,7 @@ In fact, the plug-in and balancing-weight estimators are algebraically equivalen
 (1-\rho_n)\Pu\{m_n(\widetilde X)\}.
 \]
 
-\textbf{TMLE.} More broadly, such debiased plug-in estimators can be viewed as instances of TMLE \citep{van2006targeted,vanderLaanRose2011,hojbjerre2026within}, a general framework for constructing plug-in estimators that are debiased and, in many cases, efficient by updating nuisance components to remove first-order bias. In the present setting, either the weights or the regression model are updated so that the corresponding augmentation term vanishes. In weighting-based TMLE, the update balances on the prediction model \(m(X)\) (e.g., \citealt{hejazi2023revisiting}); one may either include the known weight \(1/\rho_n\) as an offset or balance on the intercept as well. In regression-based TMLE, the prediction model \(m(X)\) may be included either as a covariate or as an offset (e.g., \citealt{lendle2015balancing}), and the intercept adjustment accounts for the known inverse missingness-probability weight \(1/\rho_n\). The specific targeting step is ultimately a practical choice, provided it solves the relevant estimating equation and removes the augmentation term; different choices may also yield additional benefits, such as further bias reduction or doubly robust inference \citep{van2014targeted,carone2014higher,diaz2017doubly,benkeser2017doubly,van2021higher}.
+\textbf{TMLE.} More broadly, such debiased plug-in estimators can be viewed as instances of TMLE \citep{van2006targeted,vanderLaanRose2011,hojbjerre2026within}, a general framework for constructing plug-in estimators that are debiased and, in many cases, efficient by updating nuisance components to remove first-order bias. In the present setting, either the weights or the regression model are updated so that the corresponding augmentation term vanishes. In weighting-based TMLE, the update balances on the prediction model \(m(X)\) (e.g., \citealt{hejazi2023revisiting}); one may either include the known weight \(1/\rho_n\) as an offset or balance on the intercept as well. In regression-based TMLE, the prediction model \(m(X)\) may be included either as a covariate or as an offset (e.g., \citealt{lendle2015balancing}), and the intercept adjustment accounts for the known inverse missingness-probability weight \(1/\rho_n\). The specific targeting step is ultimately a practical choice, provided it solves the relevant estimating equation and removes the augmentation term; different choices may also yield additional benefits, such as further bias reduction or doubly robust inference \citep{van2014targeted,carone2014higher,diaz2017doubly,benkeser2017doubly,van2021higher, van2024automatic}.
 \end{remark}
 
 
@@ -2766,7 +2769,7 @@ For the fixed calibration-based plug-in estimators, we fit the calibrator on the
 \begin{table}[ht]
 \centering
 \small
-\resizebox{0.94\textwidth}{!}{\input{assets/table_paper_summary.tex}}
+\resizebox{0.92\textwidth}{!}{\input{assets/table_paper_summary.tex}}
 \caption{Representative numerical summary at the smallest, middle, and largest labeled sample sizes for each reproduced benchmark. The reported quantities are Monte Carlo bias, empirical variance of the point estimator, MSE, Wald-interval coverage, and relative efficiency versus PPI for the displayed benchmark set, including PPI++, \texttt{Auto}, and \texttt{MonoSpline}.}
 \label{tab:ppi-benchmarks-full}
 \end{table}
