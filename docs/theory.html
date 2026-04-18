@@ -51,13 +51,13 @@
         <div class="hero-grid">
           <section class="hero-copy">
             <p class="eyebrow">Theory</p>
-            <h1>How the estimator works in simple terms.</h1>
+            <h1>How the estimator works.</h1>
             <p class="lede">
-              In the small-labeled, large-unlabeled setting, a good score can
-              improve precision, but it should not be trusted blindly. AIPW
-              averages that score and then adds a labeled-sample correction, so
-              you get efficiency together with a built-in safeguard against
-              score error.
+              In the small-labeled, large-unlabeled setting, a prediction score
+              can improve precision, but it should stay anchored to the
+              observed outcomes. AIPW averages that score and then adds a
+              labeled-sample correction, so the estimator can borrow strength
+              from the score without fully trusting it.
             </p>
             <p class="panel-note">
               Here <code>score</code> means the model output you plug into the
@@ -76,11 +76,11 @@
               <p class="panel-label">Core Recipe</p>
               <div class="default-stack">
                 <div>
-                  <span class="stack-name">Choose a score</span>
+                  <span class="stack-name">Score</span>
                   <strong>Average a score over labeled and unlabeled covariates</strong>
                 </div>
                 <div>
-                  <span class="stack-name">Correct with labels</span>
+                  <span class="stack-name">Labeled correction</span>
                   <strong>Add back the average residual</strong>
                 </div>
               </div>
@@ -92,9 +92,9 @@
             <div class="panel-card code-card">
               <p class="panel-label">Main Idea</p>
               <p class="panel-note">
-                AIPW is not one special formula with one special model. It is a
-                broad template, and you are free to choose the
-                score \(f(X)\) that enters it.
+                AIPW is a broad template rather than one fixed formula. What
+                changes from method to method is the score \(f(X)\) that enters
+                it.
               </p>
             </div>
           </aside>
@@ -202,8 +202,8 @@
               <text class="diagram-text-small" x="346" y="252">repairs systematic score error</text>
             </svg>
             <p class="diagram-caption">
-              A good score helps the pooled plug-in term. The correction term
-              keeps the estimate tied to observed outcomes.
+              A useful score helps the pooled plug-in term, and the correction
+              term keeps the estimate tied to observed outcomes.
             </p>
           </div>
         </section>
@@ -549,8 +549,9 @@ E_0[f(X)] = E_0[Y] = \theta_0.
           </div>
 
           <div class="theory-note">
-            Practical rule: start simple when the labeled sample is small, and
-            add flexibility only when it clearly improves prediction.
+            When the labeled sample is small, simpler scores are often the
+            better starting point; add flexibility only when it clearly helps
+            prediction.
           </div>
         </section>
 
@@ -561,19 +562,19 @@ E_0[f(X)] = E_0[Y] = \theta_0.
               <h2>What this means in practice</h2>
             </div>
             <p class="section-side-note">
-              Think of the estimator as a safe wrapper around a score you are
-              trying to improve.
+              Think of the estimator as a careful wrapper around a score you
+              are trying to improve.
             </p>
           </div>
 
           <div class="takeaway-grid">
             <article class="takeaway-card">
-              <h3>Practical takeaway</h3>
+              <h3>Main idea</h3>
               <ul>
-                <li>AIPW is the safe wrapper.</li>
+                <li>AIPW is the wrapper.</li>
                 <li>\(f(X)\) is the efficiency lever.</li>
                 <li>Calibration is one way to improve that lever.</li>
-                <li>PPI and PPI++ are specific choices inside this broader workflow.</li>
+                <li>PPI and PPI++ are specific choices within this broader workflow.</li>
               </ul>
             </article>
             <article class="takeaway-card">

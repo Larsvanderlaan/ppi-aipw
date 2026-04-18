@@ -268,11 +268,10 @@ print(result.summary())</code></pre>
           <div class="section-heading split">
             <div>
               <p class="eyebrow">Method Explorer</p>
-              <h2>Choose the estimation strategy that matches your problem</h2>
+              <h2>Supported estimation strategies</h2>
             </div>
             <p class="section-side-note">
-              Click through the methods for a short description, typical use
-              case, and main tradeoffs.
+              Method summaries, typical use cases, and main tradeoffs.
             </p>
           </div>
 
@@ -330,7 +329,7 @@ print(result.summary())</code></pre>
 
               <div class="method-columns">
                 <div class="info-box">
-                  <h4>Good when</h4>
+                  <h4>Use cases</h4>
                   <ul data-method-good></ul>
                 </div>
                 <div class="info-box">
@@ -338,7 +337,7 @@ print(result.summary())</code></pre>
                   <ul data-method-tradeoffs></ul>
                 </div>
                 <div class="info-box">
-                  <h4>Recommendation</h4>
+                  <h4>Notes</h4>
                   <p data-method-recommendation></p>
                 </div>
               </div>
@@ -350,7 +349,7 @@ print(result.summary())</code></pre>
           <div class="section-heading split">
             <div>
               <p class="eyebrow">Intervals</p>
-              <h2>Wald for speed, jackknife and bootstrap for capturing finite-sample variability</h2>
+              <h2>Wald, jackknife, and bootstrap intervals</h2>
             </div>
             <p class="section-side-note">
               Jackknife and bootstrap both refit the calibration step under
@@ -368,20 +367,20 @@ print(result.summary())</code></pre>
             <article class="toggle-card">
               <h3 data-inference-title>Wald intervals</h3>
               <p data-inference-summary>
-                Fast analytic intervals for routine use.
+                Fast analytic intervals.
               </p>
               <div class="mini-grid">
                 <div class="mini-box">
-                  <span>Best for</span>
-                  <strong data-inference-best>Routine analyses</strong>
+                  <span>Primary use</span>
+                  <strong data-inference-best>Standard analyses</strong>
                 </div>
                 <div class="mini-box">
                   <span>Cost</span>
                   <strong data-inference-cost>Low compute</strong>
                 </div>
                 <div class="mini-box">
-                  <span>Use when</span>
-                  <strong data-inference-when>You want a fast interval based on the Wald approximation</strong>
+                  <span>When appropriate</span>
+                  <strong data-inference-when>Fast interval based on the Wald approximation.</strong>
                 </div>
               </div>
             </article>

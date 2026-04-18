@@ -5,9 +5,9 @@ const methodContent = {
     summary:
       "Fits a straight-line recalibration map from prediction score to outcome, then runs AIPW on the recalibrated scores.",
     good: [
-      "You want the simplest affine recalibration.",
+      "Affine recalibration is adequate.",
       "Predictions seem useful but shifted or stretched.",
-      "Your labeled sample is small and you are worried more flexible methods may overfit."
+      "The labeled sample is small and more flexible methods may overfit."
     ],
     tradeoffs: [
       "Simple and fast.",
@@ -15,7 +15,7 @@ const methodContent = {
       "Cannot capture strongly nonlinear calibration error."
     ],
     recommendation:
-      "Use when affine recalibration is adequate and you want the simplest calibrated estimator.",
+      "Appropriate when affine recalibration is adequate and a simple calibrated estimator is sufficient.",
     visualNote:
       "A single affine map tilts and shifts the original score before the final AIPW aggregation."
   },
@@ -25,9 +25,9 @@ const methodContent = {
     summary:
       "Uses the prediction score together with optional covariates X in a semisupervised linear adjustment before AIPW. The intercept and score are unpenalized; extra covariates are ridge-regularized with tuning on the labeled sample.",
     good: [
-      "You have extra covariates X that may explain residual outcome variation after conditioning on the score.",
-      "You want to perform linear calibration with linear covariate adjustment.",
-      "You have enough labeled data to support adjustment for X."
+      "Extra covariates X may explain residual outcome variation after conditioning on the score.",
+      "Linear calibration with linear covariate adjustment is appropriate.",
+      "The labeled sample is large enough to support adjustment for X."
     ],
     tradeoffs: [
       "Clear, regression-style interpretation.",
@@ -35,7 +35,7 @@ const methodContent = {
       "Adjusting for many covariates can require a larger labeled sample; ridge regularization helps stabilize the fit."
     ],
     recommendation:
-      "Use when the score is useful but you also have covariates worth adding in a linear adjustment.",
+      "Appropriate when the score is useful and extra covariates are worth adding in a linear adjustment.",
     visualNote:
       "Shown as the score-only affine part of the fit. The actual method can also add linear covariate adjustment through X."
   },
@@ -45,9 +45,9 @@ const methodContent = {
     summary:
       "Uses the original prediction scores directly and applies AIPW with no calibration layer. Add `efficiency_maximization=True` if you want the package to rescale the predictor to `lambda m(X)` using empirical efficiency maximization.",
     good: [
-      "You trust the original score scale.",
-      "You want a direct uncalibrated baseline.",
-      "You want to separate calibration effects from AIPW itself."
+      "The original score scale is trusted.",
+      "A direct uncalibrated baseline is useful.",
+      "Calibration effects need to be separated from AIPW itself."
     ],
     tradeoffs: [
       "Simple and stable.",
@@ -55,7 +55,7 @@ const methodContent = {
       "Can miss efficiency gains when the score is systematically mis-scaled unless you turn on efficiency maximization."
     ],
     recommendation:
-      "Use when you want uncalibrated AIPW on the original score, optionally with empirical efficiency rescaling.",
+      "Appropriate for uncalibrated AIPW on the original score, optionally with empirical efficiency rescaling.",
     visualNote:
       "Raw-score AIPW leaves the score on the identity line. Efficiency maximization adds a global rescaling by lambda."
   },
@@ -67,7 +67,7 @@ const methodContent = {
     good: [
       "Predictions are probability-like or naturally bounded.",
       "A smooth monotone recalibration is plausible.",
-      "You suspect overconfidence or underconfidence has an S-shaped pattern."
+      "Overconfidence or underconfidence appears to have an S-shaped pattern."
     ],
     tradeoffs: [
       "More structured than isotonic calibration.",
@@ -75,7 +75,7 @@ const methodContent = {
       "Can underfit if the true calibration curve is not close to sigmoid-shaped."
     ],
     recommendation:
-      "Use mainly for bounded or probability-like scores when a smooth sigmoid recalibration is plausible.",
+      "Primarily appropriate for bounded or probability-like scores when a smooth sigmoid recalibration is plausible.",
     visualNote:
       "A smooth S-shaped map can correct systematic nonlinear distortion by moderating the extremes and expanding the middle of the score range."
   },
@@ -85,10 +85,10 @@ const methodContent = {
     summary:
       "Fits a smooth monotone spline calibration curve, then plugs the calibrated predictions into the AIPW estimator. This is the package's smooth monotone alternative to a stepwise isotonic fit.",
     good: [
-      "You want a strong smooth monotone default.",
-      "You expect monotone nonlinear miscalibration.",
-      "You want something smoother than isotonic calibration.",
-      "You want a middle ground between linear and isotonic recalibration."
+      "Smooth monotone calibration is appropriate as a default.",
+      "Monotone nonlinear miscalibration is expected.",
+      "Smoother behavior than isotonic calibration is preferred.",
+      "A middle ground between linear and isotonic recalibration is useful."
     ],
     tradeoffs: [
   "More flexible than linear calibration and sigmoid calibration.",
@@ -96,7 +96,7 @@ const methodContent = {
   "Retains much of the flexibility of isotonic calibration while often being more stable when the labeled sample is small."
     ],
     recommendation:
-      "Use as the default monotone calibrator when you want a smooth nonlinear adjustment.",
+      "Default smooth monotone calibrator for nonlinear adjustment.",
     visualNote:
       "A smooth monotone curve bends where needed, but avoids the hard plateaus of a stepwise isotonic fit."
   },
@@ -106,9 +106,9 @@ const methodContent = {
     summary:
       "Fits a monotone isotonic calibration curve, then plugs the calibrated predictions into the AIPW estimator. The default backend is a one-round monotone XGBoost calibrator with `min_child_weight=10`; switch to `isocal_backend=\"sklearn\"` if you want scikit-learn isotonic regression instead.",
     good: [
-      "You expect monotone but nonlinear miscalibration.",
+      "Monotone but nonlinear miscalibration is expected.",
       "Ordering is trustworthy but the numeric scale is not.",
-      "You have enough labeled data to fit a stable flexible calibrator."
+      "The labeled sample is large enough to fit a stable flexible calibrator."
     ],
     tradeoffs: [
       "Most flexible monotone option in the package.",
@@ -116,7 +116,7 @@ const methodContent = {
       "Less stable than simpler methods when the labeled sample is very small."
     ],
     recommendation:
-      "Use when you want a nonlinear upgrade and the labeled sample is large enough to support it.",
+      "Appropriate when a more flexible nonlinear calibrator is needed and the labeled sample is large enough to support it.",
     visualNote:
       "The fitted map is monotone and piecewise constant, so the calibration curve moves in visible steps."
   },
@@ -126,9 +126,9 @@ const methodContent = {
     summary:
       "Compares a candidate shortlist by cross-validated influence-function variance, then refits the selected method on the full labeled sample before the final estimate. By default the shortlist is `(\"aipw\", \"linear\", \"monotone_spline\", \"isotonic\")`.",
     good: [
-      "You want the package to choose among a small, interpretable shortlist for you.",
-      "You are comfortable spending extra compute to avoid hand-picking a method.",
-      "You want a practical default selector rather than a single fixed calibration family."
+      "A small interpretable shortlist is preferred over a fixed method.",
+      "Extra compute is acceptable to avoid hand-picking a method.",
+      "A data-adaptive selector is preferred over a single calibration family."
     ],
     tradeoffs: [
       "More compute than fitting one method directly.",
@@ -136,7 +136,7 @@ const methodContent = {
       "If `\"aipw\"` is in the shortlist, the selector also compares an efficiency-maximized AIPW candidate."
     ],
     recommendation:
-      "Use when you want a data-adaptive choice across a small candidate set rather than committing to one method up front.",
+      "Appropriate for data-adaptive selection across a small candidate set rather than committing to one method up front.",
     visualNote:
       "Shown as a candidate comparison rather than a single calibration map: the selector scores the shortlisted methods and then refits the winner."
   }
@@ -314,10 +314,10 @@ const inferenceContent = {
   wald: {
     title: "Wald intervals",
     summary:
-      "Fast analytic intervals for routine use.",
-    best: "Routine analyses",
+      "Fast analytic intervals.",
+    best: "Standard analyses",
     cost: "Low compute",
-    when: "You want a fast interval based on the Wald approximation"
+    when: "Fast interval based on the Wald approximation."
   },
   jackknife: {
     title: "Jackknife intervals",
@@ -325,7 +325,7 @@ const inferenceContent = {
       "V-fold delete-a-group intervals that refit calibration after dropping one labeled and one unlabeled fold at a time, then use the jackknife SE in a normal approximation.",
     best: "Finite-sample checks",
     cost: "Moderate compute",
-    when: "You want a finite-sample check; it may work better than bootstrap in practice"
+    when: "Finite-sample check; it may work better than bootstrap in practice."
   },
   bootstrap: {
     title: "Bootstrap intervals",
@@ -333,7 +333,7 @@ const inferenceContent = {
       "Percentile bootstrap intervals that treat the prediction model as fixed, resample rows, and refit the calibration step inside each replicate.",
     best: "Classical resampling",
     cost: "Higher compute",
-    when: "You want a classical resampling check with percentile intervals"
+    when: "Classical resampling check with percentile intervals."
   }
 };
 
