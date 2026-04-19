@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ppi_aipw</title>
+    <title>Calibeating Prediction-Powered Inference | ppi_aipw</title>
     <meta
       name="description"
-      content="Semisupervised mean estimation with AIPW, calibration, and uncertainty quantification."
+      content="Calibeating prediction-powered inference with post-hoc calibration, AIPW, and semisupervised uncertainty quantification."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -39,9 +39,9 @@
 
         <div class="hero-grid">
           <section class="hero-copy">
-            <p class="eyebrow">Semisupervised Mean Inference</p>
+            <p class="eyebrow">Calibeating Prediction-Powered Inference</p>
             <div class="hero-head">
-              <h1>Semisupervised mean inference with AIPW and calibration</h1>
+              <h1>Post-hoc calibration for prediction-powered inference</h1>
               <div class="hero-art">
                 <img
                   src="./assets/ppi-aipw-badge-mark.svg"
@@ -52,17 +52,19 @@
               </div>
             </div>
             <p class="lede">
-              <code>ppi_aipw</code> is for the small-labeled, large-unlabeled
-              setting where predictions from a fixed model can improve power
-              and precision. It uses AIPW (Robins et al., 1994) as the safe
-              debiased baseline and adds calibration methods that go beyond
-              mean correction, together with uncertainty quantification in one
-              API.
+              <code>ppi_aipw</code> implements the paper
+              <em>Calibeating Prediction-Powered Inference</em> for the
+              small-labeled, large-unlabeled setting where a fixed black-box
+              score may still be useful even when it is miscalibrated. The
+              package recalibrates that score post hoc, averages the calibrated
+              predictions over the pooled sample, and connects the result back
+              to AIPW in one API.
             </p>
             <p class="panel-note">
-              A useful model score can help even if it is not perfectly
-              calibrated. Calibration is the step that puts that prediction
-              score on the right outcome scale before averaging it.
+              The updated paper framing is simple: predict, calibrate, and
+              average. Calibration improves the score itself rather than only
+              correcting its mean, which is why it can sharpen inference
+              without retraining the original model.
             </p>
             <div class="hero-actions">
               <a class="button button-primary" href="#quickstart">Quickstart</a>
@@ -413,11 +415,12 @@ print(result.summary())</code></pre>
               Main paper themes reflected here:
             </p>
             <ul>
-              <li>PPI and PPI++ can be understood within the AIPW, semiparametric-efficiency, and debiased machine learning framework.</li>
-              <li>In the one-score setting, <code>efficiency_maximization=True</code> for <code>method="aipw"</code> targets the same empirical efficiency-maximization problem as PPI++; see Rubin and van der Laan (2008). The official <code>ppi_py</code> implementation of PPI++ may differ in finite samples because it clips the optimized scale to lie in <code>[0,1]</code>. Plain PPI is not implemented because raw-score AIPW is typically at least as efficient.</li>
-              <li>In the one-score setting, AIPW with empirical efficiency maximization (PPI++) is asymptotically equivalent to linear calibration and prognostic-score regression adjustment.</li>
-              <li>Calibration is stronger than mean-bias correction alone and can improve semisupervised inference when the score is miscalibrated. Linear calibration is the less flexible parametric option, while isotonic calibration is a nonparametric calibrator.</li>
-              <li>Monotone spline calibration implements a smoothed version of isotonic calibration and is the package default, while linear calibration remains the simplest affine alternative and isotonic calibration provides a more flexible monotone option when the labeled sample is large enough.</li>
+              <li>The paper studies post-hoc calibration of a miscalibrated black-box score in semisupervised mean estimation, then averages the calibrated score over the pooled labeled and unlabeled sample.</li>
+              <li>The resulting calibrated plug-in estimator has an exact AIPW interpretation, so calibration improves the score while AIPW supplies the debiased safety net.</li>
+              <li>For isotonic calibration, the paper proves a first-order <em>calibeating</em> guarantee: the fitted isotonic score improves on simpler post-processing rules, and further post-processing does not yield additional first-order gain.</li>
+              <li>The original PPI estimator is a special case of AIPW and can be less efficient because it does not fully use labeled-sample covariate information.</li>
+              <li>In the one-score setting, <code>efficiency_maximization=True</code> for <code>method="aipw"</code> targets the same empirical efficiency-maximization problem as PPI++; linearly calibrated PPI is first-order equivalent to PPI++ and to linear prognostic-score regression adjustment.</li>
+              <li>Monotone spline calibration remains the package default as a smoother monotone alternative to isotonic calibration, while linear calibration stays the simplest affine correction.</li>
               <li>Jackknife and bootstrap intervals are practical complements to Wald intervals when finite-sample variability matters.</li>
             </ul>
             <p>
@@ -454,7 +457,7 @@ print(result.summary())</code></pre>
               Semisupervised mean estimation:
             </p>
             <ul>
-              <li>van der Laan and van der Laan, <em>"Prediction-Powered Inference via Calibration"</em>.</li>
+              <li>van der Laan and van der Laan, <em>"Calibeating Prediction-Powered Inference"</em>.</li>
               <li>Mozer (2026), <em>"PPI is the difference estimator: recognizing the survey sampling roots of prediction-powered inference"</em>, <em>arXiv preprint arXiv:2603.19160</em>.</li>
               <li>Angelopoulos, Bates, Fannjiang, Jordan, and Zrnic (2023), <em>"Prediction-powered inference"</em>, <em>Science</em> 382(6671): 669-674.</li>
               <li>Angelopoulos, Duchi, and Zrnic (2023), <em>"PPI++: Efficient prediction-powered inference"</em>.</li>

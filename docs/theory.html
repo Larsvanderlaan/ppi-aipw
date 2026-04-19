@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ppi_aipw theory</title>
+    <title>Calibeating Prediction-Powered Inference | Theory | ppi_aipw</title>
     <meta
       name="description"
-      content="Simple practitioner guide to AIPW, calibration, PPI, PPI++, and efficiency in semisupervised mean inference."
+      content="Theory notes for Calibeating Prediction-Powered Inference: post-hoc calibration, exact AIPW interpretation, and the relation to PPI and PPI++."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -50,19 +50,20 @@
 
         <div class="hero-grid">
           <section class="hero-copy">
-            <p class="eyebrow">Theory</p>
-            <h1>How the estimator works.</h1>
+            <p class="eyebrow">Calibeating Prediction-Powered Inference</p>
+            <h1>How the paper’s estimator works.</h1>
             <p class="lede">
-              In the small-labeled, large-unlabeled setting, a prediction score
-              can improve precision, but it should stay anchored to the
-              observed outcomes. AIPW averages that score and then adds a
-              labeled-sample correction, so the estimator can borrow strength
-              from the score without fully trusting it.
+              The paper studies post-hoc calibration for the small-labeled,
+              large-unlabeled setting where a black-box prediction score may be
+              useful but miscalibrated. The core workflow is predict,
+              calibrate, and average, with AIPW providing the debiased
+              interpretation that keeps inference anchored to observed
+              outcomes.
             </p>
             <p class="panel-note">
-              Here <code>score</code> means the model output you plug into the
-              estimator. It can still be useful before calibration puts it on
-              the right outcome scale.
+              This page is a compact bridge from the paper to the package:
+              exact AIPW interpretation, the isotonic <em>calibeating</em>
+              guarantee, and where PPI and PPI++ fit in the same workflow.
             </p>
             <div class="hero-actions">
               <a class="button button-primary" href="./index.html#quickstart">Quickstart</a>
@@ -102,6 +103,48 @@
       </header>
 
       <main>
+        <section class="section" id="paper">
+          <div class="section-heading split">
+            <div>
+              <p class="eyebrow">Paper</p>
+              <h2>Main contributions</h2>
+            </div>
+            <p class="section-side-note">
+              The three paper-facing ideas that drive the rest of this theory page.
+            </p>
+          </div>
+
+          <div class="argument-grid">
+            <article class="argument-card">
+              <h3>Exact AIPW interpretation</h3>
+              <p>
+                After recalibrating the score on the labeled sample, the pooled
+                plug-in estimator can be written exactly as AIPW with the
+                calibrated score. Calibration improves the score; AIPW supplies
+                the safety layer.
+              </p>
+            </article>
+            <article class="argument-card">
+              <h3>Calibeating guarantee</h3>
+              <p>
+                For isotonic calibration, the paper proves a first-order
+                <em>calibeating</em> result: the fitted isotonic score can
+                improve on simpler post-processing rules, and further
+                post-processing does not deliver additional first-order gain.
+              </p>
+            </article>
+            <article class="argument-card">
+              <h3>PPI and PPI++ in context</h3>
+              <p>
+                The paper clarifies that PPI is a special case of AIPW, while
+                PPI++ is AIPW with empirical efficiency maximization. In the
+                one-score setting, linear calibration is first-order equivalent
+                to PPI++ and classical prognostic-score adjustment.
+              </p>
+            </article>
+          </div>
+        </section>
+
         <section class="section" id="estimator">
           <div class="section-heading split">
             <div>
