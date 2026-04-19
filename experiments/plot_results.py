@@ -7,6 +7,7 @@ import sys
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 import numpy as np
 import pandas as pd
 
@@ -18,8 +19,9 @@ ESTIMATOR_LABELS = {
     "labeled_only": "Naive",
     "ppi": "PPI",
     "ppi_plus_plus": "PPI++",
+    "aipw_em": "AIPW-EM",
     "aipw": "AIPW",
-    "auto_calibration": "Auto",
+    "auto_calibration": "AutoCal",
     "monotone_spline": "MonoSpline",
     "affine_calibration": "LinearCal",
     "platt_calibration": "Platt",
@@ -31,8 +33,9 @@ COLORS = {
     "labeled_only": "#4D4D4D",
     "ppi": "#D55E00",
     "ppi_plus_plus": "#C44E52",
+    "aipw_em": "#4E79A7",
     "aipw": "#8C564B",
-    "auto_calibration": "#2A6F97",
+    "auto_calibration": "#E69F00",
     "monotone_spline": "#0B6E4F",
     "affine_calibration": "#009E73",
     "platt_calibration": "#56B4E9",
@@ -42,15 +45,28 @@ COLORS = {
 
 ESTIMATOR_ORDER = [
     "labeled_only",
+    "aipw",
     "ppi",
     "ppi_plus_plus",
-    "aipw",
+    "aipw_em",
     "auto_calibration",
     "monotone_spline",
     "affine_calibration",
-    "platt_calibration",
     "isotonic_calibration",
+    "platt_calibration",
     "calibrated_plugin",
+]
+
+SIMULATION_PAPER_LEGEND_ORDER = [
+    "labeled_only",
+    "aipw",
+    "ppi",
+    "ppi_plus_plus",
+    "aipw_em",
+    "auto_calibration",
+    "monotone_spline",
+    "affine_calibration",
+    "isotonic_calibration",
 ]
 
 PRIMARY_ESTIMATORS = {
@@ -60,6 +76,7 @@ PRIMARY_ESTIMATORS = {
     "monotone_spline",
     "ppi",
     "ppi_plus_plus",
+    "aipw_em",
     "isotonic_calibration",
 }
 
@@ -67,9 +84,11 @@ PRIMARY_ESTIMATORS = {
 def draw_order(order: list[str]) -> list[str]:
     secondary = [name for name in order if name not in PRIMARY_ESTIMATORS]
     primary = [
-        name for name in order if name in PRIMARY_ESTIMATORS and name not in {"ppi_plus_plus", "ppi", "aipw"}
+        name
+        for name in order
+        if name in PRIMARY_ESTIMATORS and name not in {"aipw_em", "ppi_plus_plus", "ppi", "aipw"}
     ]
-    tail = [name for name in ["ppi_plus_plus", "ppi", "aipw"] if name in order]
+    tail = [name for name in ["aipw_em", "ppi_plus_plus", "ppi", "aipw"] if name in order]
     return secondary + primary + tail
 
 
@@ -80,6 +99,8 @@ def line_width(estimator: str, default: float = 1.8) -> float:
 
 
 def line_zorder(estimator: str) -> int:
+    if estimator == "aipw_em":
+        return 14
     if estimator == "aipw":
         return 12
     if estimator == "ppi":
@@ -97,6 +118,24 @@ def line_zorder(estimator: str) -> int:
 
 def line_alpha(estimator: str) -> float:
     return 1.0 if estimator in PRIMARY_ESTIMATORS else 0.5
+
+
+def build_legend(order: list[str], available: set[str]) -> tuple[list[Line2D], list[str]]:
+    legend_estimators = [name for name in order if name in available]
+    handles = [
+        Line2D(
+            [0],
+            [0],
+            color=COLORS[name],
+            marker="o",
+            linewidth=line_width(name),
+            alpha=line_alpha(name),
+            label=ESTIMATOR_LABELS[name],
+        )
+        for name in legend_estimators
+    ]
+    labels = [ESTIMATOR_LABELS[name] for name in legend_estimators]
+    return handles, labels
 
 QUALITY_LABELS = {
     "well_calibrated": "Mildly miscalibrated score",
@@ -136,10 +175,20 @@ def plot_rmse(summary: pd.DataFrame, output_path: Path) -> None:
             ax.set_xscale("log", base=2)
             ax.set_xticks(sorted(sub["unlabeled_ratio"].unique()))
             ax.get_xaxis().set_major_formatter(plt.ScalarFormatter())
-    handles, labels = axes[0, 0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="upper center", ncol=8, frameon=False)
+    handles, labels = build_legend(ESTIMATOR_ORDER, set(keep["estimator"].unique()))
+    fig.legend(
+        handles,
+        labels,
+        loc="upper center",
+        bbox_to_anchor=(0.5, 0.995),
+        ncol=len(handles),
+        frameon=False,
+        fontsize=8.5,
+        handlelength=1.7,
+        columnspacing=0.9,
+    )
     fig.supxlabel("Unlabeled-to-labeled ratio N/n")
-    fig.tight_layout(rect=(0, 0, 1, 0.96))
+    fig.tight_layout(rect=(0, 0, 1, 0.95))
     fig.savefig(output_path, bbox_inches="tight")
     plt.close(fig)
 
@@ -149,7 +198,7 @@ def plot_bias_coverage(summary: pd.DataFrame, output_path: Path) -> None:
     target_ratio = keep["unlabeled_ratio"].max()
     keep = keep[keep["unlabeled_ratio"] == target_ratio]
     row_keys = [("monotone", "well_calibrated"), ("monotone", "poorly_calibrated")]
-    fig, axes = plt.subplots(len(row_keys), 2, figsize=(11, 12), sharex=True)
+    fig, axes = plt.subplots(len(row_keys), 2, figsize=(14.5, 12), sharex=True)
     for row_idx, (dgp, quality) in enumerate(row_keys):
         sub = keep[(keep["dgp"] == dgp) & (keep["score_quality"] == quality)]
         for estimator in draw_order(ESTIMATOR_ORDER):
@@ -181,9 +230,19 @@ def plot_bias_coverage(summary: pd.DataFrame, output_path: Path) -> None:
     axes[0, 1].set_title(f"Coverage at N/n={target_ratio}")
     axes[-1, 0].set_xlabel("Labeled sample size n")
     axes[-1, 1].set_xlabel("Labeled sample size n")
-    handles, labels = axes[0, 0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="upper center", ncol=8, frameon=False)
-    fig.tight_layout(rect=(0, 0, 1, 0.96))
+    handles, labels = build_legend(ESTIMATOR_ORDER, set(keep["estimator"].unique()))
+    fig.legend(
+        handles,
+        labels,
+        loc="upper center",
+        bbox_to_anchor=(0.5, 0.995),
+        ncol=len(handles),
+        frameon=False,
+        fontsize=8.5,
+        handlelength=1.7,
+        columnspacing=0.9,
+    )
+    fig.tight_layout(rect=(0, 0, 1, 0.95))
     fig.savefig(output_path, bbox_inches="tight")
     plt.close(fig)
 
@@ -238,23 +297,14 @@ def plot_simulation_main(summary: pd.DataFrame, output_path: Path) -> None:
     )
     keep["rel_eff_vs_ppi"] = (keep["ppi_emp_sd"] / keep["emp_sd"]) ** 2
     row_keys = [("monotone", "poorly_calibrated", ratio) for ratio in ratio_keys]
-    estimators = [
-        "labeled_only",
-        "ppi",
-        "ppi_plus_plus",
-        "aipw",
-        "auto_calibration",
-        "monotone_spline",
-        "affine_calibration",
-        "isotonic_calibration",
-    ]
+    estimators = SIMULATION_PAPER_LEGEND_ORDER
     metrics = [
         ("abs_mean_bias", "Absolute Bias"),
         ("emp_sd", "Empirical SD"),
         ("coverage", "Coverage"),
         ("rel_eff_vs_ppi", "Rel. Eff. vs PPI"),
     ]
-    fig, axes = plt.subplots(len(row_keys), len(metrics), figsize=(14.5, 5.4), sharex=True)
+    fig, axes = plt.subplots(len(row_keys), len(metrics), figsize=(16.2, 5.4), sharex=True)
     if len(row_keys) == 1:
         axes = np.expand_dims(axes, axis=0)
     for row_idx, (dgp, quality, ratio) in enumerate(row_keys):
@@ -289,16 +339,18 @@ def plot_simulation_main(summary: pd.DataFrame, output_path: Path) -> None:
             if row_idx == len(row_keys) - 1:
                 ax.set_xlabel("Labeled sample size n")
             ax.margins(x=0.02)
-    handles, labels = axes[0, 0].get_legend_handles_labels()
+    handles, labels = build_legend(SIMULATION_PAPER_LEGEND_ORDER, set(keep["estimator"].unique()))
     fig.legend(
         handles,
         labels,
         loc="upper center",
         bbox_to_anchor=(0.5, 0.995),
-        ncol=8,
+        ncol=len(handles),
         frameon=False,
-        handlelength=1.8,
-        columnspacing=1.0,
+        handlelength=1.55,
+        handletextpad=0.35,
+        columnspacing=0.72,
+        fontsize=10.2,
     )
     fig.tight_layout(rect=(0, 0, 1, 0.93), pad=0.4, w_pad=0.6, h_pad=0.5)
     fig.savefig(output_path, bbox_inches="tight")

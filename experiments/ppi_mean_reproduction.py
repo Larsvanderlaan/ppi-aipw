@@ -24,6 +24,7 @@ if __package__ in (None, ""):
     sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from experiments.estimators import (
+    aipw_em_result,
     aipp_from_prediction,
     auto_aipw_pointestimate_and_se,
     fit_binned_isotonic_calibration,
@@ -60,6 +61,7 @@ ESTIMATOR_ORDER = [
     "aipw",
     "ppi",
     "ppi_plus_plus",
+    "aipw_em",
     "auto_calibration",
     "monotone_spline",
     "linear_calibration",
@@ -75,11 +77,12 @@ ESTIMATOR_LABELS = {
     "aipw": "AIPW",
     "ppi": "PPI",
     "ppi_plus_plus": "PPI++",
-    "auto_calibration": "Auto",
+    "aipw_em": "AIPW-EM",
+    "auto_calibration": "AutoCal",
     "monotone_spline": "MonoSpline",
     "linear_calibration": "LinearCal",
     "platt_calibration": "Platt",
-    "isotonic_calibration_min10": "IsoCal (min bin 10)",
+    "isotonic_calibration_min10": "IsoCal",
     "venn_abers_calibration": "Venn-Abers",
 }
 
@@ -90,7 +93,8 @@ ESTIMATOR_COLORS = {
     "aipw": "#8C564B",
     "ppi": "#D55E00",
     "ppi_plus_plus": "#C44E52",
-    "auto_calibration": "#2A6F97",
+    "aipw_em": "#4E79A7",
+    "auto_calibration": "#E69F00",
     "monotone_spline": "#0B6E4F",
     "linear_calibration": "#009E73",
     "platt_calibration": "#56B4E9",
@@ -104,6 +108,7 @@ PAPER_ESTIMATOR_ORDER = [
     "aipw",
     "ppi",
     "ppi_plus_plus",
+    "aipw_em",
     "auto_calibration",
     "monotone_spline",
     "linear_calibration",
@@ -116,9 +121,17 @@ MAIN_TEXT_ESTIMATOR_ORDER = [
     "aipw",
     "ppi",
     "ppi_plus_plus",
+    "aipw_em",
     "auto_calibration",
-    "monotone_spline",
     "linear_calibration",
+]
+
+APPENDIX_CALIBRATION_ORDER = [
+    "ppi",
+    "aipw",
+    "linear_calibration",
+    "monotone_spline",
+    "isotonic_calibration_min10",
 ]
 
 PRIMARY_ESTIMATORS = {
@@ -128,14 +141,19 @@ PRIMARY_ESTIMATORS = {
     "monotone_spline",
     "ppi",
     "ppi_plus_plus",
+    "aipw_em",
     "isotonic_calibration_min10",
 }
 
 
 def plot_draw_order(order: Sequence[str]) -> List[str]:
     secondary = [name for name in order if name not in PRIMARY_ESTIMATORS]
-    primary = [name for name in order if name in PRIMARY_ESTIMATORS and name not in {"ppi_plus_plus", "ppi", "aipw"}]
-    tail = [name for name in ["ppi_plus_plus", "ppi", "aipw"] if name in order]
+    primary = [
+        name
+        for name in order
+        if name in PRIMARY_ESTIMATORS and name not in {"aipw_em", "ppi_plus_plus", "ppi", "aipw"}
+    ]
+    tail = [name for name in ["aipw_em", "ppi_plus_plus", "ppi", "aipw"] if name in order]
     return secondary + primary + tail
 
 
@@ -150,6 +168,8 @@ def plot_line_alpha(estimator: str) -> float:
 
 
 def plot_line_zorder(estimator: str) -> int:
+    if estimator == "aipw_em":
+        return 14
     if estimator == "aipw":
         return 12
     if estimator == "ppi":
@@ -429,6 +449,15 @@ def run_aipw_estimator(
         "ci_lower": lower,
         "ci_upper": upper,
     }
+
+
+def run_aipw_em_estimator(
+    y_l: np.ndarray,
+    yhat_l: np.ndarray,
+    yhat_u: np.ndarray,
+    alpha: float,
+) -> Dict[str, float]:
+    return aipw_em_result(y_l, yhat_l, yhat_u, alpha=alpha)
 
 
 def run_auto_calibration_estimator(
@@ -717,6 +746,7 @@ def build_trial_results(
         ("aipw", run_aipw_estimator),
         ("ppi", run_ppi_estimator),
         ("ppi_plus_plus", run_ppi_plus_plus_estimator),
+        ("aipw_em", run_aipw_em_estimator),
         ("auto_calibration", run_auto_calibration_estimator),
         ("monotone_spline", run_monotone_spline_estimator),
         ("linear_calibration", run_linear_calibration_estimator),
@@ -1049,6 +1079,81 @@ def plot_main_text_grid(summary_df: pd.DataFrame, output_dir: Path) -> None:
     plt.close(fig)
 
 
+def plot_appendix_calibration_grid(summary_df: pd.DataFrame, output_dir: Path) -> None:
+    summary_df = summary_df[summary_df["estimator"].isin(APPENDIX_CALIBRATION_ORDER)].copy()
+    metrics = [
+        ("mse_ratio_vs_ppi", "MSE / PPI MSE"),
+        ("rel_eff_vs_ppi", "Rel. eff. vs PPI"),
+        ("coverage", "Coverage"),
+    ]
+    datasets = list(summary_df["dataset"].drop_duplicates())
+    fig, axes = plt.subplots(
+        len(metrics),
+        len(datasets),
+        figsize=(4.6 * len(datasets), 6.0),
+    )
+    axes = np.asarray(axes)
+    if axes.ndim == 1:
+        if len(metrics) == 1:
+            axes = axes.reshape(1, -1)
+        else:
+            axes = axes.reshape(len(metrics), 1)
+    for col_idx, dataset_name in enumerate(datasets):
+        frame = summary_df[summary_df["dataset"] == dataset_name].copy()
+        for row_idx, (metric, ylabel) in enumerate(metrics):
+            ax = axes[row_idx, col_idx]
+            for estimator in plot_draw_order([name for name in APPENDIX_CALIBRATION_ORDER if name in frame["estimator"].unique()]):
+                sub = frame[frame["estimator"] == estimator].sort_values("n_labeled")
+                ax.plot(
+                    sub["n_labeled"],
+                    sub[metric],
+                    marker="o",
+                    linewidth=plot_line_width(estimator),
+                    color=ESTIMATOR_COLORS[estimator],
+                    label=ESTIMATOR_LABELS[estimator],
+                    alpha=plot_line_alpha(estimator),
+                    zorder=plot_line_zorder(estimator),
+                )
+            if metric == "coverage":
+                alpha = float(frame["alpha"].iloc[0])
+                ax.axhline(1.0 - alpha, color="black", linestyle="--", linewidth=1)
+            if metric in {"mse_ratio_vs_ppi", "rel_eff_vs_ppi"}:
+                ax.axhline(1.0, color="black", linestyle="--", linewidth=1)
+            ax.set_xlim(frame["n_labeled"].min(), frame["n_labeled"].max())
+            if row_idx == 0:
+                ax.set_title(dataset_name)
+            if col_idx == 0:
+                ax.set_ylabel(ylabel)
+            if row_idx == len(metrics) - 1:
+                ax.set_xlabel("Labeled sample size n")
+    legend_estimators = [name for name in APPENDIX_CALIBRATION_ORDER if name in summary_df["estimator"].unique()]
+    legend_handles = [
+        Line2D(
+            [0],
+            [0],
+            color=ESTIMATOR_COLORS[name],
+            marker="o",
+            linewidth=plot_line_width(name),
+            alpha=plot_line_alpha(name),
+            label=ESTIMATOR_LABELS[name],
+        )
+        for name in legend_estimators
+    ]
+    fig.legend(
+        legend_handles,
+        [ESTIMATOR_LABELS[name] for name in legend_estimators],
+        loc="upper center",
+        ncol=len(legend_handles),
+        frameon=False,
+        columnspacing=1.1,
+        handlelength=1.8,
+        bbox_to_anchor=(0.5, 0.995),
+    )
+    fig.tight_layout(rect=(0, 0, 1, 0.93))
+    fig.savefig(output_dir / "fig_paper_calibration_grid.pdf", bbox_inches="tight")
+    plt.close(fig)
+
+
 def build_argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument("--datasets", nargs="*", default=None, help="Experiment ids to run.")
@@ -1150,6 +1255,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     plot_dataset_metric(summary_df, args.output_dir, "rel_eff_vs_ppi", "Rel. eff. vs PPI", "relative_efficiency")
     plot_dataset_metric(summary_df, args.output_dir, "coverage", "Coverage", "coverage")
     plot_main_text_grid(summary_df, args.output_dir)
+    plot_appendix_calibration_grid(summary_df, args.output_dir)
     plot_overall_metric_grid(summary_df, args.output_dir)
 
 

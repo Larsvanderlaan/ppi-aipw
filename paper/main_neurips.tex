@@ -1,13 +1,12 @@
 \documentclass{article}
 
-\PassOptionsToPackage{authoryear,round}{natbib}
-\usepackage{paper_style}
+\PassOptionsToPackage{numbers,compress}{natbib}
+\usepackage{neurips_2026}
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{amsmath,amssymb,amsthm,mathtools}
 \usepackage{amsfonts}
-\usepackage{bbm}
 \usepackage{algorithm}
 \usepackage[noend]{algpseudocode}
 \usepackage{booktabs}
@@ -38,7 +37,7 @@
 \newcommand{\Var}{\mathrm{Var}}
 \newcommand{\Prob}{\mathbb{P}}
 \newcommand{\R}{\mathbb{R}}
-\newcommand{\1}{\mathbbm{1}}
+\newcommand{\1}{\mathbf{1}}
 \newcommand{\Pzero}{P_0}
 \newcommand{\psihat}{\widehat{\psi}_{\mathrm{cal}}}
 \newcommand{\mhat}{m}
@@ -66,15 +65,7 @@
 
 \title{Calibeating Prediction-Powered Inference}
 
-\author{
-Lars van der Laan\\
-Department of Statistics, University of Washington\\[0.75em]
-Mark van der Laan\thanks{Targeted ML Solutions, \href{https://www.targetedml.com/}{targetedml.com}}\\
-Department of Statistics and Division of Biostatistics,\\
-Center for Targeted Machine Learning and Causal Inference,\\
-University of California, Berkeley
-}
-\date{\today}
+\author{}
 
 \begin{document}
 \maketitle
@@ -83,59 +74,36 @@ We study semisupervised mean estimation with a small labeled sample, a large unl
 
 We propose a simple post-hoc calibration correction: using the labeled sample, we recalibrate the prediction score and then average the calibrated predictions over the pooled sample. This procedure, which we call \emph{Calibrated Prediction-Powered Inference}, requires no retraining of the original model and can improve efficiency relative to AIPW based on the original uncalibrated score. We study both linear and isotonic calibration. For isotonic calibration, we establish a first-order \emph{calibeating} guarantee: the calibrated estimator can improve on the original score and on simpler post-processing rules, and no further post-processing of the fitted isotonic score yields additional first-order improvement. For linear calibration, we show first-order equivalence to PPI++ and hence the same asymptotic efficiency.
 
-We also clarify how our approach relates to recent prediction-powered inference (PPI) methods. We show that the original PPI estimator of \citet{ppi2023} is a special case of AIPW and can be less efficient when the prediction model is accurate, because it does not fully use labeled-sample covariate information. We further show that PPI++ of \citet{angelopoulos2023ppi} is AIPW with empirical-efficiency maximization \citep{rubin2008empirical} and is first-order equivalent to linear prognostic-score regression adjustment \citep{mincer1969evaluation,hansen2008prognostic}. These results place PPI methods within a broader class of semiparametric debiasing and regression-adjustment methods. In simulations and real-data experiments, our calibrated estimators often improve on PPI and remain competitive with, or outperform, AIPW and PPI++. We provide an accompanying \texttt{Python} package, \href{https://larsvanderlaan.github.io/ppi-aipw/}{\texttt{ppi\_aipw}}.
+We also clarify that recent PPI methods are particular AIPW-based procedures within a broader semiparametric regression-adjustment framework. In simulations and benchmark experiments, our calibrated estimators often improve on PPI and remain competitive with, or outperform, AIPW and PPI++.
 \end{abstract}
+ 
 \section{Introduction}
 
-We study semisupervised mean estimation with one labeled dataset \(\{(X_i, Y_i)\}_{i=1}^n\) and one unlabeled dataset \(\{\widetilde X_i\}_{i=1}^N\), where outcomes are observed only for a subset sampled completely at random. This is a classical missing-outcome problem: rich covariate information is available for many individuals, but the outcome of interest is observed only for a smaller subset. Such settings arise when gold-standard outcomes are expensive to collect but prediction scores are readily available, for example in randomized trials with prognostic models trained on historical data \citep{schuler2022increasing}, biobank analyses using phenotype predictors built from EHR or omics measurements \citep{hong2019semisupervised,zhang2019phecap}, and computational biology pipelines that supplement slow or costly experimental measurements with model-based predictions \citep{ppi2023,crossppi2024}. The goal is to use the larger unlabeled sample to improve estimation of a population mean while accounting for prediction error. This setting has long been studied in missing-data and semiparametric statistics, where methods such as AIPW, TMLE, and related debiased estimators allow flexible machine-learning predictors to be used with valid inference \citep{robins1994estimation,vanderlaanunified,van2006targeted,vanderLaanRose2011,DoubleML}. More recently, related ideas have reappeared in the machine-learning literature under the name prediction-powered inference \citep{ppi2023,angelopoulos2023ppi,crossppi2024}. Closely related questions also arise in covariate adjustment for randomized trials, where machine-learning predictors trained on auxiliary data can improve precision in small samples \citep{hansen2008prognostic,rubin2008empirical,moore2009covariate,lin2013agnostic,schuler2022increasing,demirel2024prediction,jin2026prognostic}.
+We study semisupervised mean estimation with one labeled dataset \(\{(X_i,Y_i)\}_{i=1}^n\) and one unlabeled dataset \(\{\widetilde X_i\}_{i=1}^N\), where outcomes are observed only for a subset sampled completely at random. This is a classical missing-outcome problem: rich covariate information is available for many individuals, but the outcome of interest is observed only for a smaller subset. Such settings arise when gold-standard outcomes are expensive to collect but prediction scores are readily available, for example in randomized trials with prognostic models trained on historical data \citep{schuler2022increasing}, biobank analyses using phenotype predictors built from EHR or omics measurements \citep{hong2019semisupervised,zhang2019phecap}, and computational biology pipelines that supplement slow or costly experimental measurements with model-based predictions \citep{ppi2023,crossppi2024}. The goal is to use the larger unlabeled sample to improve estimation of a population mean while accounting for prediction error. This setting has long been studied in missing-data and semiparametric statistics, where methods such as AIPW, TMLE, and related debiased estimators allow flexible machine-learning predictors to be used with valid inference \citep{robins1994estimation,vanderlaanunified,van2006targeted,vanderLaanRose2011,DoubleML}. More recently, related ideas have reappeared in the machine-learning literature under the name prediction-powered inference \citep{ppi2023,angelopoulos2023ppi,crossppi2024}. Closely related questions also arise in covariate adjustment for randomized trials, where machine-learning predictors trained on auxiliary data can improve precision in small samples \citep{hansen2008prognostic,rubin2008empirical,moore2009covariate,lin2013agnostic,schuler2022increasing,demirel2024prediction,jin2026prognostic}.
 
+A standard approach is to use the labeled sample to debias a plug-in estimator based on a prediction model. If \(m(X)\) is a black-box prediction score, the plug-in estimator averages \(m(X)\) over the pooled covariate sample, while the labeled sample is used to estimate the residual correction term \(\E\{Y-m(X)\}\). The augmented inverse-probability weighted (AIPW) estimator \citep{robins1994estimation} averages \(m(X)\) over both labeled and unlabeled samples and then adds the average residual over the labeled sample, whereas the PPI estimator \citep{ppi2023} averages \(m(X)\) only over the unlabeled covariates before applying the same residual correction. PPI can be less efficient because it discards labeled-covariate information. Thus, while these methods protect against bias from imperfect prediction models, they typically treat the prediction score itself as fixed. In practice, however, useful black-box prediction scores are often systematically too high, too low, or too extreme. Such misalignment may arise because the model was trained on a different population, or because of temporal drift, distribution shift, or regularization bias.
 
-A standard approach is to use the labeled sample to debias a plug-in estimator based on a prediction model. If \(m(X)\) is a black-box prediction score, the plug-in estimator averages \(m(X)\) over the pooled covariate sample, while the labeled sample is used to estimate the residual correction term \(\E\{Y-m(X)\}\). For example, the augmented inverse-probability weighted (AIPW) estimator \citep{robins1994estimation} averages \(m(X)\) over both labeled and unlabeled samples and then adds the average residual over the labeled sample, whereas the PPI estimator \citep{ppi2023} averages \(m(X)\) only over the unlabeled covariates before applying the same residual correction. The latter is generally less efficient because it discards information in the labeled covariates. Thus, while these methods protect against bias from imperfect prediction models, they typically treat the prediction score itself as fixed. In practice, however, useful black-box scores are often systematically too high, too low, or too extreme. Such misalignment may arise because the model was trained on a different population, or because of temporal drift, distribution shift, or regularization bias.
+This motivates post-hoc calibration of the prediction score. Rather than correcting only the marginal bias \(\E\{Y-m(X)\}\), one can use the labeled sample to transform the score so that its numerical values better align with the outcomes they are meant to predict \citep{zadrozny2001obtaining,zadrozny2002transforming,niculescu2005predicting}. An ideal target is a calibrated score \(m_n^\star(X)\) satisfying \(\E[Y\mid m_n^\star(X)] = m_n^\star(X)\). Under this condition, \(\E[m_n^\star(X)] = \E[Y]\), so the corresponding plug-in estimator is automatically unbiased for the population mean. This is attractive because a useful prediction model may already be available, while a relatively small labeled sample can recalibrate its output without retraining \citep{roth2022uncertain}. Classical post-processing methods include Platt scaling \citep{platt1999probabilistic}, linear calibration \citep{mincer1969evaluation}, histogram binning \citep{zadrozny2001obtaining}, and isotonic regression \citep{zadrozny2002transforming}. Such calibration is especially relevant for modern machine-learning predictors, which are often informative yet systematically miscalibrated \citep{bella2010calibration,guo2017calibration,wang2023calibration}.
 
-This motivates post-hoc calibration of the prediction score. Rather than correcting only the marginal bias \(\E\{Y-m(X)\}\), one can use the labeled sample to transform the score so that its numerical values better align with the outcomes they are meant to predict \citep{zadrozny2001obtaining,zadrozny2002transforming,niculescu2005predicting}. An ideal target is a calibrated score \(m_n^\star(X)\) satisfying $\E\!\left[Y \mid m_n^\star(X)\right] = m_n^\star(X).$
-Under this condition, \(\E[m_n^\star(X)]=\E[Y]\), so the corresponding plug-in estimator is automatically unbiased for the population mean. This is attractive in practice because a useful prediction model may already be available, while a relatively small labeled sample can often calibrate its output without retraining the underlying model \citep{roth2022uncertain}. Classical post-processing methods include Platt scaling \citep{platt1999probabilistic}, linear calibration \citep{mincer1969evaluation}, histogram binning \citep{zadrozny2001obtaining}, and isotonic regression \citep{zadrozny2002transforming}. Such calibration is especially relevant for modern machine-learning predictors, such as neural networks, which are often informative yet systematically miscalibrated \citep{bella2010calibration,guo2017calibration,wang2023calibration}.
-
-Our proposal is therefore simple: fit a black-box regression model, calibrate it on the labeled sample, and then average the calibrated predictions over the pooled covariate sample. This remains a simple ``predict, calibrate, and average'' procedure, but we show that it also admits an exact debiased interpretation. In particular, the resulting estimator is exactly equal to an AIPW estimator based on the calibrated score, with the residual correction encoded by the calibration step itself. Because calibration can improve the score, it can also improve efficiency relative to AIPW based on the uncalibrated model. Calibration therefore converts a simple plug-in rule into a debiased estimator with attractive efficiency properties.
+Our proposal is therefore simple: fit a black-box regression model, calibrate it on the labeled sample, and average the calibrated predictions over the pooled covariate sample. We call this workflow \emph{Calibrated Prediction-Powered Inference}. This remains a simple ``predict, calibrate, and average'' procedure, but we show that it also admits an exact debiased interpretation. In particular, the resulting estimator is exactly equal to the AIPW estimator based on the calibrated score, with the residual correction encoded by the calibration step itself. Because calibration can improve the score, it can also improve efficiency relative to AIPW based on the uncalibrated model. Calibration therefore converts a simple plug-in rule into a debiased estimator with attractive efficiency properties.
 
 \paragraph{Contributions.}
-We make three main contributions.
-
-First, in Section~\ref{sec:calppi}, we introduce a general \textit{Calibrated Prediction-Powered Inference} framework for semisupervised mean estimation with a small labeled sample and a larger unlabeled one. This framework accommodates familiar post-hoc calibration methods, including linear calibration, Platt scaling, histogram binning, and isotonic regression; see, in particular, Sections~\ref{sec:iso} and \ref{sec:linear}. We focus in particular on two practical estimators, linearly calibrated PPI and isotonic-calibrated PPI, which are simple to implement, tuning-parameter-free, and easy to add to an existing prediction pipeline without retraining the original model. Isotonic calibration is especially appealing because it learns the mean-squared-error-optimal monotone transformation of the prediction score.
-
-Second, we argue that calibration can provide three important statistical benefits. First, it can improve the prediction score and thereby increase the precision of point estimates and confidence intervals. Second, it makes the calibrated plug-in estimator automatically debiased, because it is exactly equal to the AIPW estimator one would construct from the calibrated score. Third, calibration can produce a fitted score that cannot be improved by further post-processing, in the sense that no transformation of that score within the relevant class of post-processing maps can improve predictive performance or reduce estimator variance to first order. This can be viewed as a form of \emph{calibeating} in the sense of \citet{foster2023calibeating}.
-
-Third, we develop asymptotic theory for linearly calibrated and isotonic-calibrated PPI estimators. For linear calibration, we show that PPI++ is asymptotically equivalent both to linear calibration and to linear regression adjustment using \(m(X)\) as a prognostic score. This clarifies the connection between PPI++ and classical covariate-adjustment methods in randomized trials and missing-at-random settings. For isotonic-calibrated PPI, Section~\ref{sec:theory} establishes asymptotic normality, valid inference, and efficiency results. In particular, we show that isotonic-calibrated PPI achieves the smallest asymptotic variance among estimators based on monotone transformations of the original score, and is therefore at least as efficient as AIPW and PPI using the uncalibrated score. We also show that no further post-processing of the fitted score can improve predictive performance at first order, and that the resulting estimator is first-order equivalent to the oracle estimator based on the conditional mean of the outcome given the calibrated score.
-
-Our calibrated PPI framework can be viewed as a semisupervised specialization of the calibrated debiased machine learning framework developed by \citet{van2024automatic}. Our estimators can also be interpreted as targeted minimum loss estimators \citep{van2006targeted,vanderLaanRose2011}, with calibration playing the role of the targeting step.
-
-Section~\ref{sec:setup} reviews the two-sample semisupervised model, the AIPW, PPI, and PPI++ estimators, and the main efficiency concepts used throughout the paper. Section~\ref{sec:exp} presents synthetic and real-data experiments.
-
-\textbf{Code.} The accompanying \texttt{Python} package, reproduction code, and documentation are publicly available at
-\href{https://github.com/Larsvanderlaan/ppi-aipw}{github.com/Larsvanderlaan/ppi-aipw}. An interactive package website with examples and API documentation is available at
-\href{https://larsvanderlaan.github.io/ppi-aipw/}{larsvanderlaan.github.io/ppi-aipw/}. Self-contained code is provided in Appendix~\ref{appendix:code}.
-
+We make three main contributions. First, we introduce a general \emph{Calibrated Prediction-Powered Inference} framework for semisupervised mean estimation, covering familiar post-hoc methods such as linear and isotonic calibration. Second, we show that calibration provides three gains: it can improve the prediction score and therefore precision; it makes the pooled plug-in estimator automatically debiased because it is exactly equal to AIPW with the calibrated score; and it can produce a fitted score that cannot be improved by further post-processing within the relevant class, a form of \emph{calibeating} in the sense of \citet{foster2023calibeating}. Third, we develop asymptotic theory for these estimators. In particular, isotonic-calibrated PPI gives a lightweight default with valid inference, efficiency gains under miscalibration, and no further first-order gain from post-processing, while linearly calibrated PPI is first-order equivalent to PPI++ and related to classical prognostic-score regression adjustment.
 
 \subsection{Related work}
 Although PPI has been presented as a recent development, the underlying problem and many of its estimators are special cases of a broader literature on semiparametric debiasing and regression adjustment, including work on missing data, causal inference, and debiased machine learning.
 
-\textbf{Semiparametric statistics and missing data.} This paper builds on foundational ideas from the missing-data and semiparametric literatures. \citet{rubin1976} formalized missing at random as a key identification condition for recovering full-data targets from partially observed outcomes. Semiparametric efficiency theory then characterized efficient influence functions, regular asymptotically linear estimators, and one-step debiased procedures \citep{levit1975efficiency,pfanzagl1985contributions,hasminskii1979nonparametric,klaassen1987consistent,bickel1993efficient}. In missing-data and causal-inference problems, these ideas led to influence-function-based estimating equations \citep{robins1994estimation,robins1995analysis,robins1995semiparametric,vanderlaanunified,tsiatis2006semiparametric}, often with doubly robust structure \citep{bang2005doubly}. As a result, the efficiency theory for missing-data models under missingness or coarsening at random is now well understood, and the class of regular asymptotically linear estimators in these models can be characterized through their influence functions \citep{robins1994estimation,robins1995analysis,robins1995semiparametric,vanderlaanunified,tsiatis2006semiparametric}.
+\textbf{Semiparametric statistics and missing data.} This paper builds on foundational ideas from the missing-data and semiparametric literatures. Rubin formalized missing at random as a key identification condition for recovering full-data targets from partially observed outcomes \citep{rubin1976}, and semiparametric efficiency theory then characterized efficient influence functions, regular asymptotically linear estimators, and one-step debiased procedures \citep{robins1994estimation,robins1995analysis,robins1995semiparametric,vanderlaanunified,tsiatis2006semiparametric,bickel1993efficient}. In missing-data and causal-inference problems, these ideas led to influence-function-based estimating equations and the efficiency framework used throughout this paper.
 
-\textbf{Debiased machine learning and targeted learning.} A large body of work combines the semiparametric framework above with machine-learning-based nuisance estimation, often under the label of debiased machine learning. Flexible learning methods within estimating equations and AIPW-style procedures already appear in \citet{vanderlaanunified}. Targeted minimum loss estimation (TMLE), or targeted learning, updates an initial nuisance estimator in a parameter-targeted way so that the resulting plug-in estimator is debiased; in the present setting, the main nuisance is the outcome regression \citep{van2006targeted,vanderLaanRose2011,gruber2009targeted,hoffman2020tmle,ross2025constructing}. These approaches are often combined with sample splitting and cross-fitting to accommodate generic machine-learning estimators \citep{schick1986asymptotically,klaassen1987consistent,zheng2010asymptotic,vanderLaanRose2011,DoubleML}. Double machine learning emphasizes similar ingredients---orthogonality, cross-fitting, and influence-function expansions---for inference with modern nuisance estimators \citep{DoubleML,chernozhukov2022automatic}, and can be understood within the same semiparametric framework \citep{vanderlaan2019cvtmle,diaz2020machine,chen2026equivalence}. For sufficiently stable estimators, cross-fitting can itself be relaxed \citep{chen2022stable}. Closely related work studies balancing-weight estimators \citep{hainmueller2012entropy,imai2014covariate,zubizarreta2015stable,lendle2015balancing,chattopadhyay2020balancing,hejazi2023revisiting}, which often admit equivalent regression-adjustment or augmented representations \citep{chattopadhyay2023implied,bruns2025augmented,rotnitzky2025note}. In completely missing-at-random settings, including semisupervised learning and randomized trials, these approaches allow flexible black-box nuisance estimation while still supporting valid inference under appropriate conditions \citep{moore2009covariate,moore2009increasing,rosenblum2009using,hojbjerre2025powering,hojbjerre2026within}.
-  
- 
-\textbf{Semisupervised inference.} Related work studies semisupervised or surrogate-assisted estimation in settings where the primary outcome is observed only on a limited subset, while auxiliary outcomes or surrogate measurements are available more broadly \citep{pepe1992inference,pepe1994auxiliary,chen2000miscellanea,chen2008improving,cheng2021robust,ji2025predictions,kallus2025role}. Two-sample semisupervised inference is a special case of two-stage sampling designs \citep{scott1982effect,rose2011targeted,hejazi2021efficient,qiu2026efficient} and, more generally, of data fusion, for which a substantial semiparametric efficiency literature has been developed \citep{li2023efficient,li2025data,graham2024towards,xu2025unified}. More recent papers have used the term \emph{prediction-powered inference} (PPI) for the semisupervised mean-estimation setting in which a black-box predictor is combined with a small labeled sample and a large unlabeled sample \citep{ppi2023,angelopoulos2023ppi,crossppi2024,xu2025unified,song2026demystifying,poulet2025prediction,lee2026mec}. These papers also helped popularize such methods for a broader machine-learning audience and provided accessible software. Closely related questions have long been studied in randomized trials, where prognostic scores or other regression adjustments learned from larger historical or auxiliary data sources are used to improve precision in smaller trials \citep{hansen2008prognostic,rosenblum2009using,moore2009covariate,moore2009increasing,moore2011robust,schuler2022increasing,balzer2024adaptive,hojbjerre2025powering}. Methodologically, however, PPI estimators are best understood as instances or variants of existing semiparametric procedures. For example, PPI++ is an AIPW estimator \citep{robins1994estimation,vanderlaanunified} obtained by empirical efficiency maximization \citep{rubin2008empirical} over a scaling parameter, while cross-PPI \citep{crossppi2024} is simply AIPW with cross-fitting. More fundamentally, the ability to combine black-box prediction models with valid inference is a consequence of the double robustness of AIPW when the missingness probability is known, and is not specific to semisupervised mean estimation \citep{bang2005doubly,seaman2018introduction,rotnitzky2021characterization}.
+\textbf{Debiased machine learning and targeted learning.} A large body of work combines this semiparametric framework with machine-learning-based nuisance estimation under the labels of targeted learning and debiased machine learning \citep{van2006targeted,vanderLaanRose2011,DoubleML,chernozhukov2022automatic}. In the present setting, these methods already imply that flexible black-box predictors can be used with valid inference once the missingness probability is known, which is exactly the lens through which we interpret score-based semisupervised estimators.
 
- 
+\textbf{Semisupervised inference and PPI.} Related work studies semisupervised or surrogate-assisted estimation when the primary outcome is observed only on a limited subset \citep{pepe1992inference,pepe1994auxiliary,chen2000miscellanea,chen2008improving,cheng2021robust,ji2025predictions,kallus2025role}. More recent machine-learning papers popularized the label \emph{prediction-powered inference} (PPI) for the semisupervised mean-estimation setting \citep{ppi2023,angelopoulos2023ppi,crossppi2024}. These papers helped popularize the setting, but methodologically PPI estimators are best understood as instances or variants of existing semiparametric procedures. For example, PPI++ is AIPW with empirical-efficiency maximization \citep{rubin2008empirical,vanderlaanunified}. MEC \citep{lee2026mec} instead uses generalized entropy weights to balance the prediction score, which is closer to the balancing-weight representation of our linearly calibrated estimator. Closely related questions have long been studied in randomized trials \citep{hansen2008prognostic,rosenblum2009using,moore2009covariate,moore2009increasing,schuler2022increasing,hojbjerre2025powering}. Here we emphasize the corresponding regression-adjustment view, implemented by ordinary linear regression of \(Y\) on the score.
 
+\textbf{From missing data to causal inference.} From the perspective of estimation and efficiency theory, semisupervised mean estimation with missing-at-random outcomes is statistically equivalent to randomized experiments and related sampling problems once the missingness indicator is reinterpreted as a treatment or sampling indicator \citep{rubin1978bayesian,vanderlaanunified,licausal,mozer2026ppi}. This equivalence allows tools from covariate adjustment, causal inference, and model-assisted estimation to transfer directly to the semisupervised setting.
 
-\textbf{From missing data to causal inference.} From the perspective of estimation and efficiency theory, semisupervised mean estimation with missing-at-random outcomes is equivalent to randomized experiments, controlled trials, and survey-sampling designs once the missingness indicator is reinterpreted as a treatment or sampling indicator, so that the relevant potential outcomes are viewed as missing \citep{rubin1978bayesian,vanderlaanunified,licausal,mozer2026ppi}. This equivalence allows tools from covariate adjustment, causal inference, and model-assisted estimation to be transferred directly to the semisupervised setting; see, for example, \citet{mozer2026ppi} for results relating prediction-powered inference to model-assisted survey-sampling estimators. The two-sample formulation we study is also equivalent to a one-sample i.i.d.\ model \citep{li2023efficient}. In particular, our methods apply to inference on the counterfactual mean \(\mathbb{E}[Y(1)]\) in a randomized trial with binary treatment, where treated units form the labeled sample and control units contribute covariate information only; see Appendix~\ref{app:causal}.
-
+\textbf{Calibration.} A final relevant thread concerns calibration. Classical post-processing methods such as Platt scaling, linear calibration, isotonic regression, and histogram binning improve predictive reliability without retraining the underlying model \citep{platt1999probabilistic,cox1958two,gupta2023online,mincer1969evaluation,zadrozny2001obtaining,zadrozny2002transforming,niculescu2005predicting,gupta2021distribution}. Most closely related for our purposes is recent work connecting calibration to debiased estimation of statistical functionals \citep{van2024automatic,van2023adaptive,van2025semiparametric}.
  
- 
- 
-\textbf{Calibration.} A final relevant thread concerns calibration. Classical post-processing methods such as Platt scaling \citep{platt1999probabilistic,cox1958two,gupta2023online}, linear calibration \citep{mincer1969evaluation,chernozhukov2018generic,leng2021calibration}, isotonic regression \citep{zadrozny2002transforming,niculescu2005predicting}, and histogram binning \citep{zadrozny2001obtaining,gupta2021distribution} improve predictive reliability without retraining the underlying model. The idea has deeper roots in the forecasting literature \citep{mincer1969evaluation,lichtenstein1977calibration,vovk1992universal,vovk2005algorithmic,gneiting2007probabilistic,lambert2011elicitation}; see also the historical discussion in \citet{lee2023t}. More recent work studies calibration under broader losses and prediction tasks \citep{jung2021moment,noarov2023statistical,van2023causal,whitehouse2024orthogonal,van2025venn}, as well as applications to conformal prediction \citep{van2024self,van2025venn}, importance-weight stabilization \citep{gutman2022propensity,deshpande2023calibrated,ballinari2024improving,van2024stabilized}, treatment effect estimation \citep{chernozhukov2018generic,van2023causal,whitehouse2024orthogonal}, and value prediction in offline reinforcement learning \citep{van2025bellman}. Distribution-free guarantees for histogram binning are developed by \citet{gupta2021distribution}, while \citet{van2023causal,van2025venn} establish asymptotic distribution-free guarantees for isotonic calibration. Most closely related to our work is recent research connecting calibration to debiased estimation of statistical functionals \citep{van2024automatic,van2023adaptive,van2025semiparametric}. In particular, \citet{van2024automatic} studies calibrated debiased machine learning for doubly robust inference, which in our setting reduces to calibrating the outcome regression and exploiting the resulting plug-in representation, while \citet{van2025semiparametric} studies calibrated plug-in regression estimators in reinforcement learning. More broadly, \citet{van2023adaptive} shows how plug-in calibration can support regression and treatment effect estimation, including superefficient inference through dimension reduction.
- 
- \section{Two-Sample Semisupervised Setup}
+\section{Two-Sample Semisupervised Setup}
 \label{sec:setup}
 
 \subsection{Data structure and notation}
@@ -146,16 +114,7 @@ We observe two independent datasets,
 \qquad\text{and}\qquad
 \mathcal D_U=\{\widetilde X_j\}_{j=1}^N.
 \]
-The labeled sample consists of i.i.d.\ draws from a distribution \(P_0\) on \(\mathcal X\times\mathbb R\), while the unlabeled sample consists of i.i.d.\ draws from the distribution \(\Px\) of \(X\) under \(P_0\). Our target is the population mean
-\[
-\psi_0 := \E_{P_0}[Y],
-\qquad
-\muzero(x):=\E_{P_0}[Y\mid X=x].
-\]
-This can also be written as
-\[
-\psi_0=\int y\,dP_0(x,y)=\int \muzero(x)\,d\Px(x).
-\]
+The labeled sample consists of i.i.d.\ draws from a distribution \(P_0\) on \(\mathcal X\times\mathbb R\), while the unlabeled sample consists of i.i.d.\ draws from the distribution \(\Px\) of \(X\) under \(P_0\). Our target is the population mean \(\psi_0:=\E_{P_0}[Y]\), and we write \(\muzero(x):=\E_{P_0}[Y\mid X=x]\).
 
 For functions \(a:\mathcal X\times\mathbb R\to\mathbb R\) and \(b:\mathcal X\to\mathbb R\), define the empirical means over the labeled and unlabeled samples by
 \[
@@ -163,42 +122,23 @@ For functions \(a:\mathcal X\times\mathbb R\to\mathbb R\) and \(b:\mathcal X\to\
 \qquad
 \Pu b := \frac{1}{N}\sum_{j=1}^N b(\widetilde X_j).
 \]
-For readability, we will sometimes write \(\Pl\{a(X,Y)\}\) instead of \(\Pl a\). When a function depends only on \(X\), we also write
-\[
-\Pl\{b(X)\}:=\frac{1}{n}\sum_{i=1}^n b(X_i).
-\]
-
-Throughout, let \(M:=n+N\) and \(\rho_n:=n/M\) denote the labeled fraction. Then
-\[
-\frac{1}{n+N}\left\{\sum_{i=1}^n f(X_i)+\sum_{j=1}^N f(\widetilde X_j)\right\}
-=
-\rho_n \Pl f + (1-\rho_n)\Pu f.
-\]
-In other words, the empirical mean of \(f(X)\) over the pooled covariate sample is a weighted average of the empirical means from the labeled and unlabeled samples.
+For readability, we will sometimes write \(\Pl\{a(X,Y)\}\) instead of \(\Pl a\), and for functions of \(X\) alone we write \(\Pl\{b(X)\}=n^{-1}\sum_{i=1}^n b(X_i)\). Let \(M:=n+N\) and \(\rho_n:=n/M\); pooled score averages are written as \(\rho_n \Pl f + (1-\rho_n)\Pu f\).
 
 \begin{assumption}[Two-sample design]
 \label{assump:design}
 The following hold:
 \begin{enumerate}[leftmargin=6mm,label=(\roman*)]
-\item \(\mathcal D_L\) is i.i.d.\ from \(P_0\), and \(\mathcal D_U\) is i.i.d.\ from \(\Px\).
-\item \(\mathcal D_L\) and \(\mathcal D_U\) are independent.
+\item \(\mathcal D_L\) is i.i.d.\ from \(P_0\), \(\mathcal D_U\) is i.i.d.\ from \(\Px\), and the two samples are independent.
 \item \(Y\) has finite second moment under \(P_0\).
 \item With \(M:=n+N\), the labeled fraction \(\rhon=n/M\) satisfies \(\rhon\to\rhozero\) for some \(\rhozero\in(0,1)\).
 \end{enumerate}
 \end{assumption}
 
-\begin{remark}
-The labeled sample carries the outcome information, while the unlabeled sample sharpens estimation of the marginal covariate distribution. The pooled i.i.d.\ missing-data formulation in Appendix~\ref{app:iid} is a special case of this two-sample setup.
-\end{remark}
-
 \subsection{Review of AIPW, PPI, and semiparametric efficiency}
-\label{sec:effreview}
-
- 
 
 \textbf{The AIPW class.} We begin with the augmented inverse-probability weighted (AIPW) estimator in the unrestricted two-sample model \citep{robins1994estimation}. It is helpful to view AIPW not as a single estimator, but as a family of estimators indexed by a score function \(f:\mathcal X\to\R\) with finite second moment. For any such \(f\), define
 \begin{equation}
-\label{eq:aipw-family}
+\label{eq:aipw-family-main}
 \widehat\psi(f)
 :=
 \rhon \Pl\{f(X)\}
@@ -207,131 +147,39 @@ The labeled sample carries the outcome information, while the unlabeled sample s
 +
 \Pl\{Y-f(X)\}.
 \end{equation}
-This estimator combines a plug-in term that imputes \(Y\) from \(f(X)\) with a residual correction from the labeled sample. For any fixed \(f\), \(\widehat\psi(f)\) is unbiased in finite samples for \(\psi_0=\E_{P_0}[Y]\). In particular, \(f(X)=0\) yields the empirical mean estimator \(\mathbb{P}_n^L\{Y\}\). Thus, the choice of \(f\) affects efficiency, through the estimator's variance, but not validity, in the sense that the resulting confidence intervals remain valid. This makes AIPW a ``safe'' estimator \citep{xu2025unified}. This property can be viewed as a particularly simple instance of double robustness\footnote{In more general missing-at-random settings with unknown, covariate-dependent missingness probabilities, the analogous AIPW estimator remains doubly robust asymptotically, but it no longer enjoys the same finite-sample unbiasedness as in the present known-\(\rho_n\) setting \citep{seaman2018introduction}.} \citep{bang2005doubly}. The same basic principle underlies the use of flexible machine learning for covariate adjustment in randomized trials while retaining valid inference \citep{moore2009covariate,moore2009increasing,schuler2022increasing,hojbjerre2025powering}.
+This estimator combines a plug-in term that imputes \(Y\) from \(f(X)\) with a residual correction from the labeled sample. For any fixed \(f\), \(\widehat\psi(f)\) is unbiased in finite samples for \(\psi_0\). Thus, the choice of \(f\) affects efficiency through variance, but not validity. This makes AIPW a safe estimator \citep{xu2025unified} and a particularly simple instance of double robustness \citep{bang2005doubly}; it is the semisupervised version of the broader covariate-adjustment logic used in randomized trials \citep{moore2009covariate,moore2009increasing,schuler2022increasing,hojbjerre2025powering}.
 
-
-
-\textbf{Asymptotic linearity and efficiency.} To characterize the leading large-sample error in the two-sample model, we decompose the estimation error into one contribution from the labeled sample and one from the unlabeled sample. We say that \(\widehat\psi\) is asymptotically linear with influence pair \((D^L,D^U)\) if
+\textbf{Asymptotic linearity and efficiency.} Appendix~\ref{app:semicolon} gives the full influence-pair characterization of this class and the efficient influence pair in the unrestricted two-sample model. For the main paper, the key consequence is that the asymptotic variance of \(\sqrt{M}\{\widehat\psi(f)-\psi_0\}\) can be written as
 \[
-\widehat\psi-\psi_0
+\mathrm{AVar}\!\left\{\sqrt{M}\,(\widehat\psi(f)-\psi_0)\right\}
 =
-\frac{1}{M}\sum_{i=1}^n D^L(X_i,Y_i)
+V_{\mathrm{eff}}
 +
-\frac{1}{M}\sum_{j=1}^N D^U(\widetilde X_j)
-+
-o_p(M^{-1/2}),
+\frac{1-\rho_0}{\rho_0}\E_{P_0}\!\bigl[(\tilde f(X)-\mu_0(X))^2\bigr],
 \]
-where \(\E_{P_0}[D^L(X,Y)]=0\) and \(\E_{\Px}[D^U(\widetilde X)]=0\). By the central limit theorem and the independence of the two samples,
-\[
-\sqrt{M}\,(\widehat\psi-\psi_0)
-\rightsquigarrow
-N\!\left(0,\,
-\rhozero \Var_{P_0}\{D^L(X,Y)\}
-+
-(1-\rhozero)\Var_{\Px}\{D^U(\widetilde X)\}\right).
-\]
-The influence pair therefore determines the estimator's asymptotic variance and provides a convenient way to compare efficiency across different choices of \(f\). The next result uses this representation to characterize the AIPW class, identify the efficient influence pair in the unrestricted two-sample model, and thereby obtain the semiparametrically efficient variance bound \citep{bickel1993efficient}.
+where \(\tilde f(X):=f(X)-\E_{\Px}\{f(X)\}+\psi_0\) is the recentered score and \(V_{\mathrm{eff}}\) is the semiparametric efficiency bound \citep{bickel1993efficient}. Thus, within the AIPW class, efficiency is governed by the mean-squared error of the recentered score \(\tilde f\) relative to \(\mu_0(X)\), and the variance is minimized when \(\tilde f=\mu_0\), in particular at \(f=\mu_0\).
 
-\begin{proposition}[Influence pair for the AIPW class]
-\label{prop:aipw-class}
-Under \cref{assump:design}, for any fixed \(f:\mathcal X\to\R\) with finite second moment, the estimator \(\widehat\psi(f)\) is asymptotically linear with influence pair \((D_f^L,D_f^U)\), where
-\begin{align}
-\label{eq:if-class-L}
-D_f^L(X,Y)
-&=
-\tilde f(X)-\psi_0+\rhozero^{-1}\{Y-\tilde f(X)\},\\
-\label{eq:if-class-U}
-D_f^U(\widetilde X)
-&=
-\tilde f(\widetilde X)-\psi_0,
-\end{align}
-with \(\tilde f(X):=f(X)-\E_{\Px}\{f(X)\}+\psi_0\)
-denoting the recentered version of \(f(X)\). The resulting asymptotic variance of \(\sqrt{M}\,(\widehat\psi(f)-\psi_0)\) is
-\begin{align*}
-\Var\{\mu_0(X)\}
-+
-\rhozero^{-1}\E_{P_0}\!\bigl[\Var(Y\mid X)\bigr]
-+
-\frac{1-\rhozero}{\rhozero}\E_{P_0}\!\bigl[(\tilde f(X)-\mu_0(X))^2\bigr].
-\end{align*}
-This variance is minimized over the AIPW class when \(\tilde f=\mu_0\), in particular at \(f=\mu_0\). Therefore, the efficient influence pair for \(\psi_0=\E_{P_0}[Y]\) in the unrestricted two-sample model is \((D_{\mu_0}^L,D_{\mu_0}^U)\), and the corresponding asymptotic variance is the efficiency bound\footnote{Appendix~\ref{section::plugin} shows that every regular estimator is asymptotically equivalent to \(\widehat\psi(f)\) for some score function \(f\). Thus, the AIPW family characterizes the full class of regular estimators and the semiparametric efficiency bound in this model.}.
-\end{proposition}
+\textbf{AIPW, PPI, and empirical-efficiency maximization.} The usual AIPW estimator corresponds to \(f(X)=m(X)\), where \(m(X)\) is a prediction score. The original PPI estimator of \citet{ppi2023} corresponds to the scaled score choice \(f(X)=m(X)/(1-\rho_n)\), so it is another score choice in the same AIPW class. Relative to AIPW, PPI places the plug-in term entirely on the unlabeled sample and therefore discards labeled-sample covariate information, so it can be less efficient when the original score is already informative.
 
-  
-
- 
-
-
-A key insight of Proposition~\ref{prop:aipw-class} is that the limiting variance of the AIPW estimator depends on the score function \(f\) only through the mean squared error of its recentered version \(\tilde f\), namely \(\E_{P_0}\!\bigl[(\tilde f(X)-\mu_0(X))^2\bigr]\). Thus, within the AIPW class, efficiency is maximized by choosing \(f\) so that \(\tilde f\) approximates \(\mu_0(X)\) as well as possible, with equality when \(\tilde f=\mu_0\), in particular at \(f=\mu_0\). This shows that full efficiency generally requires using the full covariate information \(X\), or at least a summary rich enough to recover \(\mu_0(X)\) \citep{robins1995semiparametric}. In practice, this motivates taking \(f\) to be an estimated prediction score \(m(X)\), learned using flexible black-box methods.
-
-\textbf{AIPW, PPI, and empirical-efficiency maximization.}
-We now record several familiar choices of \(f\) within the class \eqref{eq:aipw-family}. The most common choice is \(f(X)=m(X)\), where \(m(X)\) is a prediction score, yielding the usual augmented inverse-probability weighted (AIPW) estimator \citep{robins1994estimation}:
-\[
-\widehat{\psi}_{\mathrm{AIPW}}
-=
-\rhon \Pl\{m(X)\}
-+
-(1-\rhon)\Pu\{m(\widetilde X)\}
-+
-\Pl\{Y-m(X)\}.
-\]
-Equivalently,
-\[
-\widehat{\psi}_{\mathrm{AIPW}}
-=
-\frac{1}{M}\left\{
-\sum_{i=1}^n m(X_i)
-+
-\sum_{j=1}^N m(\widetilde X_j)
-+
-\frac{1}{\rho_n}\sum_{i=1}^n \{Y_i-m(X_i)\}
-\right\},
-\]
-where \(\rho_n^{-1}\) is the inverse probability of observing the outcome. 
-
-Another estimator in this class was considered by \citet{ppi2023} under the name PPI,\footnote{The PPI and PPI++ estimators are algebraically equivalent to the model-assisted survey-design estimators of \citet{cassel1976some} and \citet{sarndal2003model}, respectively; see \citet{mozer2026ppi} for a review.} and we adopt that terminology here. It corresponds to the score choice
-\[
-f(X)=\frac{m(X)}{1-\rho_n}.
-\]
-Substituting this choice into \eqref{eq:aipw-family} gives
-\[
-\widehat{\psi}_{\mathrm{PPI}}
-=
-\Pu\{m(\widetilde X)\}+\Pl\{Y-m(X)\}.
-\]
-Relative to \(\widehat{\psi}_{\mathrm{AIPW}}\), \(\widehat{\psi}_{\mathrm{PPI}}\) uses only the unlabeled sample in the plug-in term and rescales the score by the factor \((1-\rho_n)^{-1}>1\). By Proposition~\ref{prop:aipw-class}, this helps only if the rescaled score is closer to \(\mu_0(X)\) in mean squared error. Thus, PPI is inefficient when \(m=\mu_0\), and is typically less efficient when \(m\) is already reasonably accurate. When \(\rho_n\) is small and \(m\) is sufficiently inaccurate, however, neither estimator is necessarily more efficient than the other \citep{han2012note,rotnitzky2012improved}.
-
-
-Because both \(\widehat{\psi}_{\mathrm{AIPW}}\) and \(\widehat{\psi}_{\mathrm{PPI}}\) use scores in the scaling class \(\{\lambda m(X):\lambda\in\mathbb R\}\), it is natural to choose the scaling factor data-adaptively rather than fixing it in advance. One way to do so is to minimize the estimator's empirical influence-function variance over this class:
-\[
-\sigma_n^2(f)
-:=
-\rho_n \Pl\left[\left\{f(X)-\widehat{\psi}(f)+\rho_n^{-1}(Y-f(X))\right\}^2\right]
-+
-(1-\rho_n)\Pu\left[\left\{f(\widetilde X)-\widehat{\psi}(f)\right\}^2\right].
-\]
-That is, one chooses \(\lambda\) to minimize \(\sigma_n^2(f)\) over \(f(X)=\lambda m(X)\), a procedure known as empirical-efficiency maximization \citep{rubin2008empirical,vanderlaanunified}.  The resulting estimator, called PPI++ by \citet{angelopoulos2023ppi}, is simply the AIPW estimator with an empirically rescaled prediction rule \(\hat\lambda m(X)\), where \(\hat\lambda\) estimates the population-optimal scaling coefficient
+Because both AIPW and PPI lie in the scaling class \(\{\lambda m(X):\lambda\in\mathbb R\}\), it is natural to choose \(\lambda\) data-adaptively rather than fixing it in advance. This yields the estimator called PPI++ by \citep{angelopoulos2023ppi}: the AIPW estimator with the empirically rescaled score \(\hat{\lambda}m(X)\). Here \(\hat{\lambda}\) is chosen by minimizing the empirical variance criterion over \(f(X)=\lambda m(X)\), a procedure known as empirical-efficiency maximization \citep{rubin2008empirical,vanderlaanunified}, and it targets
 \begin{equation}
 \label{opt:scale}
 \lambda^\star
 =
 \frac{\Cov\bigl(Y,m(X)\bigr)}{\Var\bigl(m(X)\bigr)}.
 \end{equation}
-The same principle extends beyond simple rescaling. For example, one can minimize \(\sigma_n^2(f)\) over richer classes such as $\{\lambda m(X)+\beta_{\mathrm{lin}}^\top X:
-\lambda \in \mathbb R,\ \beta_{\mathrm{lin}} \in \mathbb R^d\},$
-over monotone transformations of the score, or over a reproducing kernel Hilbert space (Appendix~\ref{appendix:remarks}). More generally, the same criterion can be used in cross-validation to choose among candidate estimator classes \citep{rubin2008empirical}.
+The same principle extends beyond simple rescaling: one can minimize the same criterion over richer classes, such as \(\{\lambda m(X)+\beta^\top X\}\), monotone score transformations, or an RKHS, and can use it in cross-validation to choose among candidate estimator classes \citep{rubin2008empirical}; see Appendix~\ref{appendix:remarks}. For the main paper, the point is simple: AIPW remains safe across the whole class, and our proposal is to improve the score by calibration rather than to change the underlying validity mechanism.
 
- 
 
- 
 
 \section{Calibrated Prediction-Powered Inference}
 \label{sec:calppi}
 
-Section~2.2 showed that AIPW provides a safe debiasing template, while the choice of score \(f(X)\) determines efficiency. We now introduce the \emph{calibrated prediction-powered inference} framework, which improves an available prediction score \(m(X)\) through post-processing rather than retraining. Using the labeled sample, we learn a transformation of \(m(X)\) within a chosen class and then use the resulting calibrated score to construct an estimator of the target mean. As we will show, this estimator admits both a simple plug-in form and an exact AIPW representation. Different choices of calibration class lead to different calibrated PPI estimators, including the linear and isotonic procedures studied below.
+Section~\ref{sec:setup} showed that AIPW is safe while the choice of score \(f(X)\) determines efficiency. We now introduce calibrated prediction-powered inference, which improves an available prediction score \(m(X)\) through post-processing rather than retraining. Using the labeled sample, we learn a transformation of \(m(X)\), average the calibrated predictions over the pooled sample, and obtain an estimator that has a simple plug-in form but is exactly AIPW.
 
 \subsection{General estimator and exact AIPW representation}
-Let \(m:\mathcal X\to\mathbb R\) denote a black-box regression model. A calibration procedure uses the labeled scores \(m(X_1),\dots,m(X_n)\) and outcomes \(Y_1,\dots,Y_n\) to learn a post-hoc map \(f_n\), and then defines the calibrated regression model
+
+Let \(m:\mathcal X\to\mathbb R\) denote a black-box regression model. A calibration procedure uses the labeled scores \(m(X_1),\dots,m(X_n)\) and outcomes \(Y_1,\dots,Y_n\) to fit a post-hoc map \(f_n\), and then defines the calibrated regression model
 \[
 m_n^\star := f_n\circ m.
 \]
@@ -339,26 +187,21 @@ The resulting predictions on the labeled and unlabeled samples are \(m_n^\star(X
 
 This post-processing step has two main goals. First, it aims to improve the original prediction score \(m\) through a simple transformation, without retraining the underlying model, ideally by improving calibration without sacrificing predictive performance. Second, it is designed so that the resulting plug-in estimator is automatically unbiased, without requiring an explicit residual correction.
 
-Given the post-processed score \(\mtilde\), define the calibrated PPI estimator by
+Given the post-processed score \(\mtilde\), define the calibrated plug-in estimator by
 \begin{equation}
 \label{eq:plugin}
 \psihat
 :=
 \frac{1}{n+N}\left\{\sum_{i=1}^n \mtilde(X_i) + \sum_{j=1}^N \mtilde(\widetilde X_j)\right\}.
 \end{equation}
-Equivalently,
-\[
-\psihat
-=
-\rhon \Pl\{\mtilde(X)\} + (1-\rhon)\Pu\{\mtilde(\widetilde X)\}.
-\]
+Equivalently, \(\psihat=\rhon \Pl\{\mtilde(X)\} + (1-\rhon)\Pu\{\mtilde(\widetilde X)\}\).
 
-To distinguish the class used to learn the post-processing map from the class used to assess the resulting prediction score, we introduce two function classes. Let \(\mathcal H\) be an optimization class of real-valued maps \(h:\mathbb R\to\mathbb R\), and let \(\mathcal F\) be a linear calibration class of real-valued maps \(f:\mathbb R\to\mathbb R\) containing the constant functions and the identity map. We learn the post-processing map \(f_n\) by empirical risk minimization over \(\mathcal H\), that is,
-\begin{equation}
-\label{eq:H-erm}
-f_n \in \arg\min_{h\in\mathcal H} \Pl\bigl[(Y-h(m(X)))^2\bigr].
-\end{equation}
-We then ask what calibration property the resulting post-processed score \(\mtilde:=f_n\circ m\) satisfies with respect to the class \(\mathcal F\).
+To distinguish how the post-processing map is fit from what property the resulting score satisfies, we introduce two function classes. Let \(\mathcal H\) be an optimization class of real-valued maps \(h:\mathbb R\to\mathbb R\), and let \(\mathcal F\) be a linear calibration class of real-valued maps \(f:\mathbb R\to\mathbb R\) that contains the constant functions and the identity map. We fit the post-processing map \(f_n\) by empirical risk minimization over \(\mathcal H\), in the sense that
+\[
+f_n \in \arg\min_{h\in\mathcal H}
+\Pl\bigl[(Y-h(m(X)))^2\bigr].
+\]
+We then ask what property the resulting post-processed score \(\mtilde:=f_n\circ m\) satisfies relative to the calibration class \(\mathcal F\).
 
 We say that \(\mtilde\) is \emph{empirically calibrated over \(\mathcal F\)} if, for every \(f\in\mathcal F\),
 \begin{equation}
@@ -367,33 +210,30 @@ We say that \(\mtilde\) is \emph{empirically calibrated over \(\mathcal F\)} if,
 \le
 \Pl\bigl[(Y-f(\mtilde(X)))^2\bigr],
 \end{equation}
-where \(\Pl\) denotes the empirical mean over the labeled sample. In words, once \(\mtilde\) has been formed, no further transformation of \(\mtilde\) within \(\mathcal F\) can improve the empirical squared-error fit.
+where \(\Pl\) denotes the empirical mean over the labeled sample. In words, once \(\mtilde\) has been calibrated, no further transformation of \(\mtilde\) within \(\mathcal F\) can improve empirical squared-error fit on the labeled sample.
 
-Because \(\mathcal F\) is linear, this condition is equivalent to the first-order optimality conditions
+Equivalently, the first-order optimality conditions for \eqref{eq:cal-risk} are
 \begin{equation}
 \label{eq:cal-score}
 \Pl\bigl[f(\mtilde(X))\{Y-\mtilde(X)\}\bigr]=0,
 \qquad
 f\in\mathcal F.
 \end{equation}
-Since \(\mathcal F\) contains the constant functions and the identity map, these conditions imply, in particular,
+Because \(\mathcal F\) contains the constant functions and the identity map, these conditions imply, in particular,
 \[
 \Pl\{Y-\mtilde(X)\}=0,
 \qquad
 \Pl\bigl[\mtilde(X)\{Y-\mtilde(X)\}\bigr]=0.
 \]
-The first identity is an empirical mean-calibration condition: the residuals of the calibrated score average to zero on the labeled sample, yielding the exact AIPW representation below. The second shows that \(\mtilde\) is already optimal over the one-dimensional scaling class \(\{\lambda \mtilde:\lambda\in\mathbb R\}\), so no rescaling of \(\mtilde\) can further reduce empirical squared error.
- 
+The first identity makes the AIPW residual term vanish exactly on the labeled sample.
 
-
- 
+Thus a calibration method is naturally described by a pair \((\mathcal H,\mathcal F)\): linear and fixed-bin histogram calibration have \(\mathcal H=\mathcal F\), whereas isotonic regression uses a monotone \(\mathcal H\) but, by Proposition~\ref{prop:iso-repr}, yields a much larger \(\mathcal F\).
 
 The next result gives the basic structural property of calibrated PPI estimators.
- 
 
 \begin{theorem}[Exact AIPW representation under empirical calibration]
 \label{thm:repr}
-Suppose the calibrated predictions satisfy \cref{eq:cal-score}, where \(\mathcal F\) contains all affine maps. Then, for any \(\what\in\mathcal F\),
+Suppose the calibrated score satisfies \cref{eq:cal-score}, where \(\mathcal F\) contains all affine maps. Then, for any \(\what\in\mathcal F\),
 \begin{equation}
 \label{eq:abw-general}
 \psihat
@@ -429,11 +269,11 @@ then
 \Pl\bigl[\what_n^\star(\mtilde(X))Y\bigr].
 \end{equation}
 \end{theorem}
-Theorem~\ref{thm:repr} shows that empirical calibration does more than improve prediction: it gives the calibrated PPI estimator an exact debiased representation. Specifically, \(\psihat\) is exactly an AIPW estimator with score \(\mtilde\). The same calibration conditions also yield an equivalent balancing-weight representation, under which \(\psihat\) is a weighted average of \(Y\) over the labeled sample, with the unlabeled sample entering only through the weights. This representation makes clear how unlabeled information is incorporated and enables familiar weighting diagnostics, such as balance checks and inspection of the weight distribution.
+Theorem~\ref{thm:repr} turns the pooled plug-in rule into exact AIPW with the calibrated score and, when \eqref{eq:F-balance} holds, into an equivalent balancing-weight estimator.
 
-\textbf{Full versus linear calibration.} We focus on two main cases. In the nonparametric case, \(\mathcal F\) is the class of all transformations \(f:\R\to\R\), which we call \emph{full calibration}. At the population level, a predictor is fully calibrated if no further transformation can improve its mean squared prediction error. In practice, however, the fitted post-processing map \(f_n\) is obtained by minimizing empirical squared error over a chosen optimization class \(\mathcal H\), which need not coincide with \(\mathcal F\). The class \(\mathcal H\) acts as a regularizer: without such a restriction, one could overfit the labeled sample, achieving perfect empirical fit but poor prediction and poor population-level calibration. For example, \(\mathcal H\) may consist of piecewise constant or monotone functions, as in histogram regression or isotonic regression (Section~\ref{sec:iso}). In the parametric case, both \(\mathcal H\) and \(\mathcal F\) are restricted to affine transformations \(t\mapsto a+bt\), which we call \emph{linear calibration}. This corresponds to fitting the working linear model \(a+b\,m(X)\) for \(Y\) (Section~\ref{sec:linear}).
+\textbf{Full versus linear calibration.} We focus on two main cases. In \emph{full calibration}, \(\mathcal F\) is the class of all real-valued transformations, while \(\mathcal H\) is the fitting class used to learn \(f_n\). This distinction matters because \(\mathcal H\) serves as a regularizer: without such a restriction, one could overfit the labeled sample and achieve perfect empirical fit with poor population prediction. In practice, \(\mathcal H\) may consist of piecewise-constant or monotone maps, as in histogram and isotonic calibration. In \emph{linear calibration}, by contrast, \(\mathcal H=\mathcal F\) is the affine class \(t\mapsto a+bt\), so both fitting and no-further-calibration are assessed within the same working linear model for \(Y\) given \(m(X)\).
 
-\textbf{Why calibration can improve efficiency.} The representation in Theorem~\ref{thm:repr} explains why calibration yields a valid debiased estimator; the remaining question is why it may also improve precision. To see this, suppose that the fitted post-processing map \(f_n\) converges to a population minimizer \(g_0\in\mathcal H\), and hence that the post-processed score \(\mtilde=f_n\circ m\) converges to
+\textbf{Why calibration can improve efficiency.} Suppose the calibrated score \(\mtilde\) converges to a population limit \(m_0\), where
 \[
 m_0(X)=g_0\{m(X)\},
 \qquad
@@ -441,17 +281,15 @@ g_0\in\arg\min_{g\in\mathcal H}
 \E_{P_0}\!\left[\{Y-g(m(X))\}^2\right].
 \]
 Thus, \(m_0\) is the best predictor obtainable from the original score \(m\) using post-processing maps in the class \(\mathcal H\). When \(\mtilde\) is close to \(m_0\), \(\psihat\) behaves like the AIPW estimator that uses \(m_0\). Proposition~\ref{prop:aipw-class} therefore implies that this limiting estimator has asymptotic variance no larger than that of the AIPW estimator based on any \(\theta\circ m\) with \(\theta\in\mathcal H\). In particular, if \(\mathcal H\) contains the identity map, as it does for affine or monotone transformations, then \(m\) itself is among the admissible post-processings. It follows that the estimator based on \(m_0\) is asymptotically at least as efficient as the AIPW estimator based on the original score \(m\). Calibration can therefore improve efficiency insofar as \(m_0\) provides a better regression adjustment than \(m\).
+ 
 
 \subsection{Isotonic-calibrated PPI}
 \label{sec:iso}
 
-We now describe two simple second-stage calibration methods that fit naturally into the \((\mathcal H,\mathcal F)\) framework: histogram binning and isotonic regression \citep{zadrozny2001obtaining,zadrozny2002transforming,niculescu2005predicting}. Both are fit using the labeled pairs \(\{(\mhat(X_i),Y_i)\}_{i=1}^n\), but they use different optimization classes \(\mathcal H\).
+We now turn to isotonic regression, the main nonparametric second-stage calibrator. Fitted on the labeled pairs \(\{(\mhat(X_i),Y_i)\}_{i=1}^n\), it is tuning-free, easy to compute, and cannot worsen empirical squared error relative to the original score \citep{zadrozny2002transforming,niculescu2005predicting,barlow1972isotonic}.
 
-For histogram binning, \(\mathcal H\) is the class of piecewise-constant maps on a prespecified partition of the score space \citep{gupta2020distribution,gupta2021distribution}. One may take \(\mathcal F=\mathcal H\). In fact, because the fitted score is constant within each bin, any further transformation of that score is also piecewise constant on the same partition. Thus histogram binning is empirically calibrated not only over \(\mathcal H\), but also fully calibrated. In this sense, a post-processing map learned over a restricted class \(\mathcal H\) can still yield full empirical calibration.
 
-For isotonic calibration, \(\mathcal H=\mathcal F_{\mathrm{iso}}\), where \(\mathcal F_{\mathrm{iso}}\) denotes the class of nondecreasing real-valued functions. The calibrator is fit by isotonic regression via the pooled-adjacent-violators algorithm \citep{barlow1972isotonic}. The fitted score is piecewise constant on a data-adaptive partition of the score space determined by the pooled blocks. As with histogram binning, any further transformation remains constant on the same blocks, so isotonic calibration also yields full empirical calibration. We focus on isotonic regression because it does not require prespecified bins: the partition is learned adaptively from the data, and the method is lightweight, tuning-free, and easy to implement with widely available software.
-
-The isotonic-calibrated PPI estimator is
+The isotonic-calibrated plug-in estimator is
 \[
 \widehat{\psi}_{\mathrm{iso}}
 :=
@@ -469,27 +307,11 @@ m_{n,\mathrm{iso}}^\star(X)
 \hat f\{\mhat(X)\},
 \qquad
 \hat f \in \arg\min_{f \in \mathcal F_{\mathrm{iso}}}
-\sum_{i=1}^n \bigl\{Y_i - f(\mhat(X_i))\bigr\}^2.
+\sum_{i=1}^n \bigl\{Y_i - f(\mhat(X_i))\bigr\}^2,
 \]
+and \(\mathcal F_{\mathrm{iso}}\) denotes the class of nondecreasing real-valued functions. The fitted values \(m_{n,\mathrm{iso}}^\star(X_i)=\hat f(\mhat(X_i))\) are piecewise constant and can be computed by the pooled-adjacent-violators algorithm. This structure implies full empirical calibration, even though the calibration step is restricted to isotonic functions.
 
  
-
-\begin{algorithm}[t]
-\caption{Isotonic-calibrated PPI}
-\label{alg:isoppi}
-\begin{algorithmic}[1]
-\Require \(\mathcal D_L=\{(X_i,Y_i)\}_{i=1}^n\), \(\mathcal D_U=\{\widetilde X_j\}_{j=1}^N\), score \(\mhat\), level \(1-\alpha\)
-\State Compute \(T_i=\mhat(X_i)\) and \(\widetilde T_j=\mhat(\widetilde X_j)\)
-\State Fit \(\hat f\in\arg\min_{f\in\mathcal F_{\mathrm{iso}}}\sum_{i=1}^n\{Y_i-f(T_i)\}^2\)
-\State Set \(m_{n,\mathrm{iso}}^\star(X_i)=\hat f(T_i)\) and \(m_{n,\mathrm{iso}}^\star(\widetilde X_j)=\hat f(\widetilde T_j)\)
-\State Form \(\widehat\psi_{\mathrm{iso}}\gets (n+N)^{-1}\{\sum_{i=1}^n m_{n,\mathrm{iso}}^\star(X_i)+\sum_{j=1}^N m_{n,\mathrm{iso}}^\star(\widetilde X_j)\}\)
-\State Set \(\widehat D_i^L=m_{n,\mathrm{iso}}^\star(X_i)-\widehat\psi_{\mathrm{iso}}+\rhon^{-1}\{Y_i-m_{n,\mathrm{iso}}^\star(X_i)\}\) and \(\widehat D_j^U=m_{n,\mathrm{iso}}^\star(\widetilde X_j)-\widehat\psi_{\mathrm{iso}}\)
-\State Set \(\widehat{\mathrm{SE}}_{\mathrm{iso}}^2=(n+N)^{-2}\{\sum_{i=1}^n(\widehat D_i^L)^2+\sum_{j=1}^N(\widehat D_j^U)^2\}\)
-\State Return \(\widehat\psi_{\mathrm{iso}} \pm z_{1-\alpha/2}\widehat{\mathrm{SE}}_{\mathrm{iso}}\)
-\end{algorithmic}
-\end{algorithm}
-
-The key calibration property of isotonic regression, and likewise of histogram binning, is the following.
 
 \begin{proposition}[Isotonic calibration is fully calibrated]
 \label{prop:iso-repr}
@@ -498,7 +320,7 @@ For every function \(h:\R\to\R\),
 \label{eq:orth}
 \Pl\bigl[h(m_{n,\mathrm{iso}}^\star(X))\{Y-m_{n,\mathrm{iso}}^\star(X)\}\bigr]=0.
 \end{equation}
-Moreover,
+Moreover, it holds that
 \[
 \Pl\bigl[(Y-m_{n,\mathrm{iso}}^\star(X))^2\bigr]
 \le
@@ -506,19 +328,17 @@ Moreover,
 \]
 \end{proposition}
 
-Consequently, the representations in Theorem~\ref{thm:repr} hold with \(\mathcal F\) taken to be the class of all real-valued functions.  
-
-
-
-\begin{remark}[Implementation]
-Isotonic regression is widely available in standard software. A standard algorithm is the pooled-adjacent-violators algorithm (PAVA) \citep{barlow1972isotonic}. Although it is generally fast, it may become slow at ultra-large sample sizes. A scalable alternative is to use regression tree software with monotonicity constraints, such as XGBoost or LightGBM (see Appendix~\ref{appendix:code}). An advantage of tree-based software is that the fit can be regularized by constraining or tuning the number of leaves, the maximum tree depth, or the minimum number of observations per leaf.
-\end{remark}
+Thus isotonic regression is the main example in which a restricted monotone fitting class \(\mathcal H\) yields a much larger calibration class \(\mathcal F\). Consequently, Theorem~\ref{thm:repr} applies with \(\mathcal F\) equal to the class of all real-valued functions. Additional implementation details and implementation variants appear in Appendices~\ref{appendix:remarks} and \ref{appendix:code}.
 
  
+ 
+
+
+ 
+
 \subsection{Linearly calibrated PPI}
 \label{sec:linear}
-
-For small labeled samples, one may prefer smoother parametric calibration rules to histogram binning or isotonic regression. We focus on linear calibration, in which \(\mathcal H=\mathcal F=\mathcal F_{\mathrm{lin}}\), where \(\mathcal F_{\mathrm{lin}}\) denotes the class of affine maps \(t\mapsto at+b\). Thus, the post-processing step is learned over the same class with respect to which calibration is assessed. Compared with isotonic regression, this imposes a more restrictive parametric form, akin in spirit to Platt scaling and temperature scaling \citep{platt1999probabilistic,guo2017calibration}, but it may be more stable when the labeled sample is small. Its guarantee is correspondingly narrower: it need not correct nonlinear miscalibration, but it is optimal within the class of affine transformations.
+For smaller labeled samples, one may prefer the lower-dimensional affine case. We therefore focus on linear calibration \citep{mincer1969evaluation}, where the fitting and calibration classes coincide as the affine maps. It regresses the outcome on the original score and therefore corrects mean bias, scaling, and location shift inside that class.
 
 Let
 \begin{equation}
@@ -527,7 +347,7 @@ Let
 \qquad
 m_{n,\mathrm{lin}}^\star(X):=\hat a_{\mathrm{lin}}\,\mhat(X)+\hat b_{\mathrm{lin}}.
 \end{equation}
-Equivalently, \(m_{n,\mathrm{lin}}^\star\) is obtained by empirical risk minimization over the affine class \(\mathcal F_{\mathrm{lin}}\). The associated linearly calibrated PPI estimator\footnote{Appendix~\ref{section::plugin} shows that this estimator can equivalently be implemented by balancing on \((1,m(X))\) and then forming the corresponding weighted outcome estimator.}is
+Define the associated linearly calibrated plug-in estimator by
 \begin{equation}
 \label{eq:linear-plugin}
 \widehat{\psi}_{\mathrm{lin}}
@@ -538,9 +358,7 @@ Equivalently, \(m_{n,\mathrm{lin}}^\star\) is obtained by empirical risk minimiz
 \sum_{j=1}^N m_{n,\mathrm{lin}}^\star(\widetilde X_j)
 \right\}.
 \end{equation}
-Because \(\mathcal F_{\mathrm{lin}}\) contains the constant function and the identity map, the least-squares fit enforces empirical mean calibration and empirical orthogonality between the calibrated score and its residuals. Consequently, \(\widehat{\psi}_{\mathrm{lin}}\) satisfies the exact AIPW representation and the no-further-calibration property within the affine class.
-
-More generally, one can include additional covariates in the linear regression adjustment to further improve precision, provided there is sufficient labeled data (Algorithm~\ref{alg:linearppi}).
+Because the affine class includes the constant function, the least-squares fit automatically enforces empirical mean calibration. As a result, the linearly calibrated plug-in estimator admits an exact AIPW representation.
 
 \begin{proposition}[Linear calibration as AIPW]
 \label{prop:linear}
@@ -562,10 +380,7 @@ Hence, for any \(\hat w(X)=a+b\,m_{n,\mathrm{lin}}^\star(X)\),
 \end{equation}
 \end{proposition}
 
-
-
-The next result connects linear calibration to PPI++, a closely related estimator that rescales the original score by empirical-efficiency maximization. In the mean-estimation problem, the two approaches are first-order equivalent, though they need not coincide exactly in finite samples. Intuitively, both target the same one-dimensional adjustment, namely the optimal rescaling of \(m(X)\), given by the population slope \(\lambda_0\) in \eqref{opt:scale} from the linear regression of \(Y\) on \(m(X)\). Let \(\widehat{\psi}_{++}(\widehat{\lambda}_{++})\) denote the PPI++ estimator of \citet{angelopoulos2023ppi}, that is, the AIPW estimator based on the score \(\widehat{\lambda}_{++}m(X)\), where \(\widehat{\lambda}_{++}\) is obtained by empirical efficiency maximization over \(\{\lambda m(X):\lambda\in\R\}\) \citep{rubin2008empirical}.
-
+The next result connects linear calibration to PPI++, a closely related estimator that chooses a rescaling of the original score by empirical efficiency maximization. In the mean-estimation problem, these two approaches are first-order equivalent, although they need not coincide exactly in finite samples. Intuitively, both are trying to make the same one-dimensional adjustment: they choose the best linear rescaling of \(m(X)\). Let \(\widehat{\psi}_{++}(\widehat{\lambda}_{++})\) denote the PPI++ estimator of \citet{angelopoulos2023ppi}, that is, the AIPW estimator based on the rescaled score \(\widehat{\lambda}_{++}m(X)\), where \(\widehat{\lambda}_{++}\) is obtained by empirical efficiency maximization over \(\{\lambda m(X):\lambda\in\R\}\) \citep{rubin2008empirical,vanderlaanunified}. The key point is that \(\widehat{\lambda}_{++}\) estimates \(\lambda_0\) in \eqref{opt:scale}, which is exactly the population slope in the linear regression of \(Y\) on \(m(X)\). 
  
 \begin{proposition}[First-order equivalence of PPI++ and linear calibration]
 \label{prop:ppi++-linear}
@@ -595,95 +410,20 @@ o_p\bigl(M^{-1/2}\bigr).
 \end{proposition}
 
 
-\begin{algorithm}[t]
-\caption{Linearly calibrated PPI}
-\label{alg:linearppi-basic}
-\begin{algorithmic}[1]
-\Require \(\mathcal D_L=\{(X_i,Y_i)\}_{i=1}^n\), \(\mathcal D_U=\{\widetilde X_j\}_{j=1}^N\), score \(\mhat\), level \(1-\alpha\)
-\State Compute \(T_i=\mhat(X_i)\) and \(\widetilde T_j=\mhat(\widetilde X_j)\)
-\State Fit \((\hat a,\hat b)\in\arg\min_{a,b}\sum_{i=1}^n\{Y_i-(aT_i+b)\}^2\)
-\State Set \(m_{n,\mathrm{lin}}^\star(X_i)=\hat aT_i+\hat b\) and \(m_{n,\mathrm{lin}}^\star(\widetilde X_j)=\hat a\widetilde T_j+\hat b\)
-\State Form \(\widehat\psi_{\mathrm{lin}}\gets (n+N)^{-1}\{\sum_{i=1}^n m_{n,\mathrm{lin}}^\star(X_i)+\sum_{j=1}^N m_{n,\mathrm{lin}}^\star(\widetilde X_j)\}\)
-\State Set \(\widehat D_i^L=m_{n,\mathrm{lin}}^\star(X_i)-\widehat\psi_{\mathrm{lin}}+\rhon^{-1}\{Y_i-m_{n,\mathrm{lin}}^\star(X_i)\}\) and \(\widehat D_j^U=m_{n,\mathrm{lin}}^\star(\widetilde X_j)-\widehat\psi_{\mathrm{lin}}\)
-\State Set \(\widehat{\mathrm{SE}}_{\mathrm{lin}}^2=(n+N)^{-2}\{\sum_{i=1}^n(\widehat D_i^L)^2+\sum_{j=1}^N(\widehat D_j^U)^2\}\)
-\State Return \(\widehat\psi_{\mathrm{lin}} \pm z_{1-\alpha/2}\widehat{\mathrm{SE}}_{\mathrm{lin}}\)
-\end{algorithmic}
-\end{algorithm}
-
-\begin{algorithm}[t]
-\caption{Linearly calibrated PPI with covariate adjustment}
-\label{alg:linearppi}
-\begin{algorithmic}[1]
-\Require \(\mathcal D_L=\{(X_i,Y_i)\}_{i=1}^n\), \(\mathcal D_U=\{\widetilde X_j\}_{j=1}^N\), score \(\mhat\), level \(1-\alpha\)
-\State Compute \(T_i=\mhat(X_i)\) and \(\widetilde T_j=\mhat(\widetilde X_j)\)
-\State Fit \((\hat a,\hat\beta,\hat b)\in\arg\min_{a,\beta,b}\sum_{i=1}^n\{Y_i-(a+X_i^\top\beta+bT_i)\}^2\)
-\State Set \(m_{n,\mathrm{lin}}^\star(X_i)=\hat a+X_i^\top\hat\beta+\hat bT_i\) and \(m_{n,\mathrm{lin}}^\star(\widetilde X_j)=\hat a+\widetilde X_j^\top\hat\beta+\hat b\widetilde T_j\)
-\State Form \(\widehat\psi_{\mathrm{lin}}\gets (n+N)^{-1}\{\sum_{i=1}^n m_{n,\mathrm{lin}}^\star(X_i)+\sum_{j=1}^N m_{n,\mathrm{lin}}^\star(\widetilde X_j)\}\)
-\State Set \(\widehat D_i^L=m_{n,\mathrm{lin}}^\star(X_i)-\widehat\psi_{\mathrm{lin}}+\rhon^{-1}\{Y_i-m_{n,\mathrm{lin}}^\star(X_i)\}\) and \(\widehat D_j^U=m_{n,\mathrm{lin}}^\star(\widetilde X_j)-\widehat\psi_{\mathrm{lin}}\)
-\State Set \(\widehat{\mathrm{SE}}_{\mathrm{lin}}^2=(n+N)^{-2}\{\sum_{i=1}^n(\widehat D_i^L)^2+\sum_{j=1}^N(\widehat D_j^U)^2\}\)
-\State Return \(\widehat\psi_{\mathrm{lin}} \pm z_{1-\alpha/2}\widehat{\mathrm{SE}}_{\mathrm{lin}}\)
-\end{algorithmic}
-\end{algorithm}
- 
-
-\begin{remark}[Relation to prognostic-score adjustment]
-Linear calibration can be viewed as prognostic-score regression adjustment, a classical approach to improving precision through covariate adjustment in small-sample settings \citep{hansen2008prognostic,rosenblum2009using,lin2013agnostic,schuler2022increasing,balzer2024adaptive,hojbjerre2025powering}. Proposition~\ref{prop:ppi++-linear} shows that PPI++ has the same first-order interpretation. Linear calibration can also be viewed as a special case of TMLE \citep{hojbjerre2026within}.
-\end{remark}
-
-\begin{remark}[Platt scaling adjustment]
-The linear-calibration idea extends beyond squared-error loss. One can instead use logistic loss, Poisson loss, or, more generally, losses from canonical-link generalized linear models \citep{rosenblum2009using}. In particular, when \(Y\in\{0,1\}\) and \(\mhat(X)\in(0,1)\) is an initial predictor, one may apply Platt scaling \citep{cox1958two,platt1999probabilistic} by fitting a logistic regression of \(Y\) on the logit of \(\mhat(X)\):
-\begin{equation}
-\label{eq:platt-cal}
-\bigl(\hat a_{\mathrm{platt}},\hat b_{\mathrm{platt}}\bigr)
-\in
-\arg\min_{a,b\in\R}
-\sum_{i=1}^n
-\Bigl[
--Y_i \log \sigma\bigl(a\,\mathrm{logit}(\mhat(X_i))+b\bigr)
--(1-Y_i)\log\Bigl(1-\sigma\bigl(a\,\mathrm{logit}(\mhat(X_i))+b\bigr)\Bigr)
-\Bigr],
-\end{equation}
-with calibrated predictor
-\[
-m_{n,\mathrm{platt}}^\star(X)
-:=
-\sigma\bigl(\hat a_{\mathrm{platt}}\,\mathrm{logit}(\mhat(X))+\hat b_{\mathrm{platt}}\bigr),
-\]
-where \(\sigma(t):=(1+e^{-t})^{-1}\). Platt scaling may be preferred over linear regression calibration when predicted probabilities are systematically over- or under-confident, in which case the calibration curve is often approximately sigmoidal. More generally, outcomes can be rescaled to \([0,1]\) before applying this procedure. In online settings, calibration properties of Platt scaling are developed in \cite{gupta2023online}.
-\end{remark}
-
-
+Linear calibration can thus be viewed as classical prognostic-score adjustment in semisupervised form \citep{hansen2008prognostic,rosenblum2009using,lin2013agnostic,schuler2022increasing}. Appendix~\ref{appendix:remarks} discusses richer smooth and generalized-linear-model extensions, including Platt scaling and Venn--Abers shrinkage.
 \subsection{Cross-Fitting and Cross-Calibration}
 \label{sec:crossfit}
 
-In the main exposition, we assume for simplicity that the initial black-box predictor is fixed. In practice, however, it may be trained on the labeled sample itself, in which case the same labeled observations are used both to fit the predictor and to calibrate its scores. A cross-fitted version avoids this reuse by replacing the single prediction function with out-of-fold predictions and then fitting the calibrator to the resulting labeled out-of-fold scores.
-
-\begin{enumerate}[leftmargin=6mm,label=\arabic*.]
-\item Partition the labeled sample indices into folds \(I_1,\dots,I_K\).
-\item For each fold \(k\), train the black-box regression \(\mhat^{(-k)}\) on the labeled observations outside \(I_k\), compute out-of-fold predictions \(\mhat^{(-k)}(X_i)\) for \(i\in I_k\), and compute predictions \(\mhat^{(-k)}(\widetilde X_j)\) on the unlabeled sample.
-\item Pool the labeled out-of-fold predictions \(\{\mhat^{(-k(i))}(X_i)\}_{i=1}^n\) and fit a calibrator \(\fhat\) to the labeled pairs \((\mhat^{(-k(i))}(X_i),Y_i)\).
-\item Form calibrated predictions
-\[
-\mtilde(X_i)=\fhat(\mhat^{(-k(i))}(X_i))
-\]
-and
-\[
-\mtilde(\widetilde X_j)=\frac{1}{K}\sum_{k=1}^K \fhat(\mhat^{(-k)}(\widetilde X_j)),
-\]
-and then compute the plug-in estimator in \cref{eq:plugin}.
-\end{enumerate}
-
-This cross-fitted modification is the natural DML-style implementation when one wishes to reduce overfitting from using the same labeled data both to estimate the initial regression and to calibrate it for inference \citep{zheng2010asymptotic,vanderLaanRose2011,DoubleML}. Related procedures have been used for debiased inference in \citet{van2024stabilized,van2024automatic,rabenseifner2025causal}, and a related cross-calibration variant appears in \citet{van2023causal}.
+In the main exposition, we assume for simplicity that the initial black-box predictor is fixed. In practice, however, it may be trained on the labeled sample itself, in which case the same labeled observations are used both to fit the predictor and to calibrate its scores. A cross-fitted version replaces \(m\) by out-of-fold prediction scores, fits the calibrator on those out-of-fold labeled scores, and then evaluates the calibrated score on the unlabeled sample. This is the natural DML-style implementation when one wishes to reduce overfitting from using the same labeled data both to estimate the initial regression and to calibrate it for inference, so we defer the algorithmic details to the appendix discussion.
 
 \section{Theory for isotonic-calibrated PPI}
 \label{sec:theory}
 
-We now study the theoretical basis for \emph{calibeating} via isotonic calibration. Our goal is to understand when post-processing an available score by isotonic regression can improve on the original score and on simpler calibration rules. To that end, we analyze the isotonic-calibrated PPI estimator \(\widehat{\psi}_{\mathrm{iso}}\), establishing asymptotic linearity, asymptotic normality, and the validity of Wald inference. We then study its efficiency, giving conditions under which it is asymptotically at least as efficient as AIPW, PPI, PPI++, and linear calibration, and conditions under which it attains the minimum asymptotic variance among regular estimators based on \(m(X)\) or on the full covariate vector \(X\) \citep{bickel1993efficient,van2000asymptotic}. Finally, we turn to the calibration side of calibeating. We show that isotonic calibration is first-order optimal in a natural sense: once the score has been isotonically calibrated, no further post-processing based only on the fitted score can improve either its mean squared prediction error or the leading asymptotic behavior of the resulting plug-in estimator. To keep the exposition light, we focus on the non-cross-fitted estimator and treat the initial black-box score \(\mhat\) as fixed.
-
+We now study the theoretical basis for \emph{calibeating} via isotonic calibration. Our goal is to understand when post-processing an available score by isotonic regression can improve on the original score and on simpler calibration rules. We establish asymptotic linearity, asymptotic normality, valid Wald inference, and efficiency results, and then show that no further post-processing of the fitted isotonic score yields additional first-order gain. To keep the exposition light, we focus on the non-cross-fitted estimator and treat the initial black-box score \(\mhat\) as fixed.
 
 \subsection{Asymptotic normality, inference, and efficiency}
 
-We let \(f_0\) denote a population isotonic calibration map for the fixed score \(\mhat\), defined by
+Throughout this subsection, let \(f_0\) denote a population isotonic calibration map for the fixed score \(\mhat\), defined by
 \begin{equation}
 \label{eq:pop-iso}
 f_0 \in \arg\min_{f\in\mathcal F_{\mathrm{iso}}}
@@ -691,7 +431,7 @@ f_0 \in \arg\min_{f\in\mathcal F_{\mathrm{iso}}}
 \qquad
 m_0 = f_0 \circ \mhat.
 \end{equation}
-Thus, \(m_0\) is the population \(L^2\)-optimal monotone transformation of the initial score \(\mhat(X)\). Because the identity map belongs to \(\mathcal F_{\mathrm{iso}}\), \(m_0\) has squared-error risk no larger than that of the original score \(\mhat\).
+Thus, \(m_0\) is the population \(L^2\)-optimal monotone transformation of the initial score \(\mhat(X)\).
 
 \begin{assumption}[Regularity conditions for isotonic calibration]
 \label{assump:isoreg}
@@ -702,9 +442,7 @@ Assume:
 \end{enumerate}
 \end{assumption}
 
-Condition~\ref{cond::bound} requires only that the regression target be bounded and that the isotonic estimator remain bounded in probability. Condition~\ref{cond::subgaus} allows \(Y\) to be unbounded, covering both Gaussian-like tails and somewhat heavier exponential-type tails. In particular, it holds for binary, Gaussian, Poisson, and bounded outcomes. Existing results on isotonic regression under heavy-tailed errors also suggest some robustness to violations of these conditions \citep{han2018robustness,han2019convergence}.
-
-The target of the asymptotic analysis is the population isotonic limit \(m_0\), which need not equal the true regression \(\muzero\). Under \cref{assump:isoreg}, the isotonic estimator attains the classical rate
+Under \cref{assump:isoreg}, the isotonic estimator attains the classical rate
 \[
 \|m_{n,\mathrm{iso}}^\star-m_0\|_{2,\Px}^2 = O_p(n^{-2/3});
 \]
@@ -763,8 +501,6 @@ N(0,1).
 \]
 \end{corollary}
 
-The next corollary describes two important efficiency regimes: one in which isotonic calibration attains full semiparametric efficiency, and one in which it is optimal among estimators that use the covariates only through the one-dimensional score \(\mhat(X)\).
-
 \begin{corollary}[Efficiency regimes]
 \label{cor:efficiency}
 Under the conditions of \cref{thm:al}, the following hold.
@@ -774,20 +510,10 @@ Under the conditions of \cref{thm:al}, the following hold.
 \end{enumerate}
 \end{corollary}
 
-\begin{remark}[Practical takeaway]
-Isotonic calibration can improve efficiency when the original score is informative but miscalibrated. The resulting estimator behaves as if \(\mhat(X)\) were replaced by its best monotone calibration \(m_0(X)\). Because the isotonic class contains the identity map and all affine maps with positive slope, the isotonic-calibrated estimator has limiting variance no larger than that of any estimator that is first-order equivalent to AIPW with score \(\theta\{\mhat(X)\}\) for such a transformation \(\theta\). This includes AIPW and PPI based on \(\mhat(X)\), as well as PPI++, and linear calibration whenever the corresponding scaling or slope coefficient is nonnegative. Thus isotonic calibration is asymptotically at least as efficient, at first order, as these methods, and can be strictly more efficient when the best monotone calibration is genuinely nonlinear. More generally, if \(\E_{P_0}[Y\mid \mhat(X)]\) is monotone, then no regular estimator based only on \(\mhat(X)\) can improve on the isotonic-calibrated estimator at first order.
-\end{remark}
-
-
-
-\begin{remark}[When full efficiency is attained]
-Full efficiency requires that the calibrated target recover all regression information relevant to \(\psi_0\). This holds if \(m_0=\mu_0\) almost surely. More generally, full efficiency fails when the one-dimensional score \(\mhat(X)\) omits predictive information in \(X\) that cannot be recovered by monotone calibration.
-\end{remark}
-
 
 \subsection{No further first-order gain from post-processing}
 
-We now ask whether the isotonic-calibrated score can be improved by an additional post-processing step. The key observation is that \(\widehat{\psi}_{\mathrm{iso}}\) depends on the covariates only through the one-dimensional fitted score \(m_{n,\mathrm{iso}}^\star(X)\). It is therefore natural to study the reduced two-sample experiment
+We now ask whether the isotonic-calibrated score can be improved by an additional post-processing step. The key observation is that \(\widehat{\psi}_{\mathrm{iso}}\) uses the covariates only through the one-dimensional score \(m_{n,\mathrm{iso}}^\star(X)\). It is therefore natural to view the estimator as operating in the reduced two-sample experiment
 \[
 \mathcal E_{m_{n,\mathrm{iso}}^\star}
 :=
@@ -798,14 +524,11 @@ We now ask whether the isotonic-calibrated score can be improved by an additiona
 \]
 in which the full covariate \(X\) is replaced by the scalar score \(m_{n,\mathrm{iso}}^\star(X)\).
 
-Within this reduced experiment, the natural benchmark is the estimator that replaces \(m_{n,\mathrm{iso}}^\star(X)\) by the regression function \(\E_{P_0}[Y\mid m_{n,\mathrm{iso}}^\star(X)]\). The result below shows that isotonic calibration is already first-order optimal relative to this benchmark: further post-processing of the fitted score cannot improve the leading asymptotic behavior of the resulting plug-in estimator. In practical terms, once the score has been isotonic-calibrated, additional calibration of that fitted score yields no first-order gain.
 \begin{assumption}[Bounded-variation score regression]
 \label{assump:eff-bv}
 The map \(t\mapsto \E_{P_0}[Y\mid \mhat(X)=t]\)
 has bounded variation on the support of \(\mhat(X)\).
 \end{assumption}
-
-Assumption~\ref{assump:eff-bv} is mild. It requires only that the population regression of \(Y\) on the initial score \(\mhat(X)\), viewed as a one-dimensional function of the score, have bounded total variation. In particular, it allows jumps and is weaker than differentiability or Lipschitz conditions.
 
 \begin{proposition}[No further first-order improvement from post-processing]
 \label{prop:eif-red}
@@ -827,8 +550,6 @@ o_p(M^{-1/2}).
 In particular, \(\widehat{\psi}_{\mathrm{iso}}\) and \(\widehat{\psi}_{\mathrm{eff}}\) have the same asymptotic variance.
 \end{proposition}
 
-
-
 \section{Experiments}
 \label{sec:exp}
 
@@ -843,89 +564,41 @@ and draw \(Y\mid S\sim \mathrm{Bernoulli}\{\mu_0(S)\}\). To induce substantial m
 \[
 m(X)=\mathrm{clip}\left[-0.15+0.75\,\sigma\bigl\{0.8\,z(S)+0.1\,z(S)^3-1\bigr\},\,0.01,\,0.99\right],
 \]
-where \(z(S):=\mathrm{logit}\{\mu_0(S)\}\). This transformation preserves ranking information while introducing nonlinear distortion on the probability scale. We compare the labeled-only mean (\textsc{Naive}), PPI, AIPW, PPI++, an unclipped efficiency-maximized AIPW benchmark (\textsc{AIPW-EM}), linear calibration (\textsc{LinearCal}), monotone spline calibration (\textsc{MonoSpline}) \citep{ramsay1988monotone,jiang2011smooth}, isotonic calibration (\textsc{IsoCal}), and an adaptive selector (\textsc{AutoCal}) that chooses among AIPW and the main calibration rules by cross-validated empirical efficiency. Here PPI++ is the official \texttt{ppi\_py} implementation, while \textsc{AIPW-EM} uses the same one-dimensional empirical-efficiency-maximization idea without clipping the selected scaling coefficient. The labeled sample size ranges over \(n\in\{50,100,200,400,800,1200,2400\}\), with \(N/n=1\) and \(N/n=16\). All figures and summaries are based on 500 Monte Carlo repetitions.
+where \(z(S):=\mathrm{logit}\{\mu_0(S)\}\). This preserves ranking information while introducing nonlinear distortion on the probability scale. We compare \textsc{Naive}, PPI, AIPW, clipped PPI++, unclipped \textsc{AIPW-EM}, \textsc{LinearCal}, \textsc{MonoSpline}, \textsc{IsoCal}, and \textsc{AutoCal}; PPI++ uses the official \texttt{ppi\_py} clipping rule, while \textsc{AIPW-EM} does not. The labeled sample size ranges over \(n\in\{50,100,200,400,800,1200,2400\}\), with \(N/n\in\{1,16\}\), and each setting uses 500 Monte Carlo repetitions.
 
  
 
 \begin{figure}[htb]
 \centering
 \includegraphics[width=\textwidth]{assets/sim_fig_main.pdf}
-\caption{Synthetic simulation study with a poorly calibrated score in two unlabeled-sample regimes. The top row shows the balanced case \(N/n=1\), and the bottom row shows the large-unlabeled case \(N/n=16\). The four columns report absolute bias, empirical Monte Carlo standard deviation, coverage, and relative efficiency versus PPI, computed from empirical Monte Carlo variance. The score-based comparators now include PPI++, \textsc{AIPW-EM}, \textsc{AutoCal}, and \textsc{MonoSpline} in addition to PPI, AIPW, and the fixed calibration rules.}
+\caption{Binary simulation with a miscalibrated score. Columns report bias, Monte Carlo standard deviation, coverage, and relative efficiency versus PPI for \(N/n\in\{1,16\}\).}
 \label{fig:simulation-rmse}
 \end{figure}
 
-\cref{fig:simulation-rmse} reports four diagnostics most directly tied to the theory in two representative unlabeled-sample regimes, \(N/n=1\) and \(N/n=16\): absolute bias, empirical Monte Carlo standard deviation, coverage, and relative efficiency versus PPI. All score-based AIPW-type estimators are essentially unbiased. When the original score is already well calibrated, the main practical difference is efficiency: PPI is less efficient than AIPW and the calibration-based estimators. Under meaningful miscalibration, the gains from calibration are most visible when the unlabeled sample is large. For example, at \(n=400\) and \(N/n=16\), the calibrated methods reduce RMSE from about \(0.0172\) for PPI to about \(0.0164\), and by \(n=1200\) in the same regime, RMSE is about \(0.0087\) for \textsc{AutoCal}, \textsc{MonoSpline}, and \textsc{IsoCal}, compared with \(0.0092\) for PPI.
-
-The additional benchmarks sharpen the interpretation of PPI++ relative to linear calibration. In the more balanced regime, PPI++ and \textsc{AIPW-EM} both track \textsc{LinearCal} closely, consistent with the first-order equivalence developed in Section~\ref{sec:linear}. In the large-unlabeled regime, however, \textsc{AIPW-EM} stays essentially on top of \textsc{LinearCal} while clipped PPI++ falls back toward plain PPI. Averaging over the poorly calibrated \(N/n=16\) designs, RMSE is about \(0.0196\) for \textsc{AIPW-EM} and \textsc{LinearCal}, versus \(0.0208\) for PPI++; across the 28 displayed design points, \textsc{AIPW-EM} improves on PPI++ in 18 and differs from \textsc{LinearCal} only by tiny finite-sample amounts. This points to an implementation-specific explanation: we benchmark PPI++ using the official \texttt{ppi\_py} routine, which clips the optimized power-tuning coefficient \(\lambda\) to \([0,1]\), whereas \textsc{AIPW-EM} uses the same empirical-efficiency-maximization criterion without that truncation. When the variance-optimal scaling exceeds \(1\), clipping pulls PPI++ back toward plain PPI. \textsc{AutoCal} stays close to the best fixed score-based option, while \textsc{MonoSpline} provides a smooth monotone alternative that is usually close to isotonic calibration in RMSE and can have slightly more stable coverage in smaller samples. Coverage is broadly reasonable overall, although the more aggressive nonlinear monotone fits can show mild undercoverage when \(n\) is small. Overall, the results support the paper's main qualitative message: little changes when the score is already well calibrated, whereas under genuine miscalibration, even simple post-hoc calibration can yield noticeable semisupervised efficiency gains.
+\Cref{fig:simulation-rmse} shows that all score-based AIPW estimators are essentially unbiased, so the differences are mainly in variance. Under miscalibration, especially when \(N/n=16\), calibration improves efficiency. In balanced designs PPI++ and \textsc{AIPW-EM} track \textsc{LinearCal}; when the unlabeled sample is large, \textsc{AIPW-EM} stays near \textsc{LinearCal} while clipped PPI++ falls back toward PPI. \textsc{AutoCal} stays near the best fixed option.
 
 
 \subsection{Empirical Illustration}
 \label{sec:empirical}
 
-We evaluate the proposed calibration-based estimators on the mean-estimation benchmarks used in the original experiments of \citet{ppi2023,angelopoulos2023ppi}, as provided in the \texttt{ppi\_py} package. Our goal is not to revisit the original benchmark comparison, but rather to understand when one-dimensional calibration of a prediction score improves semisupervised mean inference. We use the same \texttt{ppi\_py} datasets and retain the labeled-sample-size grids from the original examples. For each labeled sample size \(n\), we repeatedly split the fully labeled benchmark into a labeled subset of size \(n\) and an unlabeled subset of size \(N\), apply all estimators to the same split, and treat the full-sample mean as the ground truth.\footnote{Because repeated sample splits of a fixed finite benchmark dataset are not i.i.d.\ draws from a superpopulation, asymptotic Wald confidence intervals can exhibit either undercoverage or overcoverage. This is not specific to our calibration extensions, but is a feature of evaluating Wald-type intervals under finite-population resampling.} The current draft summaries are averaged over 500 random splits for each \(n\).
+We evaluate the proposed calibration-based estimators on the mean-estimation benchmarks used in the original experiments of \citet{ppi2023,angelopoulos2023ppi}, as provided in the \texttt{ppi\_py} package. We use the same datasets and labeled-sample-size grids, repeatedly split each fully labeled benchmark into labeled and unlabeled subsets, evaluate all estimators on the same split, treat the full-sample mean as ground truth, and average over 500 random splits. We report \texttt{forest}, \texttt{galaxies}, and \texttt{census\_income}.
 
- 
-
-\paragraph{Benchmarks and baselines.}
-We study the \texttt{forest}, \texttt{galaxies}, and \texttt{census\_income} semisupervised mean-estimation examples from the official benchmark suite. The retained baselines are the original labeled-only interval, the imputation benchmark on the binary-outcome datasets, PPI, the classical AIPW estimator based on the same prediction score, PPI++, and an unclipped efficiency-maximized AIPW benchmark that we denote \textsc{AIPW-EM}. The imputation benchmark averages model predictions over the pooled sample without a labeled residual correction. AIPW is the corresponding pooled plug-in-plus-augmentation estimator based on the original score; PPI is a less efficient variant that discards labeled covariate information from the plug-in term; PPI++ is the empirical-efficiency-maximized version of AIPW studied in the original PPI benchmark suite and implemented here through the official \texttt{ppi\_py} code; and \textsc{AIPW-EM} applies the same one-dimensional efficiency-maximization idea through \texttt{ppi\_aipw} without clipping the selected scaling coefficient.
-
-We also consider four fixed calibration-based comparators that fit directly within our framework: linear calibration (\texttt{LinearCal}) \citep{mincer1969evaluation}, monotone spline calibration (\texttt{MonoSpline}) \citep{ramsay1988monotone,jiang2011smooth}, Platt scaling (\texttt{Platt}) for the binary-outcome datasets \citep{platt1999probabilistic}, and isotonic calibration with a fixed minimum of 10 observations per bin (\texttt{IsoCal}) \citep{zadrozny2002transforming}. We further report an adaptive selector (\texttt{AutoCal}) that chooses among AIPW, linear calibration, monotone spline calibration, and isotonic calibration by cross-validated empirical efficiency maximization \citep{rubin2008empirical}. For the binary-outcome datasets, we also report the Venn--Abers shrinkage variant described in Appendix~\ref{appendix:remarks}. Platt scaling and Venn--Abers are omitted for \texttt{census\_income} because its outcome is not binary. To keep the main-text benchmark figure readable, however, we reserve \texttt{IsoCal} and \texttt{MonoSpline} for a calibration-focused appendix comparison in \cref{fig:ppi-calibration-appendix}.
+Baselines are the labeled-only interval, imputation on binary tasks, PPI, AIPW, clipped PPI++, and unclipped \textsc{AIPW-EM}. The main-text figure focuses on PPI, AIPW, PPI++, \textsc{AIPW-EM}, \texttt{AutoCal}, and \texttt{LinearCal}; Appendix~\ref{app:empirical} gives the richer calibration comparison.
 
 
 \begin{figure}[htb]
 \centering
 \includegraphics[width=\textwidth]{assets/fig_paper_main_grid.pdf}
-\caption{Main-text benchmark summary showing normalized MSE relative to PPI, relative efficiency versus PPI, and coverage across the reproduced PPI benchmarks, restricted to the primary score-based comparators: PPI, AIPW, PPI++, \textsc{AIPW-EM}, \texttt{AutoCal}, and \texttt{LinearCal}. In the normalized-MSE panels, values below one indicate improvement over PPI. Relative efficiency is computed from empirical Monte Carlo variance, so values above one indicate improvement over PPI. The dashed horizontal line in the coverage panels marks the nominal target coverage, which is \(0.95\) for \texttt{forest} and \(0.90\) for \texttt{galaxies} and \texttt{census\_income}.}
+\caption{Benchmark summary for PPI, AIPW, clipped PPI++, \textsc{AIPW-EM}, \texttt{AutoCal}, and \texttt{LinearCal}. Panels report normalized MSE, relative efficiency, and coverage versus PPI.}
 \label{fig:ppi-main}
 \end{figure}
 
-\begin{table}[htb]
-\centering
-\small
-\begin{tabular}{p{0.16\textwidth}p{0.34\textwidth}p{0.34\textwidth}}
-\toprule
-Dataset & Smaller labeled-sample regime & Larger labeled-sample regime \\
-\midrule
-\texttt{forest} & AIPW and PPI are already hard to beat at the smallest \(n\); among the efficiency-maximized one-dimensional corrections, \textsc{AIPW-EM} stays closer to \texttt{LinearCal} than clipped PPI++. & At larger \(n\), all of the score-based methods cluster tightly, with only very small differences among AIPW, \texttt{LinearCal}, \textsc{AIPW-EM}, and PPI++. \\
-\texttt{galaxies} & AIPW, PPI, and \texttt{AutoCal} are very close at the smallest \(n\), while \textsc{AIPW-EM} and \texttt{LinearCal} are slightly more competitive than PPI++ in this noisier regime. & At larger \(n\), the leading score-based methods remain tightly clustered, with \textsc{AIPW-EM} typically falling between \texttt{LinearCal} and PPI++. \\
-\texttt{census\_income} & PPI and AIPW are effectively indistinguishable because the unlabeled sample is enormous; \textsc{AIPW-EM} and \texttt{LinearCal} already offer modest gains at the smallest \(n\), while PPI++ trails both. & \texttt{LinearCal} and \textsc{AIPW-EM} are essentially tied on average and both outperform PPI++ throughout, while PPI and AIPW remain nearly identical. \\
-\bottomrule
-\end{tabular}
-\caption{Compact summary of the reproduced PPI benchmarks across regimes. The main empirical contrast is between small labeled-sample regimes, where simple or adaptive low-complexity corrections are safer, and larger labeled-sample regimes, where richer monotone calibration can help when the score is miscalibrated.}
-\label{tab:ppi-takeaways}
-\end{table}
-
-\paragraph{Metrics and main findings.}
-For each estimator, we report Monte Carlo bias, empirical variance, MSE, Wald-interval coverage, and relative efficiency relative to PPI, with relative efficiency computed from empirical Monte Carlo variances. Estimated standard errors are used only to construct Wald intervals; all reported variability summaries are empirical Monte Carlo quantities.
-
-The results suggest a simple practical picture. AIPW is the natural estimator based on the original score, and it typically matches or outperforms PPI. In \texttt{forest}, where the original score is already strong, the score-based methods perform similarly. In \texttt{galaxies}, AIPW and PPI remain nearly tied across the grid, while \texttt{AutoCal} usually stays near the top. When the unlabeled sample is much larger than the labeled sample, AIPW and PPI become nearly indistinguishable because the labeled contribution to the pooled plug-in term is negligible. This is what we see in \texttt{census\_income}, where the unlabeled sample is enormous.
-
-Post-hoc calibration is most useful when the score is meaningfully miscalibrated and the labeled sample is large enough to estimate the second-stage calibrator stably. \texttt{Census\_income} provides the clearest example: \texttt{LinearCal} performs best on average, and the appendix comparison in \cref{fig:ppi-calibration-appendix} shows that \texttt{IsoCal} and \texttt{MonoSpline} remain broadly competitive without changing the main ranking. The added efficiency-maximization baseline sharpens the comparison with PPI++. Across the 30 dataset-size cells in \cref{fig:ppi-main}, \textsc{AIPW-EM} has lower MSE than PPI++ in 29 and is nearly tied with \texttt{LinearCal}; averaged across all cells, mean MSE is about \(4.75\times 10^6\) for \textsc{AIPW-EM}, \(4.75\times 10^6\) for \texttt{LinearCal}, and \(5.03\times 10^6\) for PPI++, with essentially identical coverage near \(0.919\). The clearest separation again appears in \texttt{census\_income}, where \textsc{AIPW-EM} and \texttt{LinearCal} both substantially improve on PPI++; in \texttt{forest} the same ranking holds with smaller absolute gaps, and in \texttt{galaxies} the leading methods remain tightly clustered although PPI++ is still slightly weakest. This mirrors the simulations: once the empirical efficiency-maximization step is left unclipped, its finite-sample behavior moves much closer to \texttt{LinearCal}. \texttt{AutoCal} acts as a practical hedge that tends to stay close to the best fixed score-based method, while \texttt{MonoSpline} provides a smoother monotone alternative to fixed-bin isotonic calibration. Overall, these results suggest little practical reason to prefer PPI over AIPW, and they indicate that simple calibration methods such as \texttt{LinearCal} can deliver modest but repeatable gains.
-
-\section{Conclusion and closing remarks}
-
-We introduced \emph{Calibrated Prediction-Powered Inference}, a simple framework for semisupervised mean estimation based on three steps: fit a prediction score, calibrate it on the labeled sample, and average the calibrated predictions over the pooled covariate sample. This simple plug-in procedure fits naturally within the broader literature on semiparametric debiasing and can be viewed as a semisupervised specialization of calibrated debiased machine learning \citep{van2024automatic}.
-
-Our results highlight a simple message. Calibration can improve semisupervised efficiency without retraining the original model, and isotonic calibration can \emph{calibeat} the original score and simpler post-processing rules at first order. At the same time, once the score has been isotonicly calibrated, further post-processing of that fitted score brings no additional first-order gain. Empirically, this suggests a transparent and practical workflow: when the original score is already well calibrated, calibration changes little, whereas under meaningful miscalibration, even simple linear or monotone calibration can improve efficiency while preserving a transparent plug-in form.
+\Cref{fig:ppi-main} suggests a simple practical picture. AIPW is the natural estimator based on the original score, and it typically matches or outperforms PPI; when the unlabeled sample is enormous, they nearly coincide, as in \texttt{census\_income}. Post-hoc calibration is most useful when the score is meaningfully miscalibrated and the labeled sample is large enough to estimate the second-stage calibrator stably, with \texttt{LinearCal} strongest on \texttt{census\_income}. The added \textsc{AIPW-EM} baseline sharpens the comparison with PPI++: once the efficiency-maximization step is left unclipped, it tracks \texttt{LinearCal} much more closely, whereas official PPI++ clips the scaling coefficient to \([0,1]\), motivated by shrinkage estimators, and can therefore fall back toward PPI when the variance-minimizing rescaling would exceed \(1\). Overall, the practical comparison is that AIPW is the right raw-score baseline, and when miscalibration is substantial the gains come from calibration or unclipped empirical-efficiency maximization rather than from clipped PPI++.
 
 
-\textbf{Positioning within existing semiparametric methods.} More broadly, our results clarify that recent prediction-powered inference methods fit naturally within the standard semiparametric, debiased machine-learning, and flexible covariate-adjustment toolkit for randomized trials and missing-at-random settings. In particular, we show that PPI++ is AIPW with empirical efficiency maximization \citep{rubin2008empirical} and is first-order equivalent to linear calibration and classical prognostic-score regression adjustment \citep{hansen2008prognostic,rosenblum2009using,moore2009covariate,lin2013agnostic}. It is therefore closely related to randomized-trial approaches that learn prognostic scores from larger historical or auxiliary data sets and then use them for regression adjustment in smaller trials \citep{hansen2008prognostic,schuler2022increasing,hojbjerre2025powering}. This perspective suggests that semisupervised inference may benefit from closer integration with the broader missing-data, causal-inference, and debiased machine-learning literatures. These lines of work address closely related versions of the same underlying problem, so further progress may come from translational work across them, especially in adapting tools developed for randomized trials and missing-at-random settings to semisupervised problems \citep{smith2023application}.
+\section{Conclusion}
 
-
-
-
-
-\textbf{Beyond mean estimation.} These connections extend beyond the semisupervised mean-estimation setting considered here. For example, when missingness affects both outcomes and covariates and may depend on observed covariates and outcomes, as well as in extensions to right-censored time-to-event outcomes and longitudinal settings, existing semiparametric methods can often be applied directly \citep{robins1994estimation,vanderlaanunified,bang2005doubly,moore2009increasing,rose2011targeted,van2018targeted}. Likewise, there is already a well-developed literature on machine-learning-assisted estimation of local and conditional regression targets, including dose-response curves and conditional average treatment effects, that can be used to extend inference beyond marginal mean estimation \citep{rubin2006doubly,diaz2013targeted,kennedy2017non,bibaut2017data,van2018cv,westling2020causal,kennedy2023towards,foster2023orthogonal,luedtke2024one,chernozhukov2024conditional,butzin2024highly,zhang2025constructing}. In particular, kernel-regression-based \citep{bibaut2017data} and isotonic-regression-based \citep{westling2020unified} inference can be carried out in this setting using AIPW-score-based pseudo-outcomes, as in \citet{van2003unified,rubin2006doubly,kennedy2017non}, or more generally using influence functions and Neyman-orthogonal losses \citep{bibaut2017data,foster2023orthogonal,chernozhukov2024conditional}. Finally, when outcomes are not missing completely at random, naively pooling labeled and unlabeled data can bias estimation because the missingness mechanism may remain confounded by unobserved outcomes. There is substantial work on combining gold-standard and potentially biased auxiliary data more safely using semiparametric and machine-learning tools \citep{kallus2018removing,rosenman2025methods,dang2025experiment,van2026adaptive}. Likewise, when the unlabeled sample is selected in a data-dependent way, the problem is closely related to adaptive and selectively sampled designs, including two-phase and informative sampling \citep{van2008construction,chow2008adaptive,rose2011targeted,malenica2021adaptive,zhang2025efficient,liu2025robust}. Extending these ideas to semisupervised settings is therefore a natural direction for future work.
-
-
- 
- 
-
-
- 
-
-
-\textbf{Extensions of calibration.} While we focus on calibration of regression functions and inference on means, the ideas here may extend to more general supervised learning problems defined through loss minimization, such as median and quantile regression \citep{noarov2023statistical,jung2021moment,roth2022uncertain,whitehouse2024orthogonal}. As a concrete example, Algorithm~\ref{alg:linearppi} extends our linearly calibrated mean estimator to linear regression by including the prediction score as a covariate, in the spirit of classical prognostic adjustment. Related validity results for such adjustments in generalized linear models are given by \citet{rosenblum2009using}. Similarly, for median and quantile regression, one could include prediction scores as covariates. More generally, when the target parameter is defined by a moment equation, as in \(M\)-estimation, one could debias or calibrate the associated augmented moment equation \citep{vanderlaanunified}; see Appendix~\ref{appendix::momentgeneral}. A practical challenge in this setting is that augmented loss functions may be nonconvex, which can complicate optimization. In such cases, a more practical alternative may be a multiaccuracy-style adjustment rather than explicit augmentation or calibration, as in the Efficient Plug-in Learning framework of \citet{van2024combining}, which addresses this issue for nonconvex Neyman-orthogonal loss functions \citep{foster2023orthogonal}. Debiased inference and influence-function theory for estimating equations are studied by \citet{vanderlaanunified,DoubleML}, while generic smooth functionals of \(M\)-estimands are studied by \citet{van2025automatic}.
+We introduced \emph{Calibrated Prediction-Powered Inference} for semisupervised mean estimation. Calibration can improve efficiency without retraining the original model, isotonic calibration can \emph{calibeat} the original score and simpler post-processing rules at first order, and linearly calibrated PPI is first-order equivalent to PPI++ and related to classical prognostic-score regression adjustment.
 
 \bibliographystyle{plainnat}
 \bibliography{references}
@@ -938,16 +611,148 @@ Our results highlight a simple message. Calibration can improve semisupervised e
 
 \appendix
 
+\section{Extended related work}
+\label{app:related-work}
 
-\tableofcontents
+Although PPI has been presented as a recent development, the underlying problem and many of its estimators are special cases of a broader literature on semiparametric debiasing and regression adjustment, including work on missing data, causal inference, and debiased machine learning.
 
- \section{Additional background on semiparametric statistics}
-  \label{section::plugin}
+\textbf{Semiparametric statistics and missing data.} This paper builds on foundational ideas from the missing-data and semiparametric literatures. \citet{rubin1976} formalized missing at random as a key identification condition for recovering full-data targets from partially observed outcomes. Semiparametric efficiency theory then characterized efficient influence functions, regular asymptotically linear estimators, and one-step debiased procedures \citep{levit1975efficiency,pfanzagl1985contributions,hasminskii1979nonparametric,klaassen1987consistent,bickel1993efficient}. In missing-data and causal-inference problems, these ideas led to influence-function-based estimating equations \citep{robins1994estimation,robins1995analysis,robins1995semiparametric,vanderlaanunified,tsiatis2006semiparametric}, often with doubly robust structure \citep{bang2005doubly}. As a result, the efficiency theory for missing-data models under missingness or coarsening at random is now well understood, and the class of regular asymptotically linear estimators in these models can be characterized through their influence functions \citep{robins1994estimation,robins1995analysis,robins1995semiparametric,vanderlaanunified,tsiatis2006semiparametric}.
 
+\textbf{Debiased machine learning and targeted learning.} A large body of work combines the semiparametric framework above with machine-learning-based nuisance estimation, often under the label of debiased machine learning. Flexible learning methods within estimating equations and AIPW-style procedures already appear in \citet{vanderlaanunified}. Targeted minimum loss estimation (TMLE), or targeted learning, updates an initial nuisance estimator in a parameter-targeted way so that the resulting plug-in estimator is debiased; in the present setting, the main nuisance is the outcome regression \citep{van2006targeted,vanderLaanRose2011,gruber2009targeted,hoffman2020tmle,ross2025constructing}. These approaches are often combined with sample splitting and cross-fitting to accommodate generic machine-learning estimators \citep{schick1986asymptotically,klaassen1987consistent,zheng2010asymptotic,vanderLaanRose2011,DoubleML}. Double machine learning emphasizes similar ingredients---orthogonality, cross-fitting, and influence-function expansions---for inference with modern nuisance estimators \citep{DoubleML,chernozhukov2022automatic}, and can be understood within the same semiparametric framework \citep{vanderlaan2019cvtmle,diaz2020machine,chen2026equivalence}. For sufficiently stable estimators, cross-fitting can itself be relaxed \citep{chen2022stable}. Closely related work studies balancing-weight estimators \citep{hainmueller2012entropy,imai2014covariate,zubizarreta2015stable,lendle2015balancing,chattopadhyay2020balancing,hejazi2023revisiting}, which often admit equivalent regression-adjustment or augmented representations \citep{chattopadhyay2023implied,bruns2025augmented,rotnitzky2025note}. In completely missing-at-random settings, including semisupervised learning and randomized trials, these approaches allow flexible black-box nuisance estimation while still supporting valid inference under appropriate conditions \citep{moore2009covariate,moore2009increasing,rosenblum2009using,hojbjerre2025powering,hojbjerre2026within}.
 
+\textbf{Semisupervised inference.} Related work studies semisupervised or surrogate-assisted estimation in settings where the primary outcome is observed only on a limited subset, while auxiliary outcomes or surrogate measurements are available more broadly \citep{pepe1992inference,pepe1994auxiliary,chen2000miscellanea,chen2008improving,cheng2021robust,ji2025predictions,kallus2025role}. Two-sample semisupervised inference is a special case of two-stage sampling designs \citep{scott1982effect,rose2011targeted,hejazi2021efficient,qiu2026efficient} and, more generally, of data fusion, for which a substantial semiparametric efficiency literature has been developed \citep{li2023efficient,li2025data,graham2024towards,xu2025unified}. More recent papers have used the term \emph{prediction-powered inference} (PPI) for the semisupervised mean-estimation setting in which a black-box predictor is combined with a small labeled sample and a large unlabeled sample \citep{ppi2023,angelopoulos2023ppi,crossppi2024,xu2025unified,song2026demystifying,poulet2025prediction,lee2026mec}. These papers also helped popularize such methods for a broader machine-learning audience and provided accessible software. Closely related questions have long been studied in randomized trials, where prognostic scores or other regression adjustments learned from larger historical or auxiliary data sources are used to improve precision in smaller trials \citep{hansen2008prognostic,rosenblum2009using,moore2009covariate,moore2009increasing,moore2011robust,schuler2022increasing,balzer2024adaptive,hojbjerre2025powering}. Methodologically, however, PPI estimators are best understood as instances or variants of existing semiparametric procedures. For example, PPI++ is an AIPW estimator \citep{robins1994estimation,vanderlaanunified} obtained by empirical efficiency maximization \citep{rubin2008empirical} over a scaling parameter, and cross-PPI \citep{crossppi2024} is simply AIPW with cross-fitting. MEC \citep{lee2026mec} instead uses generalized entropy weights to balance the prediction score, which is closer to the balancing-weight representation of our linearly calibrated estimator. Our linearly calibrated estimator emphasizes the corresponding regression-adjustment view, implemented by ordinary linear regression of \(Y\) on the score. More fundamentally, the ability to combine black-box prediction models with valid inference is a consequence of the double robustness of AIPW when the missingness probability is known, and is not specific to semisupervised mean estimation \citep{bang2005doubly,seaman2018introduction,rotnitzky2021characterization}.
 
+\textbf{From missing data to causal inference.} From the perspective of estimation and efficiency theory, semisupervised mean estimation with missing-at-random outcomes is equivalent to randomized experiments, controlled trials, and survey-sampling designs once the missingness indicator is reinterpreted as a treatment or sampling indicator, so that the relevant potential outcomes are viewed as missing \citep{rubin1978bayesian,vanderlaanunified,licausal,mozer2026ppi}. This equivalence allows tools from covariate adjustment, causal inference, and model-assisted estimation to be transferred directly to the semisupervised setting; see, for example, \citet{mozer2026ppi} for results relating prediction-powered inference to model-assisted survey-sampling estimators. The two-sample formulation we study is also equivalent to a one-sample i.i.d.\ model \citep{li2023efficient}. In particular, our methods apply to inference on the counterfactual mean \(\mathbb{E}[Y(1)]\) in a randomized trial with binary treatment, where treated units form the labeled sample and control units contribute covariate information only; see Appendix~\ref{app:causal}.
 
-The next result shows that the efficient choice in  Proposition \ref{prop:aipw-class}  is not merely optimal within the AIPW class. In fact, every regular estimator\footnote{Informally, a regular estimator is one whose large-sample behavior remains stable under small changes in the data-generating distribution \citep{van2000asymptotic}.} in the unrestricted two-sample model is asymptotically equivalent to \(\widehat\psi(f)\) for some score function \(f\). Thus, the AIPW family characterizes the full class of regular estimators at first order in this model.
+\textbf{Calibration.} A final relevant thread concerns calibration. Classical post-processing methods such as Platt scaling \citep{platt1999probabilistic,cox1958two,gupta2023online}, linear calibration \citep{mincer1969evaluation,chernozhukov2018generic,leng2021calibration}, isotonic regression \citep{zadrozny2002transforming,niculescu2005predicting}, and histogram binning \citep{zadrozny2001obtaining,gupta2021distribution} improve predictive reliability without retraining the underlying model. The idea has deeper roots in the forecasting literature \citep{mincer1969evaluation,lichtenstein1977calibration,vovk1992universal,vovk2005algorithmic,gneiting2007probabilistic,lambert2011elicitation}; see also the historical discussion in \citet{lee2023t}. More recent work studies calibration under broader losses and prediction tasks \citep{jung2021moment,noarov2023statistical,van2023causal,whitehouse2024orthogonal,van2025venn}, as well as applications to conformal prediction \citep{van2024self,van2025venn}, importance-weight stabilization \citep{gutman2022propensity,deshpande2023calibrated,ballinari2024improving,van2024stabilized}, treatment effect estimation \citep{chernozhukov2018generic,van2023causal,whitehouse2024orthogonal}, and value prediction in offline reinforcement learning \citep{van2025bellman}. Distribution-free guarantees for histogram binning are developed by \citet{gupta2021distribution}, while \citet{van2023causal,van2025venn} establish asymptotic distribution-free guarantees for isotonic calibration. Most closely related to our work is recent research connecting calibration to debiased estimation of statistical functionals \citep{van2024automatic,van2023adaptive,van2025semiparametric}. In particular, \citet{van2024automatic} studies calibrated debiased machine learning for doubly robust inference, which in our setting reduces to calibrating the outcome regression and exploiting the resulting plug-in representation, while \citet{van2025semiparametric} studies calibrated plug-in regression estimators in reinforcement learning. More broadly, \citet{van2023adaptive} shows how plug-in calibration can support regression and treatment effect estimation, including superefficient inference through dimension reduction.
+
+\section{Semiparametric background and equivalence material}
+\label{app:semicolon}
+
+\subsection{Review of AIPW, PPI, and semiparametric efficiency}
+\label{sec:effreview}
+
+\textbf{The AIPW class.} We begin with the augmented inverse-probability weighted (AIPW) estimator in the unrestricted two-sample model \citep{robins1994estimation}. It is helpful to view AIPW not as a single estimator, but as a family of estimators indexed by a score function \(f:\mathcal X\to\R\) with finite second moment. For any such \(f\), define
+\begin{equation}
+\label{eq:aipw-family}
+\widehat\psi(f)
+:=
+\rhon \Pl\{f(X)\}
++
+(1-\rhon)\Pu\{f(\widetilde X)\}
++
+\Pl\{Y-f(X)\}.
+\end{equation}
+This estimator combines a plug-in term that imputes \(Y\) from \(f(X)\) with a residual correction from the labeled sample. For any fixed \(f\), \(\widehat\psi(f)\) is unbiased in finite samples for \(\psi_0=\E_{P_0}[Y]\). In particular, \(f(X)=0\) yields the empirical mean estimator \(\mathbb{P}_n^L\{Y\}\). Thus, the choice of \(f\) affects efficiency, through the estimator's variance, but not validity, in the sense that the resulting confidence intervals remain valid. This makes AIPW a ``safe'' estimator \citep{xu2025unified}. This property can be viewed as a particularly simple instance of double robustness\footnote{In more general missing-at-random settings with unknown, covariate-dependent missingness probabilities, the analogous AIPW estimator remains doubly robust asymptotically, but it no longer enjoys the same finite-sample unbiasedness as in the present known-\(\rho_n\) setting \citep{seaman2018introduction}.} \citep{bang2005doubly}. The same basic principle underlies the use of flexible machine learning for covariate adjustment in randomized trials while retaining valid inference \citep{moore2009covariate,moore2009increasing,schuler2022increasing,hojbjerre2025powering}.
+
+\textbf{Asymptotic linearity and efficiency.} To characterize the leading large-sample error in the two-sample model, we decompose the estimation error into one contribution from the labeled sample and one from the unlabeled sample. We say that \(\widehat\psi\) is asymptotically linear with influence pair \((D^L,D^U)\) if
+\[
+\widehat\psi-\psi_0
+=
+\frac{1}{M}\sum_{i=1}^n D^L(X_i,Y_i)
++
+\frac{1}{M}\sum_{j=1}^N D^U(\widetilde X_j)
++
+o_p(M^{-1/2}),
+\]
+where \(\E_{P_0}[D^L(X,Y)]=0\) and \(\E_{\Px}[D^U(\widetilde X)]=0\). By the central limit theorem and the independence of the two samples,
+\[
+\sqrt{M}\,(\widehat\psi-\psi_0)
+\rightsquigarrow
+N\!\left(0,\,
+\rhozero \Var_{P_0}\{D^L(X,Y)\}
++
+(1-\rhozero)\Var_{\Px}\{D^U(\widetilde X)\}\right).
+\]
+The influence pair therefore determines the estimator's asymptotic variance and provides a convenient way to compare efficiency across different choices of \(f\). The next result uses this representation to characterize the AIPW class, identify the efficient influence pair in the unrestricted two-sample model, and thereby obtain the semiparametrically efficient variance bound \citep{bickel1993efficient}.
+
+\begin{proposition}[Influence pair for the AIPW class]
+\label{prop:aipw-class}
+Under \cref{assump:design}, for any fixed \(f:\mathcal X\to\R\) with finite second moment, the estimator \(\widehat\psi(f)\) is asymptotically linear with influence pair \((D_f^L,D_f^U)\), where
+\begin{align}
+\label{eq:if-class-L}
+D_f^L(X,Y)
+&=
+\tilde f(X)-\psi_0+\rhozero^{-1}\{Y-\tilde f(X)\},\\
+\label{eq:if-class-U}
+D_f^U(\widetilde X)
+&=
+\tilde f(\widetilde X)-\psi_0,
+\end{align}
+with \(\tilde f(X):=f(X)-\E_{\Px}\{f(X)\}+\psi_0\)
+denoting the recentered version of \(f(X)\). The resulting asymptotic variance of \(\sqrt{M}\,(\widehat\psi(f)-\psi_0)\) is
+\begin{align*}
+\Var\{\mu_0(X)\}
++
+\rho_0^{-1}\E_{P_0}\!\bigl[\Var(Y\mid X)\bigr]
++
+\frac{1-\rho_0}{\rho_0}\E_{P_0}\!\bigl[(\tilde f(X)-\mu_0(X))^2\bigr].
+\end{align*}
+This variance is minimized over the AIPW class when \(\tilde f=\mu_0\), in particular at \(f=\mu_0\). Therefore, the efficient influence pair for \(\psi_0=\E_{P_0}[Y]\) in the unrestricted two-sample model is \((D_{\mu_0}^L,D_{\mu_0}^U)\), and the corresponding asymptotic variance is the efficiency bound\footnote{Appendix~\ref{section::plugin} shows that every regular estimator is asymptotically equivalent to \(\widehat\psi(f)\) for some score function \(f\). Thus, the AIPW family characterizes the full class of regular estimators and the semiparametric efficiency bound in this model.}.
+\end{proposition}
+
+A key insight of Proposition~\ref{prop:aipw-class} is that the limiting variance of the AIPW estimator depends on the score function \(f\) only through the mean squared error of its recentered version \(\tilde f\), namely \(\E_{P_0}\!\bigl[(\tilde f(X)-\mu_0(X))^2\bigr]\). Thus, within the AIPW class, efficiency is maximized by choosing \(f\) so that \(\tilde f\) approximates \(\mu_0(X)\) as well as possible, with equality when \(\tilde f=\mu_0\), in particular at \(f=\mu_0\). This shows that full efficiency generally requires using the full covariate information \(X\), or at least a summary rich enough to recover \(\mu_0(X)\) \citep{robins1995semiparametric}. In practice, this motivates taking \(f\) to be an estimated prediction score \(m(X)\), learned using flexible black-box methods.
+
+\textbf{AIPW, PPI, and empirical-efficiency maximization.}
+We now record several familiar choices of \(f\) within the class \eqref{eq:aipw-family}. The most common choice is \(f(X)=m(X)\), where \(m(X)\) is a prediction score, yielding the usual augmented inverse-probability weighted (AIPW) estimator \citep{robins1994estimation}:
+\[
+\widehat{\psi}_{\mathrm{AIPW}}
+=
+\rhon \Pl\{m(X)\}
++
+(1-\rhon)\Pu\{m(\widetilde X)\}
++
+\Pl\{Y-m(X)\}.
+\]
+Equivalently,
+\[
+\widehat{\psi}_{\mathrm{AIPW}}
+=
+\frac{1}{M}\left\{
+\sum_{i=1}^n m(X_i)
++
+\sum_{j=1}^N m(\widetilde X_j)
++
+\frac{1}{\rho_n}\sum_{i=1}^n \{Y_i-m(X_i)\}
+\right\},
+\]
+where \(\rho_n^{-1}\) is the inverse probability of observing the outcome.
+
+Another estimator in this class was considered by \citet{ppi2023} under the name PPI,\footnote{The PPI and PPI++ estimators are algebraically equivalent to the model-assisted survey-design estimators of \citet{cassel1976some} and \citet{sarndal2003model}, respectively; see \citet{mozer2026ppi} for a review.} and we adopt that terminology here. It corresponds to the score choice
+\[
+f(X)=\frac{m(X)}{1-\rho_n}.
+\]
+Substituting this choice into \eqref{eq:aipw-family} gives
+\[
+\widehat{\psi}_{\mathrm{PPI}}
+=
+\Pu\{m(\widetilde X)\}+\Pl\{Y-m(X)\}.
+\]
+Relative to \(\widehat{\psi}_{\mathrm{AIPW}}\), \(\widehat{\psi}_{\mathrm{PPI}}\) uses only the unlabeled sample in the plug-in term and rescales the score by the factor \((1-\rho_n)^{-1}>1\). By Proposition~\ref{prop:aipw-class}, this helps only if the rescaled score is closer to \(\mu_0(X)\) in mean squared error. Thus, PPI is inefficient when \(m=\mu_0\), and is typically less efficient when \(m\) is already reasonably accurate. When \(\rho_n\) is small and \(m\) is sufficiently inaccurate, however, neither estimator is necessarily more efficient than the other \citep{han2012note,rotnitzky2012improved}.
+
+Because both \(\widehat{\psi}_{\mathrm{AIPW}}\) and \(\widehat{\psi}_{\mathrm{PPI}}\) use scores in the scaling class \(\{\lambda m(X):\lambda\in\mathbb R\}\), it is natural to choose the scaling factor data-adaptively rather than fixing it in advance. One way to do so is to minimize the estimator's empirical influence-function variance over this class:
+\[
+\sigma_n^2(f)
+:=
+\rho_n \Pl\left[\left\{f(X)-\widehat{\psi}(f)+\rho_n^{-1}(Y-f(X))\right\}^2\right]
++
+(1-\rho_n)\Pu\left[\left\{f(\widetilde X)-\widehat{\psi}(f)\right\}^2\right].
+\]
+That is, one chooses \(\lambda\) to minimize \(\sigma_n^2(f)\) over \(f(X)=\lambda m(X)\), a procedure known as empirical-efficiency maximization \citep{rubin2008empirical,vanderlaanunified}. The resulting estimator, called PPI++ by \citet{angelopoulos2023ppi}, is simply the AIPW estimator with an empirically rescaled prediction rule \(\hat\lambda m(X)\), where \(\hat\lambda\) estimates the population-optimal scaling coefficient
+\begin{equation}
+\label{opt:scale-app}
+\lambda^\star
+=
+\frac{\Cov\bigl(Y,m(X)\bigr)}{\Var\bigl(m(X)\bigr)}.
+\end{equation}
+The same principle extends beyond simple rescaling. For example, one can minimize \(\sigma_n^2(f)\) over richer classes such as $\{\lambda m(X)+\beta_{\mathrm{lin}}^\top X:
+\lambda \in \mathbb R,\ \beta_{\mathrm{lin}} \in \mathbb R^d\},$
+over monotone transformations of the score, or over a reproducing kernel Hilbert space (Appendix~\ref{appendix:remarks}). More generally, the same criterion can be used in cross-validation to choose among candidate estimator classes \citep{rubin2008empirical}.
+
+\subsection{Additional background on semiparametric statistics}
+\label{section::plugin}
+
+The next result shows that the efficient choice in Proposition~\ref{prop:aipw-class} is not merely optimal within the AIPW class. In fact, every regular estimator\footnote{Informally, a regular estimator is one whose large-sample behavior remains stable under small changes in the data-generating distribution \citep{van2000asymptotic}.} in the unrestricted two-sample model is asymptotically equivalent to \(\widehat\psi(f)\) for some score function \(f\). Thus, the AIPW family characterizes the full class of regular estimators at first order in this model.
 
 \begin{proposition}[Characterization of regular estimators]
 \label{prop:if-class}
@@ -961,132 +766,11 @@ where \(D_f^L\) and \(D_f^U\) are given in \eqref{eq:if-class-L}--\eqref{eq:if-c
 \]
 \end{proposition}
 
-\begin{proof}[Proof of \cref{prop:if-class}]
-If \((D^L,D^U)=(D_{f_0}^L,D_{f_0}^U)\) for some \(f_0\), then \cref{prop:aipw-class} shows that \(\widehat\psi(f_0)\) is asymptotically linear with influence pair \((D^L,D^U)\). Any asymptotically linear estimator is regular \citep{van2000asymptotic}, so this proves the ``if'' direction.
-
-For the converse, let \((D^L,D^U)\) be the mean-zero influence pair of a regular estimator of \(\psi_0\). Fix bounded measurable functions \(a:\mathcal X\to\R\) and \(b:\mathcal X\times\R\to\R\) satisfying
-\[
-\E_{\Px}\{a(X)\}=0,
-\qquad
-\E_{P_0}\{b(X,Y)\mid X\}=0
-\qquad\text{almost surely.}
-\]
-For \(t\) near zero, define
-\[
-\frac{dP_{t,X}}{d\Px}(x)
-:=
-\frac{\exp\{ta(x)\}}{\E_{\Px}[\exp\{ta(X)\}]}
-\]
-and
-\[
-\frac{dP_t(\cdot\mid x)}{dP_0(\cdot\mid x)}(y)
-:=
-\frac{\exp\{tb(x,y)\}}{\E_{P_0}[\exp\{tb(X,Y)\}\mid X=x]}.
-\]
-Let \(P_t\) be the joint law obtained by combining \(P_{t,X}\) with the conditional law \(P_t(\cdot\mid x)\). Then \((P_t,P_{t,X})\) remains in the unrestricted two-sample model, and its score pair at \(t=0\) is \((a+b,a)\). Because \((D^L,D^U)\) is an influence pair for the regular estimator,
-\[
-\left.\frac{d}{dt}\E_{P_t}(Y)\right|_{t=0}
-=
-\rhozero \E_{P_0}\!\left[D^L(X,Y)\{a(X)+b(X,Y)\}\right]
-+
-(1-\rhozero)\E_{\Px}\!\left[D^U(X)a(X)\right].
-\]
-The left-hand side equals \(\E_{P_0}[Y\{a(X)+b(X,Y)\}]\), so
-\begin{equation}
-\label{eq:if-class-score-eq}
-\E_{P_0}[Y\{a(X)+b(X,Y)\}]
-=
-\rhozero \E_{P_0}\!\left[D^L(X,Y)\{a(X)+b(X,Y)\}\right]
-+
-(1-\rhozero)\E_{\Px}\!\left[D^U(X)a(X)\right].
-\end{equation}
-
-Taking \(a=0\) in \cref{eq:if-class-score-eq} gives
-\[
-\E_{P_0}\!\left[\{\rhozero D^L(X,Y)-Y\}b(X,Y)\right]=0
-\]
-for every bounded \(b\) with conditional mean zero given \(X\). Now let \(h:\mathcal X\times\R\to\R\) be bounded and set
-\[
-b(X,Y):=h(X,Y)-\E_{P_0}\{h(X,Y)\mid X\}.
-\]
-Then \(b\) satisfies the same conditional-mean-zero restriction, so
-\[
-\E_{P_0}\!\left[\{\rhozero D^L(X,Y)-Y\}\{h(X,Y)-\E_{P_0}(h\mid X)\}\right]=0.
-\]
-Because this holds for every bounded \(h\), it follows that \(\rhozero D^L(X,Y)-Y\) is measurable with respect to \(X\). Therefore there exists a square-integrable function \(q:\mathcal X\to\R\) such that
-\[
-D^L(X,Y)=\rhozero^{-1}Y+q(X).
-\]
-
-Taking \(b=0\) in \cref{eq:if-class-score-eq} and substituting the display above yields
-\[
-\E_{\Px}\!\left[\{\rhozero q(X)+(1-\rhozero)D^U(X)\}a(X)\right]=0
-\]
-for every bounded mean-zero function \(a\). Hence the \(X\)-measurable function
-\[
-\rhozero q(X)+(1-\rhozero)D^U(X)
-\]
-is almost surely constant. Since \(\E_{P_0}[D^L(X,Y)]=0\) and \(\E_{\Px}[D^U(X)]=0\),
-\[
-\E_{\Px}\{q(X)\}
-=
--\rhozero^{-1}\psi_0,
-\]
-and therefore the constant equals
-\[
-\rhozero \E_{\Px}\{q(X)\}+(1-\rhozero)\E_{\Px}\{D^U(X)\}
-=
--\psi_0.
-\]
-Thus
-\[
-\rhozero q(X)+(1-\rhozero)D^U(X)=-\psi_0
-\qquad\text{almost surely.}
-\]
-
-Define
-\[
-f_0(X):=\psi_0+D^U(X).
-\]
-Because \(D^U\) has mean zero, \(\E_{\Px}\{f_0(X)\}=\psi_0\), so the recentered version of \(f_0\) in \cref{eq:if-class-L,eq:if-class-U} is just \(f_0\) itself. Using \(D^U(X)=f_0(X)-\psi_0\) in the previous display gives
-\[
-q(X)
-=
--\psi_0-\frac{1-\rhozero}{\rhozero}f_0(X).
-\]
-Consequently,
-\[
-\begin{aligned}
-D^L(X,Y)
-&=
-\rhozero^{-1}Y+q(X)\\
-&=
-\rhozero^{-1}Y-\psi_0-\frac{1-\rhozero}{\rhozero}f_0(X)\\
-&=
-f_0(X)-\psi_0+\rhozero^{-1}\{Y-f_0(X)\}.
-\end{aligned}
-\]
-Therefore
-\[
-(D^L,D^U)=(D_{f_0}^L,D_{f_0}^U).
-\]
-Finally, \cref{prop:aipw-class} implies that \(\widehat\psi(f_0)\) has the same influence pair \((D^L,D^U)\), so subtracting the two asymptotic linear expansions gives
-\[
-\widehat\psi^\dagger-\widehat\psi(f_0)=o_p(M^{-1/2}).
-\]
-This proves the result.
-\end{proof}
-
 This characterization shows that the AIPW class is the relevant first-order benchmark in this model. Appendix~\ref{section::plugin} illustrates that several estimators not always written in AIPW form---including regression adjustment, balancing-weight adjustment, and TMLE---can nonetheless be viewed as finite-sample or asymptotic equivalents of AIPW estimators \citep{rotnitzky2025note,van2006targeted}, while sometimes offering better finite-sample performance \citep{porter2011relative,jin2026prognostic,van2025automatic}.
 
- 
-
-
 \begin{remark}[Plug-in approaches to bias correction and TMLE]
-    
- 
- 
-  \textbf{Regression plug-in estimators.} A particularly simple member of this first-order class is obtained through plug-in regression adjustment \citep{scharfstein1999adjusting,van2006targeted,rosenblum2009using,rotnitzky2025note}. Let
+\label{remark::plugin}
+\textbf{Regression plug-in estimators.} A particularly simple member of this first-order class is obtained through plug-in regression adjustment \citep{scharfstein1999adjusting,van2006targeted,rosenblum2009using,rotnitzky2025note}. Let
 \[
 m_n(X)=\hat a_{\mathrm{lin}}\,m(X)+\hat b_{\mathrm{lin}},
 \qquad
@@ -1098,7 +782,7 @@ The corresponding plug-in estimator is
 \[
 \rho_n \Pl\{m_n(X)\} + (1-\rho_n)\Pu\{m_n(\widetilde X)\}.
 \]
-For any \(\lambda\in\mathbb{R}\), this estimator also admits the AIPW representation
+For any \(\lambda\in\mathbb R\), this estimator also admits the AIPW representation
 \[
 \rho_n \Pl\{m_n(X)\}
 +
@@ -1106,7 +790,8 @@ For any \(\lambda\in\mathbb{R}\), this estimator also admits the AIPW representa
 +
 \lambda \Pl\bigl[Y-m_n(X)\bigr],
 \]
-because the augmentation term \(\Pl[Y-m_n(X)]\) is zero by the least-squares normal equations. Thus, when \(m_n\) converges to the best linear predictor of \(Y\) given \(m(X)\), this plug-in estimator is typically at least as efficient as \(\widehat{\psi}_{\mathrm{AIPW}}\) and \(\widehat{\psi}_{\mathrm{PPI}}\), since it corresponds to an influence function with smaller or equal variance.
+because the augmentation term \(\Pl[Y-m_n(X)]\) is zero by the least-squares normal equations.
+Thus, when \(m_n\) converges to the best linear predictor of \(Y\) given \(m(X)\), this plug-in estimator is typically at least as efficient as \(\widehat{\psi}_{\mathrm{AIPW}}\) and \(\widehat{\psi}_{\mathrm{PPI}}\), since it corresponds to an influence function with smaller or equal variance.
 
 \textbf{Balancing-weight estimators.} The same estimator can also be written in terms of balancing weights. Let \(w_n(X)=\hat a_{\mathrm{bal}}+\hat b_{\mathrm{bal}}\,m(X)\) be affine weights that balance \((1,m(X))\), in the sense that
 \[
@@ -1136,10 +821,14 @@ In fact, the plug-in and balancing-weight estimators are algebraically equivalen
 \]
 
 \textbf{TMLE.} More broadly, such debiased plug-in estimators can be viewed as instances of TMLE \citep{van2006targeted,vanderLaanRose2011,hojbjerre2026within}, a general framework for constructing plug-in estimators that are debiased and, in many cases, efficient by updating nuisance components to remove first-order bias. In the present setting, either the weights or the regression model are updated so that the corresponding augmentation term vanishes. In weighting-based TMLE, the update balances on the prediction model \(m(X)\) (e.g., \citealt{hejazi2023revisiting}); one may either include the known weight \(1/\rho_n\) as an offset or balance on the intercept as well. In regression-based TMLE, the prediction model \(m(X)\) may be included either as a covariate or as an offset (e.g., \citealt{lendle2015balancing}), and the intercept adjustment accounts for the known inverse missingness-probability weight \(1/\rho_n\). The specific targeting step is ultimately a practical choice, provided it solves the relevant estimating equation and removes the augmentation term; different choices may also yield additional benefits, such as further bias reduction or doubly robust inference \citep{van2014targeted,carone2014higher,diaz2017doubly,benkeser2017doubly,van2021higher, van2024automatic}.
- \end{remark}
+\end{remark}
 
+ 
+
+ 
 
 \section{Constructing confidence intervals via the bootstrap}
+\label{app:bootstrap}
 
  
 
@@ -1213,8 +902,34 @@ The key implementation detail is that the isotonic regression step must be refit
 \label{appendix:remarks}
 
 
+\begin{remark}[Implementation]
+Isotonic regression is widely available in standard software. A standard algorithm is the pooled-adjacent-violators algorithm (PAVA) \citep{barlow1972isotonic}. Although it is generally fast, it may become slow at ultra-large sample sizes. A scalable alternative is to use regression tree software with monotonicity constraints, such as XGBoost or LightGBM (see Appendix~\ref{appendix:code}). An advantage of tree-based software is that the fit can be regularized by constraining or tuning the number of leaves, the maximum tree depth, or the minimum number of observations per leaf.
+\end{remark}
+
+\begin{remark}[Platt scaling adjustment]
+The linear-calibration idea extends beyond squared-error loss. One can instead use logistic loss, Poisson loss, or, more generally, losses from canonical-link generalized linear models \citep{rosenblum2009using}. In particular, when \(Y\in\{0,1\}\) and \(\mhat(X)\in(0,1)\) is an initial predictor, one may apply Platt scaling \citep{cox1958two,platt1999probabilistic} by fitting a logistic regression of \(Y\) on the logit of \(\mhat(X)\):
+\begin{equation}
+\label{eq:platt-cal}
+\bigl(\hat a_{\mathrm{platt}},\hat b_{\mathrm{platt}}\bigr)
+\in
+\arg\min_{a,b\in\R}
+\sum_{i=1}^n
+\Bigl[
+-Y_i \log \sigma\bigl(a\,\mathrm{logit}(\mhat(X_i))+b\bigr)
+-(1-Y_i)\log\Bigl(1-\sigma\bigl(a\,\mathrm{logit}(\mhat(X_i))+b\bigr)\Bigr)
+\Bigr],
+\end{equation}
+with calibrated predictor
+\[
+m_{n,\mathrm{platt}}^\star(X)
+:=
+\sigma\bigl(\hat a_{\mathrm{platt}}\,\mathrm{logit}(\mhat(X))+\hat b_{\mathrm{platt}}\bigr),
+\]
+where \(\sigma(t):=(1+e^{-t})^{-1}\). Platt scaling may be preferred over linear regression calibration when predicted probabilities are systematically over- or under-confident, in which case the calibration curve is often approximately sigmoidal. More generally, outcomes can be rescaled to \([0,1]\) before applying this procedure. In online settings, calibration properties of Platt scaling are developed in \cite{gupta2023online}.
+\end{remark}
+
 \begin{remark}[Empirical efficiency maximization as a learning objective]
-We  review \cite{rubin2008empirical}. The empirical variance criterion from Section~\ref{sec:effreview},
+Following \citet{rubin2008empirical}, the empirical variance criterion from Section~\ref{sec:effreview},
 \[
 \sigma_n^2(f)
 :=
@@ -1297,7 +1012,7 @@ m_{n,\mathrm{mid}}^*(x)
 \]
 Since the shrinkage magnitude is proportional to the width of the Venn--Abers interval, this construction can be more stable than plain isotonic calibration in small samples.
 \end{remark}
- 
+
 
 \begin{remark}[Relation between linear calibration, PPI, and prognostic-score adjustment]
 Linear calibration can be viewed as prognostic-score regression adjustment, a classical approach to improving precision through flexible covariate adjustment in small-sample settings \citep{hansen2008prognostic,rosenblum2009using,lin2013agnostic,schuler2022increasing,balzer2024adaptive,hojbjerre2025powering}. Proposition~\ref{prop:ppi++-linear} shows that the PPI++ estimator admits the same first-order interpretation. Likewise, the PPI estimator \(\widehat{\psi}_{\mathrm{PPI}}\) is algebraically equivalent to the unlabeled-sample plug-in estimator \(\mathbb{P}_N^U\{m_{n,\mathrm{const}}^\star(X)\}\) based on the intercept-only adjustment
@@ -1310,10 +1025,18 @@ m_{n,\mathrm{const}}^\star(X):=\hat a_{\mathrm{const}}+\mhat(X),
 which calibrates only the mean. By contrast, the standard AIPW estimator \(\widehat{\psi}_{\mathrm{AIPW}}\) is equivalent to the pooled-sample mean $\rho_n \mathbb{P}_n^L\{m_{n,\mathrm{const}}^\star(X)\} + (1-\rho_n)\mathbb{P}_N^U\{m_{n,\mathrm{const}}^\star(X)\}.$
 \end{remark}
 
+\begin{remark}[Practical takeaway]
+Isotonic calibration can improve efficiency when the original score is informative but miscalibrated. The resulting estimator behaves as if \(\mhat(X)\) were replaced by its best monotone calibration \(m_0(X)\). Because the isotonic class contains the identity map and all affine maps with positive slope, the isotonic-calibrated estimator has limiting variance no larger than that of any estimator that is first-order equivalent to AIPW with score \(\theta\{\mhat(X)\}\) for such a transformation \(\theta\). This includes AIPW and PPI based on \(\mhat(X)\), as well as PPI++, and linear calibration whenever the corresponding scaling or slope coefficient is nonnegative. Thus isotonic calibration is asymptotically at least as efficient, at first order, as these methods, and can be strictly more efficient when the best monotone calibration is genuinely nonlinear. More generally, if \(\E_{P_0}[Y\mid \mhat(X)]\) is monotone, then no regular estimator based only on \(\mhat(X)\) can improve on the isotonic-calibrated estimator at first order.
+\end{remark}
+
+\begin{remark}[When full efficiency is attained]
+Full efficiency requires that the calibrated target recover all regression information relevant to \(\psi_0\). This holds if \(m_0=\mu_0\) almost surely. More generally, full efficiency fails when the one-dimensional score \(\mhat(X)\) omits predictive information in \(X\) that cannot be recovered by monotone calibration.
+\end{remark}
+
 
 \section{Prediction-Powered Causal Inference via Calibration (i.e., Calibrated DML)}
 \label{app:causal}
-This appendix records the direct translation of the two-sample missing-outcome setup to randomized experiments. The central point is that the semisupervised problem studied in the main text and two-arm causal inference in a randomized trial are the same statistical problem once the unobserved potential outcome in one arm is interpreted as the missing outcome. We then illustrate how our calibrated PPI estimators apply in this setting, where they arise as special cases of calibrated DML \citep{van2024automatic}.
+This appendix records the direct translation of the two-sample missing-outcome setup to randomized experiments. The central point is that the semisupervised problem studied in the main text and two-arm causal inference in a randomized trial are the same statistical problem once the unobserved potential outcome in one arm is interpreted as the missing outcome. We then illustrate how our calibrated plug-in estimators apply in this setting, where they arise as special cases of calibrated DML \citep{van2024automatic}.
 
 We use the standard potential-outcomes notation. Each unit has two potential outcomes, \(Y(1)\) under treatment and \(Y(0)\) under control, and the observed outcome satisfies
 \[
@@ -1624,7 +1347,6 @@ Expanding the variance of \(u^\top D_m(O)\) therefore yields
 The second term is nonnegative and equals zero if and only if \(\delta_m(X)=0\) almost surely. Hence \(m_0(X,\theta_0)\) minimizes the asymptotic variance of every linear contrast, so \(D_{\mathrm{eff}}\) is the efficient influence function within this class. The missing-data efficiency results of \citet{robins1994estimation,robins1995analysis,robins1995semiparametric,vanderlaanunified} identify this same influence function as the semiparametric efficient influence function in the full MAR model.
 \end{proof}
 
-
 \begin{corollary}[Two-sample/PPI form]
 Suppose the labeled and unlabeled samples arise from the semisupervised model with constant labeling probability \(\rho_0\), and let \(S=f(X)\) be a chosen score. Replacing \(X\) by \(S\) gives the reduced AIPW class
 \[
@@ -1681,11 +1403,6 @@ because \(R=1\) on labeled observations and \(R=0\) on unlabeled observations. A
 \mathbb P_n^L\{\varphi(Y,\theta)-m(S,\theta)\}.
 \]
 \end{proof}
-
-
-
-
-
 \section{Proof of the representation theorem}
 \label{app:repr}
 
@@ -2323,6 +2040,7 @@ Combining the preceding displays yields
 \]
 This expression is minimized when \(\tilde f(X)=\mu_0(X)\) almost surely, in particular at \(f=\mu_0\). Standard semiparametric characterization results for missing-data models imply that this minimum is the semiparametric efficiency bound in the unrestricted two-sample model; see, for example, \citet{bickel1993efficient,robins1995analysis,robins1995semiparametric,vanderlaanunified,tsiatis2006semiparametric}. This completes the proof.
 \end{proof}
+
 
 \begin{lemma}[Bounded variation after isotonic post-processing]
 \label{lem:bv-post}
@@ -3084,7 +2802,7 @@ For the fixed calibration-based plug-in estimators, we fit the calibrator on the
 \begin{figure}[ht]
 \centering
 \includegraphics[width=\textwidth]{assets/fig_paper_calibration_grid.pdf}
-\caption{Calibration-focused appendix comparison across the reproduced PPI benchmarks, restricted to PPI, AIPW, \texttt{LinearCal}, \texttt{MonoSpline}, and \texttt{IsoCal}. The panels report normalized MSE relative to PPI, relative efficiency versus PPI, and coverage across labeled-sample-size regimes. This figure isolates the fixed-calibration comparison that is omitted from the main-text benchmark figure for readability.}
+\caption{Calibration-focused appendix comparison across the reproduced PPI benchmarks, restricted to PPI, AIPW, \texttt{LinearCal}, \texttt{MonoSpline}, and \texttt{IsoCal}. The panels report normalized MSE relative to PPI, relative efficiency versus PPI, and coverage across labeled-sample-size regimes. This figure isolates the fixed-calibration comparison omitted from the main-text benchmark figure for readability.}
 \label{fig:ppi-calibration-appendix}
 \end{figure}
 
@@ -3102,10 +2820,56 @@ For the fixed calibration-based plug-in estimators, we fit the calibrator on the
 \label{appendix:code}
 
 \paragraph{Code availability.}
-A public repository containing the \texttt{ppi\_aipw} package, experiment scripts, and paper assets is available at
-\href{https://github.com/Larsvanderlaan/ppi-aipw}{github.com/Larsvanderlaan/ppi-aipw}.
-Package documentation and worked examples are hosted at
-\href{https://larsvanderlaan.github.io/ppi-aipw/}{larsvanderlaan.github.io/ppi-aipw/}.
+To preserve double-blind review, repository and documentation links are omitted from the submission PDF. This appendix instead gives a minimal anonymous implementation sketch that can be bundled with any supplementary artifact.
+
+Below we also record the three main algorithmic summaries from the full paper, using the notation of the main text.
+
+\subsection{Algorithmic summaries}
+
+\begin{algorithm}[t]
+\caption{Isotonic-calibrated PPI}
+\label{alg:isoppi}
+\begin{algorithmic}[1]
+\Require \(\mathcal D_L=\{(X_i,Y_i)\}_{i=1}^n\), \(\mathcal D_U=\{\widetilde X_j\}_{j=1}^N\), score \(\mhat\), level \(1-\alpha\)
+\State Compute \(T_i=\mhat(X_i)\) and \(\widetilde T_j=\mhat(\widetilde X_j)\)
+\State Fit \(\hat f\in\arg\min_{f\in\mathcal F_{\mathrm{iso}}}\sum_{i=1}^n\{Y_i-f(T_i)\}^2\)
+\State Set \(m_{n,\mathrm{iso}}^\star(X_i)=\hat f(T_i)\) and \(m_{n,\mathrm{iso}}^\star(\widetilde X_j)=\hat f(\widetilde T_j)\)
+\State Form \(\widehat\psi_{\mathrm{iso}}\gets (n+N)^{-1}\{\sum_{i=1}^n m_{n,\mathrm{iso}}^\star(X_i)+\sum_{j=1}^N m_{n,\mathrm{iso}}^\star(\widetilde X_j)\}\)
+\State Set \(\widehat D_i^L=m_{n,\mathrm{iso}}^\star(X_i)-\widehat\psi_{\mathrm{iso}}+\rhon^{-1}\{Y_i-m_{n,\mathrm{iso}}^\star(X_i)\}\) and \(\widehat D_j^U=m_{n,\mathrm{iso}}^\star(\widetilde X_j)-\widehat\psi_{\mathrm{iso}}\)
+\State Set \(\widehat{\mathrm{SE}}_{\mathrm{iso}}^2=(n+N)^{-2}\{\sum_{i=1}^n(\widehat D_i^L)^2+\sum_{j=1}^N(\widehat D_j^U)^2\}\)
+\State Return \(\widehat\psi_{\mathrm{iso}} \pm z_{1-\alpha/2}\widehat{\mathrm{SE}}_{\mathrm{iso}}\)
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[t]
+\caption{Linearly calibrated PPI}
+\label{alg:linearppi-basic}
+\begin{algorithmic}[1]
+\Require \(\mathcal D_L=\{(X_i,Y_i)\}_{i=1}^n\), \(\mathcal D_U=\{\widetilde X_j\}_{j=1}^N\), score \(\mhat\), level \(1-\alpha\)
+\State Compute \(T_i=\mhat(X_i)\) and \(\widetilde T_j=\mhat(\widetilde X_j)\)
+\State Fit \((\hat a,\hat b)\in\arg\min_{a,b}\sum_{i=1}^n\{Y_i-(aT_i+b)\}^2\)
+\State Set \(m_{n,\mathrm{lin}}^\star(X_i)=\hat aT_i+\hat b\) and \(m_{n,\mathrm{lin}}^\star(\widetilde X_j)=\hat a\widetilde T_j+\hat b\)
+\State Form \(\widehat\psi_{\mathrm{lin}}\gets (n+N)^{-1}\{\sum_{i=1}^n m_{n,\mathrm{lin}}^\star(X_i)+\sum_{j=1}^N m_{n,\mathrm{lin}}^\star(\widetilde X_j)\}\)
+\State Set \(\widehat D_i^L=m_{n,\mathrm{lin}}^\star(X_i)-\widehat\psi_{\mathrm{lin}}+\rhon^{-1}\{Y_i-m_{n,\mathrm{lin}}^\star(X_i)\}\) and \(\widehat D_j^U=m_{n,\mathrm{lin}}^\star(\widetilde X_j)-\widehat\psi_{\mathrm{lin}}\)
+\State Set \(\widehat{\mathrm{SE}}_{\mathrm{lin}}^2=(n+N)^{-2}\{\sum_{i=1}^n(\widehat D_i^L)^2+\sum_{j=1}^N(\widehat D_j^U)^2\}\)
+\State Return \(\widehat\psi_{\mathrm{lin}} \pm z_{1-\alpha/2}\widehat{\mathrm{SE}}_{\mathrm{lin}}\)
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[t]
+\caption{Linearly calibrated PPI with covariate adjustment}
+\label{alg:linearppi}
+\begin{algorithmic}[1]
+\Require \(\mathcal D_L=\{(X_i,Y_i)\}_{i=1}^n\), \(\mathcal D_U=\{\widetilde X_j\}_{j=1}^N\), score \(\mhat\), level \(1-\alpha\)
+\State Compute \(T_i=\mhat(X_i)\) and \(\widetilde T_j=\mhat(\widetilde X_j)\)
+\State Fit \((\hat a,\hat\beta,\hat b)\in\arg\min_{a,\beta,b}\sum_{i=1}^n\{Y_i-(a+X_i^\top\beta+bT_i)\}^2\)
+\State Set \(m_{n,\mathrm{lin}}^\star(X_i)=\hat a+X_i^\top\hat\beta+\hat bT_i\) and \(m_{n,\mathrm{lin}}^\star(\widetilde X_j)=\hat a+\widetilde X_j^\top\hat\beta+\hat b\widetilde T_j\)
+\State Form \(\widehat\psi_{\mathrm{lin}}\gets (n+N)^{-1}\{\sum_{i=1}^n m_{n,\mathrm{lin}}^\star(X_i)+\sum_{j=1}^N m_{n,\mathrm{lin}}^\star(\widetilde X_j)\}\)
+\State Set \(\widehat D_i^L=m_{n,\mathrm{lin}}^\star(X_i)-\widehat\psi_{\mathrm{lin}}+\rhon^{-1}\{Y_i-m_{n,\mathrm{lin}}^\star(X_i)\}\) and \(\widehat D_j^U=m_{n,\mathrm{lin}}^\star(\widetilde X_j)-\widehat\psi_{\mathrm{lin}}\)
+\State Set \(\widehat{\mathrm{SE}}_{\mathrm{lin}}^2=(n+N)^{-2}\{\sum_{i=1}^n(\widehat D_i^L)^2+\sum_{j=1}^N(\widehat D_j^U)^2\}\)
+\State Return \(\widehat\psi_{\mathrm{lin}} \pm z_{1-\alpha/2}\widehat{\mathrm{SE}}_{\mathrm{lin}}\)
+\end{algorithmic}
+\end{algorithm}
 
 Below, we provide a minimal, self-contained implementation of the method introduced in this paper.
 \subsection{Isotonic regression via XGBoost}
@@ -3120,8 +2884,8 @@ def isoreg_with_xgboost(x, y, max_depth=15, min_child_weight=20, weights=None):
     Parameters
     ----------
     x : array-like, shape (n,) or (n, 1)
-        Predictor used for calibration. In the PPI application this is usually
-        the score m(X), so x is typically one-dimensional.
+        Prediction score used for calibration. In the PPI application this is
+        usually the score m(X), so x is typically one-dimensional.
     y : array-like, shape (n,)
         Labeled outcomes.
     max_depth : int, default=15
@@ -3134,7 +2898,7 @@ def isoreg_with_xgboost(x, y, max_depth=15, min_child_weight=20, weights=None):
     Returns
     -------
     predict_fn : callable
-        Function mapping new x values to calibrated predictions f(x).
+        Function mapping new x values to calibrated scores f(x).
     """
     x = np.asarray(x)
     y = np.asarray(y).reshape(-1)
@@ -3362,6 +3126,39 @@ def linear_calibrated_plugin(
 #     score_unlabeled=mX_tilde,
 # )
 \end{codeblock}
+
+\clearpage
+\section*{NeurIPS Paper Checklist}
+
+\begin{enumerate}[leftmargin=5mm]
+\item \textbf{Claims.} \textbf{Yes.} The abstract and introduction state the paper's main claims, and the paper distinguishes between exact representation results, asymptotic theory, and empirical findings; see Sections~\ref{sec:setup}--\ref{sec:exp}.
+
+\item \textbf{Limitations.} \textbf{Yes.} The conclusion and theory sections state the paper's main scope limitations: the strongest guarantees use the known-\(\rho_n\) two-sample design and a stable second-stage calibrator; see Section~6 and Appendix~B.
+
+\item \textbf{Theory, assumptions, and proofs.} \textbf{Yes.} The main assumptions are stated in Sections~\ref{sec:setup} and~\ref{sec:theory}, with complete proofs collected in Appendices~\ref{app:repr}, \ref{sec:ppi++}, \ref{app:eif}, \ref{app:al}, and~\ref{app:eff}.
+
+\item \textbf{Experimental results.} \textbf{Yes.} The main experimental takeaways appear in Section~\ref{sec:exp}, with benchmark construction and additional diagnostics deferred to Appendix~\ref{app:empirical}.
+
+\item \textbf{Open access to data and code.} \textbf{No.} This anonymous submission does not include a public repository or packaged artifact; Appendix~\ref{appendix:code} provides representative implementation sketches, and benchmark sources are cited in the text.
+
+\item \textbf{Experimental setting and details.} \textbf{Yes.} The simulation design, benchmark protocol, estimator set, and evaluation summaries are described in Section~\ref{sec:exp} and Appendix~\ref{app:empirical}.
+
+\item \textbf{Experimental statistical significance.} \textbf{Yes.} The experiments report Monte Carlo variability, interval coverage, and efficiency comparisons, and the inference procedures are tied to the Wald theory in Section~\ref{sec:theory}; see also Appendix~\ref{app:bootstrap}.
+
+\item \textbf{Experiments compute resources.} \textbf{No.} The paper does not currently report wall-clock time, hardware, or aggregate compute usage for the simulation and benchmark runs.
+
+\item \textbf{Code of ethics.} \textbf{Yes.} The paper is a methodological contribution in semisupervised statistical inference, and we are not aware of any aspect of the work that conflicts with the NeurIPS Code of Ethics.
+
+\item \textbf{Broader impacts.} \textbf{N/A.} The paper develops estimation and inference methodology rather than a deployed decision system, though misuse of semisupervised estimators in high-stakes applications remains a general concern.
+
+\item \textbf{Safeguards.} \textbf{N/A.} The paper does not introduce a system that generates content or interacts with users, and it does not release new high-risk artifacts requiring special safeguards.
+
+\item \textbf{Licenses for existing assets.} \textbf{No.} The current draft cites the benchmark sources and related software ecosystems but does not yet include a consolidated license/version table for all reused assets.
+
+\item \textbf{New assets.} \textbf{N/A.} The paper does not introduce a new dataset, benchmark, or foundation model.
+
+\item \textbf{Crowdsourcing and research with human subjects.} \textbf{N/A.} The paper does not involve human-subject experiments or crowdsourcing.
+\end{enumerate}
 
 
 \end{document}

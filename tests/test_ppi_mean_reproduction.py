@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from ppi_py import ppi_mean_ci, ppi_mean_pointestimate
+from ppi_aipw import mean_inference
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
@@ -23,6 +24,7 @@ from experiments.ppi_mean_reproduction import (
     run_monotone_spline_estimator,
     platt_calibrated_predictions,
     run_aipw_estimator,
+    run_aipw_em_estimator,
     run_classical_estimator,
     run_isotonic_calibration_estimator,
     run_linear_calibration_estimator,
@@ -226,6 +228,53 @@ def test_ppi_plus_plus_parity_with_upstream_on_fixed_split() -> None:
     assert ours["ci_upper"] == pytest.approx(float(np.asarray(upstream_ci[1]).reshape(-1)[0]))
 
 
+def test_aipw_em_parity_with_package_api_on_fixed_split() -> None:
+    rng = np.random.default_rng(2)
+    y_total = rng.normal(size=340)
+    yhat_total = y_total + rng.normal(scale=0.4, size=340)
+    idx = rng.permutation(y_total.shape[0])
+    n = 120
+    y_l = y_total[idx[:n]]
+    yhat_l = yhat_total[idx[:n]]
+    yhat_u = yhat_total[idx[n:]]
+
+    ours = run_aipw_em_estimator(y_l, yhat_l, yhat_u, alpha=0.1)
+    expected = mean_inference(
+        y_l,
+        yhat_l,
+        yhat_u,
+        method="aipw",
+        alpha=0.1,
+        efficiency_maximization=True,
+    )
+
+    assert ours["estimate"] == pytest.approx(float(expected.pointestimate))
+    assert ours["se"] == pytest.approx(float(expected.se))
+    assert ours["ci_lower"] == pytest.approx(float(np.asarray(expected.ci[0]).reshape(-1)[0]))
+    assert ours["ci_upper"] == pytest.approx(float(np.asarray(expected.ci[1]).reshape(-1)[0]))
+
+
+def test_aipw_em_differs_from_clipped_ppi_plus_plus_when_lambda_exceeds_one() -> None:
+    yhat_l = np.array([-0.3163, 0.411631, 1.042513, -0.128535, 1.366463], dtype=float)
+    y_l = np.array([-0.54097, 0.652597, 1.654117, -0.183401, 1.975345], dtype=float)
+    yhat_u = np.array([-0.60607, -0.049271, 0.764234, -0.711542, 0.248989, 0.30893, 1.149015], dtype=float)
+
+    aipw_em = run_aipw_em_estimator(y_l, yhat_l, yhat_u, alpha=0.1)
+    ppi_plus_plus = run_ppi_plus_plus_estimator(y_l, yhat_l, yhat_u, alpha=0.1)
+    package = mean_inference(
+        y_l,
+        yhat_l,
+        yhat_u,
+        method="aipw",
+        alpha=0.1,
+        efficiency_maximization=True,
+    )
+
+    assert float(package.efficiency_lambda) > 1.0
+    assert aipw_em["estimate"] == pytest.approx(float(package.pointestimate))
+    assert aipw_em["estimate"] != pytest.approx(ppi_plus_plus["estimate"])
+
+
 def test_smoke_run_writes_expected_outputs(tmp_path: Path) -> None:
     cache_dir = tmp_path / "cache"
     write_fake_dataset_cache(cache_dir)
@@ -259,6 +308,7 @@ def test_smoke_run_writes_expected_outputs(tmp_path: Path) -> None:
         "aipw",
         "ppi",
         "ppi_plus_plus",
+        "aipw_em",
         "auto_calibration",
         "monotone_spline",
         "linear_calibration",

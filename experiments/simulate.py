@@ -17,6 +17,7 @@ if __package__ in (None, ""):
 
 from experiments.estimators import (
     TuningGrid,
+    aipw_em_result,
     aipp_from_prediction,
     auto_aipw_pointestimate_and_se,
     fit_linear_calibration,
@@ -785,6 +786,18 @@ def run_one(
     psi_ppi_plus_plus, se_ppi_plus_plus, lo, hi = official_ppi_summary(y_l, score_l, score_u, lam=None)
     results.append(summarize_result("ppi_plus_plus", psi_ppi_plus_plus, se_ppi_plus_plus, psi0, lo, hi))
 
+    aipw_em = aipw_em_result(y_l, score_l, score_u, alpha=0.05)
+    results.append(
+        summarize_result(
+            "aipw_em",
+            aipw_em["estimate"],
+            aipw_em["se"],
+            psi0,
+            aipw_em["ci_lower"],
+            aipw_em["ci_upper"],
+        )
+    )
+
     psi_aipw = aipp_from_prediction(score_l, score_u, y_l)
     se_aipw = influence_se_from_prediction(psi_aipw, score_l, score_u, y_l)
     lo, hi = ci_bounds(psi_aipw, se_aipw)
@@ -1129,6 +1142,7 @@ def build_main_table(summary: pd.DataFrame) -> pd.DataFrame:
                 "labeled_only",
                 "ppi",
                 "ppi_plus_plus",
+                "aipw_em",
                 "aipw",
                 "affine_calibration",
                 "isotonic_calibration",

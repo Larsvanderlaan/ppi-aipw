@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
+import sys
 from typing import Any, Dict, Iterable, Optional
 
 import lightgbm as lgb
@@ -14,6 +16,14 @@ from statsmodels.genmod.families import Gaussian
 from sklearn.isotonic import IsotonicRegression
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import KFold
+
+
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+from ppi_aipw import mean_inference
 
 try:
     import xgboost as xgb
@@ -1238,6 +1248,37 @@ def predict_monotone_lgbm(model: CalibrationModel, score: np.ndarray) -> np.ndar
     y_min = model.metadata.get("y_min", 1e-6)
     y_max = model.metadata.get("y_max", 1.0 - 1e-6)
     return clip_range(pred, y_min, y_max)
+
+
+def _scalarize_result(value: object) -> float:
+    array = np.asarray(value, dtype=float)
+    if array.size != 1:
+        raise ValueError(f"Expected a scalar-like value, got shape {array.shape}.")
+    return float(array.reshape(-1)[0])
+
+
+def aipw_em_result(
+    y_l: np.ndarray,
+    pred_l: np.ndarray,
+    pred_u: np.ndarray,
+    *,
+    alpha: float,
+) -> Dict[str, float]:
+    result = mean_inference(
+        np.asarray(y_l, dtype=float),
+        np.asarray(pred_l, dtype=float),
+        np.asarray(pred_u, dtype=float),
+        method="aipw",
+        alpha=float(alpha),
+        efficiency_maximization=True,
+    )
+    lower, upper = result.ci
+    return {
+        "estimate": _scalarize_result(result.pointestimate),
+        "se": _scalarize_result(result.se),
+        "ci_lower": _scalarize_result(lower),
+        "ci_upper": _scalarize_result(upper),
+    }
 
 
 def plugin_estimate(pred_l: np.ndarray, pred_u: np.ndarray) -> float:
