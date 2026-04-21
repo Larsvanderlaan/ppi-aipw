@@ -39,6 +39,32 @@ from experiments.estimators import (
     predict_venn_abers,
 )
 
+ALL_ESTIMATORS: Tuple[str, ...] = (
+    "labeled_only",
+    "ppi",
+    "ppi_plus_plus",
+    "aipw_em",
+    "aipw",
+    "auto_calibration",
+    "monotone_spline",
+    "affine_calibration",
+    "platt_calibration",
+    "isotonic_calibration",
+    "calibrated_plugin",
+)
+
+MAIN_TEXT_ESTIMATORS: Tuple[str, ...] = (
+    "labeled_only",
+    "aipw",
+    "ppi",
+    "ppi_plus_plus",
+    "aipw_em",
+    "auto_calibration",
+    "monotone_spline",
+    "affine_calibration",
+    "isotonic_calibration",
+)
+
 
 def sigmoid(x: np.ndarray) -> np.ndarray:
     return 1.0 / (1.0 + np.exp(-x))
@@ -767,120 +793,154 @@ def run_one(
     sample: Dict[str, np.ndarray],
     profile: Profile,
     rng_seed: int,
+    estimators: Tuple[str, ...] = ALL_ESTIMATORS,
 ) -> Tuple[List[Dict[str, float]], Dict[str, float]]:
     score_l = sample["score_l"]
     score_u = sample["score_u"]
     y_l = sample["y_l"]
     psi0 = sample["psi0"]
+    selected = set(estimators)
     results: List[Dict[str, float]] = []
-    diagnostics: Dict[str, float] = {}
+    diagnostics: Dict[str, float] = {
+        "raw_calibration_mse": float(np.mean((y_l - score_l) ** 2)),
+        "raw_residual_var": float(np.var(y_l - score_l)),
+    }
 
-    psi_label = labeled_mean(y_l)
-    se_label = influence_se_labeled_only(y_l, psi_label)
-    lo, hi = ci_bounds(psi_label, se_label)
-    results.append(summarize_result("labeled_only", psi_label, se_label, psi0, lo, hi))
+    psi_ppi: Optional[float] = None
+    pred_lin_l: Optional[np.ndarray] = None
+    pred_platt_l: Optional[np.ndarray] = None
+    pred_iso_l: Optional[np.ndarray] = None
+    pred_cal_l: Optional[np.ndarray] = None
 
-    psi_ppi, se_ppi, lo, hi = official_ppi_summary(y_l, score_l, score_u, lam=1)
-    results.append(summarize_result("ppi", psi_ppi, se_ppi, psi0, lo, hi))
+    if "labeled_only" in selected:
+        psi_label = labeled_mean(y_l)
+        se_label = influence_se_labeled_only(y_l, psi_label)
+        lo, hi = ci_bounds(psi_label, se_label)
+        results.append(summarize_result("labeled_only", psi_label, se_label, psi0, lo, hi))
 
-    psi_ppi_plus_plus, se_ppi_plus_plus, lo, hi = official_ppi_summary(y_l, score_l, score_u, lam=None)
-    results.append(summarize_result("ppi_plus_plus", psi_ppi_plus_plus, se_ppi_plus_plus, psi0, lo, hi))
+    if "ppi" in selected or "calibrated_plugin" in selected:
+        psi_ppi, se_ppi, lo, hi = official_ppi_summary(y_l, score_l, score_u, lam=1)
+        if "ppi" in selected:
+            results.append(summarize_result("ppi", psi_ppi, se_ppi, psi0, lo, hi))
 
-    aipw_em = aipw_em_result(y_l, score_l, score_u, alpha=0.05)
-    results.append(
-        summarize_result(
-            "aipw_em",
-            aipw_em["estimate"],
-            aipw_em["se"],
-            psi0,
-            aipw_em["ci_lower"],
-            aipw_em["ci_upper"],
+    if "ppi_plus_plus" in selected:
+        psi_ppi_plus_plus, se_ppi_plus_plus, lo, hi = official_ppi_summary(y_l, score_l, score_u, lam=None)
+        results.append(summarize_result("ppi_plus_plus", psi_ppi_plus_plus, se_ppi_plus_plus, psi0, lo, hi))
+
+    if "aipw_em" in selected:
+        aipw_em = aipw_em_result(y_l, score_l, score_u, alpha=0.05)
+        results.append(
+            summarize_result(
+                "aipw_em",
+                aipw_em["estimate"],
+                aipw_em["se"],
+                psi0,
+                aipw_em["ci_lower"],
+                aipw_em["ci_upper"],
+            )
         )
-    )
 
-    psi_aipw = aipp_from_prediction(score_l, score_u, y_l)
-    se_aipw = influence_se_from_prediction(psi_aipw, score_l, score_u, y_l)
-    lo, hi = ci_bounds(psi_aipw, se_aipw)
-    results.append(summarize_result("aipw", psi_aipw, se_aipw, psi0, lo, hi))
+    if "aipw" in selected:
+        psi_aipw = aipp_from_prediction(score_l, score_u, y_l)
+        se_aipw = influence_se_from_prediction(psi_aipw, score_l, score_u, y_l)
+        lo, hi = ci_bounds(psi_aipw, se_aipw)
+        results.append(summarize_result("aipw", psi_aipw, se_aipw, psi0, lo, hi))
 
-    auto_result = auto_aipw_pointestimate_and_se(
-        y_l,
-        score_l,
-        score_u,
-        candidate_methods=("aipw", "linear", "monotone_spline", "isocal"),
-        num_folds=20,
-        random_state=rng_seed,
-    )
-    lo, hi = ci_bounds(auto_result["estimate"], auto_result["se"])
-    results.append(
-        summarize_result(
-            "auto_calibration",
-            auto_result["estimate"],
-            auto_result["se"],
-            psi0,
-            lo,
-            hi,
+    if "auto_calibration" in selected:
+        auto_result = auto_aipw_pointestimate_and_se(
+            y_l,
+            score_l,
+            score_u,
+            candidate_methods=("aipw", "linear", "monotone_spline", "isocal"),
+            num_folds=20,
+            random_state=rng_seed,
         )
-    )
+        lo, hi = ci_bounds(auto_result["estimate"], auto_result["se"])
+        results.append(
+            summarize_result(
+                "auto_calibration",
+                auto_result["estimate"],
+                auto_result["se"],
+                psi0,
+                lo,
+                hi,
+            )
+        )
 
-    monotone_spline_model = fit_monotone_spline_calibration(score_l, y_l)
-    pred_spline_l = predict_monotone_spline(monotone_spline_model, score_l)
-    pred_spline_u = predict_monotone_spline(monotone_spline_model, score_u)
-    psi_spline = plugin_estimate(pred_spline_l, pred_spline_u)
-    se_spline = influence_se_from_prediction(psi_spline, pred_spline_l, pred_spline_u, y_l)
-    lo, hi = ci_bounds(psi_spline, se_spline)
-    results.append(summarize_result("monotone_spline", psi_spline, se_spline, psi0, lo, hi))
+    if "monotone_spline" in selected:
+        monotone_spline_model = fit_monotone_spline_calibration(score_l, y_l)
+        pred_spline_l = predict_monotone_spline(monotone_spline_model, score_l)
+        pred_spline_u = predict_monotone_spline(monotone_spline_model, score_u)
+        psi_spline = plugin_estimate(pred_spline_l, pred_spline_u)
+        se_spline = influence_se_from_prediction(psi_spline, pred_spline_l, pred_spline_u, y_l)
+        lo, hi = ci_bounds(psi_spline, se_spline)
+        results.append(summarize_result("monotone_spline", psi_spline, se_spline, psi0, lo, hi))
 
-    linear_model = fit_linear_calibration(score_l, y_l)
-    pred_lin_l = predict_linear(linear_model, score_l)
-    pred_lin_u = predict_linear(linear_model, score_u)
-    psi_lin = plugin_estimate(pred_lin_l, pred_lin_u)
-    se_lin = influence_se_from_prediction(psi_lin, pred_lin_l, pred_lin_u, y_l)
-    lo, hi = ci_bounds(psi_lin, se_lin)
-    results.append(summarize_result("affine_calibration", psi_lin, se_lin, psi0, lo, hi))
+    if "affine_calibration" in selected:
+        linear_model = fit_linear_calibration(score_l, y_l)
+        pred_lin_l = predict_linear(linear_model, score_l)
+        pred_lin_u = predict_linear(linear_model, score_u)
+        psi_lin = plugin_estimate(pred_lin_l, pred_lin_u)
+        se_lin = influence_se_from_prediction(psi_lin, pred_lin_l, pred_lin_u, y_l)
+        lo, hi = ci_bounds(psi_lin, se_lin)
+        results.append(summarize_result("affine_calibration", psi_lin, se_lin, psi0, lo, hi))
+        diagnostics.update(
+            {
+                "affine_calibration_mse": float(np.mean((y_l - pred_lin_l) ** 2)),
+                "affine_residual_var": float(np.var(y_l - pred_lin_l)),
+            }
+        )
 
-    platt_model = fit_platt_calibration(score_l, y_l)
-    pred_platt_l = predict_platt(platt_model, score_l)
-    pred_platt_u = predict_platt(platt_model, score_u)
-    psi_platt = plugin_estimate(pred_platt_l, pred_platt_u)
-    se_platt = influence_se_from_prediction(psi_platt, pred_platt_l, pred_platt_u, y_l)
-    lo, hi = ci_bounds(psi_platt, se_platt)
-    results.append(summarize_result("platt_calibration", psi_platt, se_platt, psi0, lo, hi))
+    if "platt_calibration" in selected:
+        platt_model = fit_platt_calibration(score_l, y_l)
+        pred_platt_l = predict_platt(platt_model, score_l)
+        pred_platt_u = predict_platt(platt_model, score_u)
+        psi_platt = plugin_estimate(pred_platt_l, pred_platt_u)
+        se_platt = influence_se_from_prediction(psi_platt, pred_platt_l, pred_platt_u, y_l)
+        lo, hi = ci_bounds(psi_platt, se_platt)
+        results.append(summarize_result("platt_calibration", psi_platt, se_platt, psi0, lo, hi))
+        diagnostics.update(
+            {
+                "platt_calibration_mse": float(np.mean((y_l - pred_platt_l) ** 2)),
+                "platt_residual_var": float(np.var(y_l - pred_platt_l)),
+            }
+        )
 
-    iso_model = fit_sklearn_isotonic_calibration(score_l, y_l)
-    pred_iso_l = predict_sklearn_isotonic(iso_model, score_l)
-    pred_iso_u = predict_sklearn_isotonic(iso_model, score_u)
-    psi_iso = plugin_estimate(pred_iso_l, pred_iso_u)
-    se_iso = influence_se_from_prediction(psi_iso, pred_iso_l, pred_iso_u, y_l)
-    lo, hi = ci_bounds(psi_iso, se_iso)
-    results.append(summarize_result("isotonic_calibration", psi_iso, se_iso, psi0, lo, hi))
+    if "isotonic_calibration" in selected:
+        iso_model = fit_sklearn_isotonic_calibration(score_l, y_l)
+        pred_iso_l = predict_sklearn_isotonic(iso_model, score_l)
+        pred_iso_u = predict_sklearn_isotonic(iso_model, score_u)
+        psi_iso = plugin_estimate(pred_iso_l, pred_iso_u)
+        se_iso = influence_se_from_prediction(psi_iso, pred_iso_l, pred_iso_u, y_l)
+        lo, hi = ci_bounds(psi_iso, se_iso)
+        results.append(summarize_result("isotonic_calibration", psi_iso, se_iso, psi0, lo, hi))
+        diagnostics.update(
+            {
+                "isotonic_calibration_mse": float(np.mean((y_l - pred_iso_l) ** 2)),
+                "isotonic_residual_var": float(np.var(y_l - pred_iso_l)),
+            }
+        )
 
-    ppi_reference = psi_ppi
-    reference_l = np.full_like(score_l, ppi_reference, dtype=float)
-    reference_u = np.full_like(score_u, ppi_reference, dtype=float)
-    calib_model = fit_venn_abers_calibration(score_l=score_l, y_l=y_l)
-    pred_cal_l = predict_venn_abers(calib_model, score_l, reference_l)
-    pred_cal_u = predict_venn_abers(calib_model, score_u, reference_u)
-    psi_cal = plugin_estimate(pred_cal_l, pred_cal_u)
-    se_cal = influence_se_from_prediction(psi_cal, pred_cal_l, pred_cal_u, y_l)
-    lo, hi = ci_bounds(psi_cal, se_cal)
-    results.append(summarize_result("calibrated_plugin", psi_cal, se_cal, psi0, lo, hi))
-
-    diagnostics.update(
-        {
-            "ppi_reference": float(ppi_reference),
-            "raw_calibration_mse": float(np.mean((y_l - score_l) ** 2)),
-            "affine_calibration_mse": float(np.mean((y_l - pred_lin_l) ** 2)),
-            "platt_calibration_mse": float(np.mean((y_l - pred_platt_l) ** 2)),
-            "isotonic_calibration_mse": float(np.mean((y_l - pred_iso_l) ** 2)),
-            "nonlinear_calibration_mse": float(np.mean((y_l - pred_cal_l) ** 2)),
-            "raw_residual_var": float(np.var(y_l - score_l)),
-            "affine_residual_var": float(np.var(y_l - pred_lin_l)),
-            "platt_residual_var": float(np.var(y_l - pred_platt_l)),
-            "isotonic_residual_var": float(np.var(y_l - pred_iso_l)),
-            "nonlinear_residual_var": float(np.var(y_l - pred_cal_l)),
-        }
-    )
+    if "calibrated_plugin" in selected:
+        if psi_ppi is None:
+            psi_ppi, _, _, _ = official_ppi_summary(y_l, score_l, score_u, lam=1)
+        ppi_reference = float(psi_ppi)
+        reference_l = np.full_like(score_l, ppi_reference, dtype=float)
+        reference_u = np.full_like(score_u, ppi_reference, dtype=float)
+        calib_model = fit_venn_abers_calibration(score_l=score_l, y_l=y_l)
+        pred_cal_l = predict_venn_abers(calib_model, score_l, reference_l)
+        pred_cal_u = predict_venn_abers(calib_model, score_u, reference_u)
+        psi_cal = plugin_estimate(pred_cal_l, pred_cal_u)
+        se_cal = influence_se_from_prediction(psi_cal, pred_cal_l, pred_cal_u, y_l)
+        lo, hi = ci_bounds(psi_cal, se_cal)
+        results.append(summarize_result("calibrated_plugin", psi_cal, se_cal, psi0, lo, hi))
+        diagnostics.update(
+            {
+                "ppi_reference": ppi_reference,
+                "nonlinear_calibration_mse": float(np.mean((y_l - pred_cal_l) ** 2)),
+                "nonlinear_residual_var": float(np.var(y_l - pred_cal_l)),
+            }
+        )
     return results, diagnostics
 
 
@@ -1190,11 +1250,35 @@ def main() -> None:
     parser.add_argument("--output-dir", type=Path, default=Path("outputs/simulations"))
     parser.add_argument("--seed", type=int, default=20260408)
     parser.add_argument("--recommendations-file", type=Path, default=None)
+    parser.add_argument(
+        "--estimators",
+        nargs="*",
+        default=None,
+        help="Optional estimator subset to run.",
+    )
+    parser.add_argument(
+        "--main-text-only",
+        action="store_true",
+        help="Run only the estimators used in the main-text simulation figure.",
+    )
     args = parser.parse_args()
+
+    if args.main_text_only and args.estimators is not None:
+        parser.error("Use either --main-text-only or --estimators, not both.")
 
     profile = PROFILES[args.profile]
     if args.replications is not None:
         profile = replace(profile, replications=args.replications)
+
+    if args.main_text_only:
+        estimators = MAIN_TEXT_ESTIMATORS
+    elif args.estimators is None:
+        estimators = ALL_ESTIMATORS
+    else:
+        unknown = sorted(set(args.estimators) - set(ALL_ESTIMATORS))
+        if unknown:
+            parser.error(f"Unknown estimators: {', '.join(unknown)}")
+        estimators = tuple(args.estimators)
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     pilot_pop_size = None
@@ -1239,7 +1323,12 @@ def main() -> None:
                         rng_seed = args.seed + 10_000 * regime_id + rep
                         rng = np.random.default_rng(rng_seed)
                         sample = generate_sample(n=n, N=N, dgp=dgp, setting=setting, rng=rng)
-                        results, diagnostics = run_one(sample, profile, rng_seed=rng_seed)
+                        results, diagnostics = run_one(
+                            sample,
+                            profile,
+                            rng_seed=rng_seed,
+                            estimators=estimators,
+                        )
                         for result in results:
                             raw_rows.append(
                                 {
@@ -1323,6 +1412,7 @@ def main() -> None:
     summary_json = {
         "profile": profile.name,
         "replications": profile.replications,
+        "estimators": list(estimators),
         "pilot_replications": pilot_replications,
         "pilot_population_size": pilot_pop_size,
         "recommendations_file": str(args.recommendations_file) if args.recommendations_file is not None else None,

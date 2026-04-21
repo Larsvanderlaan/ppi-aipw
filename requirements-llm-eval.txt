@@ -1,0 +1,7 @@
+datasets
+huggingface_hub
+transformers
+accelerate
+torch
+sentencepiece
+llm-blender @ git+https://github.com/yuchenlin/LLM-Blender.git

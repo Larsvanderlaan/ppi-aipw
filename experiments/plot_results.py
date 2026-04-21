@@ -360,12 +360,19 @@ def plot_simulation_main(summary: pd.DataFrame, output_path: Path) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input-dir", type=Path, default=Path("outputs/simulations"))
+    parser.add_argument(
+        "--main-text-only",
+        action="store_true",
+        help="Generate only the simulation figure used in the paper main text.",
+    )
     args = parser.parse_args()
     summary = pd.read_csv(args.input_dir / "summary.csv")
+    plot_simulation_main(summary, args.input_dir / "fig_simulation_main.pdf")
+    if args.main_text_only:
+        return
     plot_rmse(summary, args.input_dir / "fig_rmse.pdf")
     plot_bias_coverage(summary, args.input_dir / "fig_bias_coverage.pdf")
     plot_efficiency_gain(summary, args.input_dir / "fig_efficiency_gain.pdf")
-    plot_simulation_main(summary, args.input_dir / "fig_simulation_main.pdf")
 
 
 if __name__ == "__main__":
