@@ -134,6 +134,22 @@ APPENDIX_CALIBRATION_ORDER = [
     "isotonic_calibration_min10",
 ]
 
+ALL_ESTIMATORS: Tuple[str, ...] = (
+    "classical",
+    "imputation",
+    "semisupervised",
+    "aipw",
+    "ppi",
+    "ppi_plus_plus",
+    "aipw_em",
+    "auto_calibration",
+    "monotone_spline",
+    "linear_calibration",
+    "platt_calibration",
+    "isotonic_calibration_min10",
+    "venn_abers_calibration",
+)
+
 PRIMARY_ESTIMATORS = {
     "linear_calibration",
     "aipw",
@@ -701,6 +717,7 @@ def build_trial_results(
     yhat_total: np.ndarray,
     permutation: np.ndarray,
     x_total: Optional[np.ndarray],
+    selected_estimators: Optional[Sequence[str]] = None,
 ) -> List[Dict[str, float]]:
     labeled_idx = permutation[:n_labeled]
     unlabeled_idx = permutation[n_labeled:]
@@ -708,11 +725,14 @@ def build_trial_results(
     yhat_l = yhat_total[labeled_idx]
     yhat_u = yhat_total[unlabeled_idx]
     n_unlabeled = int(unlabeled_idx.shape[0])
+    selected = set(selected_estimators) if selected_estimators is not None else None
 
     rows: List[Dict[str, float]] = []
     is_binary_outcome = bool(np.all(np.isin(np.unique(y_l), [0.0, 1.0])))
 
     for estimator in config.baselines:
+        if selected is not None and estimator not in selected:
+            continue
         if estimator == "classical":
             result = run_classical_estimator(y_l, alpha)
         elif estimator == "imputation":
@@ -754,6 +774,8 @@ def build_trial_results(
         ("isotonic_calibration_min10", run_isotonic_min10_calibration_estimator),
         ("venn_abers_calibration", run_venn_abers_calibration_estimator),
     ):
+        if selected is not None and estimator not in selected:
+            continue
         if estimator in {"platt_calibration", "venn_abers_calibration"} and not is_binary_outcome:
             continue
         result = runner(y_l, yhat_l, yhat_u, alpha)
@@ -1190,6 +1212,17 @@ def build_argument_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Run a tiny subset of the experiment grid for quick validation.",
     )
+    parser.add_argument(
+        "--estimators",
+        nargs="*",
+        default=None,
+        help="Optional estimator subset to run.",
+    )
+    parser.add_argument(
+        "--main-text-only",
+        action="store_true",
+        help="Run only the estimators and asset generation needed for the main-text benchmark figure.",
+    )
     return parser
 
 
@@ -1197,9 +1230,22 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     parser = build_argument_parser()
     args = parser.parse_args(argv)
 
+    if args.main_text_only and args.estimators is not None:
+        parser.error("Use either --main-text-only or --estimators, not both.")
+
     experiments = selected_experiments(args.datasets)
     args.output_dir.mkdir(parents=True, exist_ok=True)
     args.cache_dir.mkdir(parents=True, exist_ok=True)
+
+    if args.main_text_only:
+        selected_estimators: Optional[Tuple[str, ...]] = tuple(MAIN_TEXT_ESTIMATOR_ORDER)
+    elif args.estimators is None:
+        selected_estimators = None
+    else:
+        unknown = sorted(set(args.estimators) - set(ALL_ESTIMATORS))
+        if unknown:
+            parser.error(f"Unknown estimators: {', '.join(unknown)}")
+        selected_estimators = tuple(args.estimators)
 
     raw_rows: List[Dict[str, float]] = []
     for config in experiments:
@@ -1236,6 +1282,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
                         yhat_total=yhat_total,
                         permutation=permutation,
                         x_total=x_total,
+                        selected_estimators=selected_estimators,
                     )
                 )
 
@@ -1246,6 +1293,9 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
 
     raw_df.to_csv(args.output_dir / "raw_results.csv", index=False)
     summary_df.to_csv(args.output_dir / "summary.csv", index=False)
+    if args.main_text_only:
+        plot_main_text_grid(summary_df, args.output_dir)
+        return
     write_dataset_tables(summary_df, args.output_dir)
     write_paper_summary_table(summary_df, args.output_dir)
     plot_dataset_metric(summary_df, args.output_dir, "mean_bias", "Bias", "bias")

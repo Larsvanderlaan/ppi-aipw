@@ -4,6 +4,7 @@
 __pycache__/
 .pytest_cache/
 .mplconfig/
+.cache/
 build/
 dist/
 *.egg-info/
@@ -28,3 +29,4 @@ paper/*.fls
 paper/*.log
 paper/*.out
 paper/*.toc
+paper/README.html
