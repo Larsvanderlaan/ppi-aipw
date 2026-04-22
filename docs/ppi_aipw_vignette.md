@@ -115,7 +115,7 @@ When you read the plot:
 - the fitted curve is the score-to-outcome map implied by the fitted calibrator
 - the filled raw-score points place each bin's mean outcome at that bin's mean raw score
 - the hollow calibrated-score points place that same bin mean outcome at the corresponding mean calibrated score
-- horizontal movement toward the identity line means recalibration improved the score scale
+- horizontal movement toward the identity line means calibration improved the score scale
 
 ## What The Arguments Mean
 
@@ -213,7 +213,7 @@ When it is a good choice:
 
 Tradeoffs:
 
-- More expressive than score-only linear recalibration when `X` matters.
+- More expressive than score-only linear calibration when `X` matters.
 - Still easy to inspect and explain.
 - Requires `X` and `X_unlabeled` to take advantage of the extra covariate layer.
 
@@ -332,11 +332,11 @@ Tradeoffs:
 What it does:
 
 - Fits a straight-line mapping from predictions to observed outcomes on the labeled sample.
-- Runs AIPW using those recalibrated predictions.
+- Runs AIPW using those calibrated predictions.
 
 When it is a good choice:
 
-- You want the simplest affine recalibration that is still calibrated.
+- You want the simplest affine calibration that is still calibrated.
 - You think the model is mostly right but maybe shifted or stretched.
 - You do not have a huge labeled calibration sample.
 
@@ -376,7 +376,7 @@ When it is a good choice:
 
 - You expect monotone nonlinear miscalibration.
 - You want something smoother than isotonic calibration.
-- You want a middle ground between linear and isotonic recalibration.
+- You want a middle ground between linear and isotonic calibration.
 
 Tradeoffs:
 
@@ -411,11 +411,11 @@ If you are not sure what to use:
 
 1. Start with `method="monotone_spline"`.
 2. Compare against `method="aipw"` as a baseline.
-3. Try `method="linear"` if you want the simplest affine recalibration.
+3. Try `method="linear"` if you want the simplest affine calibration.
 4. Try `method="isotonic"` if you have enough labeled data and suspect nonlinear miscalibration.
 5. Try `method="sigmoid"` when predictions are probability-like or naturally bounded.
 
-In practice, `monotone_spline` is now the package's default first choice for applied ML workflows when a smooth monotone recalibration is plausible.
+In practice, `monotone_spline` is now the package's default first choice for applied ML workflows when a smooth monotone calibration is plausible.
 
 ## Recommended Defaults
 
@@ -432,8 +432,8 @@ Why this is the default recommendation:
 
 When to switch away from the defaults:
 
-- switch to `method="sigmoid"` when your predictions are probability-like, bounded, or naturally interpreted through a smooth sigmoid recalibration
-- switch to `method="monotone_spline"` when you want a smooth monotone nonlinear recalibration instead of a stepwise isotonic curve
+- switch to `method="sigmoid"` when your predictions are probability-like, bounded, or naturally interpreted through a smooth sigmoid calibration
+- switch to `method="monotone_spline"` when you want a smooth monotone nonlinear calibration instead of a stepwise isotonic curve
 - switch to `method="isotonic"` when you believe calibration is monotone but clearly nonlinear, and you have enough labeled data to fit it stably
 - switch to `inference="jackknife"` when you want the recommended resampling-style uncertainty check with moderate extra computation
 - switch to `inference="bootstrap"` when you specifically want percentile bootstrap intervals and can afford the extra computation
@@ -441,10 +441,10 @@ When to switch away from the defaults:
 Short version:
 
 - default: `method="monotone_spline", inference="wald"`
-- simplest affine recalibration: try `method="linear"`
+- simplest affine calibration: try `method="linear"`
 - bounded or probability-like scores: try `method="sigmoid"`
-- smooth monotone nonlinear recalibration: try `method="monotone_spline"`
-- more flexible monotone recalibration: try `method="isotonic"`
+- smooth monotone nonlinear calibration: try `method="monotone_spline"`
+- more flexible monotone calibration: try `method="isotonic"`
 - extra uncertainty robustness check: try `inference="jackknife", jackknife_folds=20`
 
 ## Confidence Intervals
@@ -688,7 +688,7 @@ If you want the shortest possible recommendation:
 
 - call `aipw_mean_pointestimate` and `aipw_mean_ci`
 - start with `method="monotone_spline"`
-- use `method="linear"` when you want the simplest affine recalibration
+- use `method="linear"` when you want the simplest affine calibration
 - turn on `efficiency_maximization=True` when you want the score scale chosen by empirical influence-function variance minimization
 - under `method="auto"`, remember that the full unlabeled sample is reused in
   every fold and any final lambda is learned from cross-fitted predictions

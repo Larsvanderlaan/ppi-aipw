@@ -3,9 +3,9 @@ const methodContent = {
     badge: "Simple",
     title: "Linear calibration before AIPW",
     summary:
-      "Fits a straight-line recalibration map from prediction score to outcome, then runs AIPW on the recalibrated scores.",
+      "Fits a straight-line calibration map from prediction score to outcome, then runs AIPW on the calibrated scores.",
     good: [
-      "Affine recalibration is adequate.",
+      "A linear calibration map is adequate.",
       "Predictions seem useful but shifted or stretched.",
       "The labeled sample is small and more flexible methods may overfit."
     ],
@@ -15,7 +15,7 @@ const methodContent = {
       "Cannot capture strongly nonlinear calibration error."
     ],
     recommendation:
-      "Appropriate when affine recalibration is adequate and a simple calibrated estimator is sufficient.",
+      "Appropriate when a linear calibration map is adequate and a simple calibrated estimator is sufficient.",
     visualNote:
       "A single affine map tilts and shifts the original score before the final AIPW aggregation."
   },
@@ -66,7 +66,7 @@ const methodContent = {
       "Fits a sigmoid-shaped calibration map before AIPW. For nonbinary outcomes, the package rescales outcomes into the observed labeled range, fits the sigmoid map there, and rescales back.",
     good: [
       "Predictions are probability-like or naturally bounded.",
-      "A smooth monotone recalibration is plausible.",
+      "A smooth monotone calibration map is plausible.",
       "Overconfidence or underconfidence appears to have an S-shaped pattern."
     ],
     tradeoffs: [
@@ -75,7 +75,7 @@ const methodContent = {
       "Can underfit if the true calibration curve is not close to sigmoid-shaped."
     ],
     recommendation:
-      "Primarily appropriate for bounded or probability-like scores when a smooth sigmoid recalibration is plausible.",
+      "Primarily appropriate for bounded or probability-like scores when a smooth sigmoid calibration map is plausible.",
     visualNote:
       "A smooth S-shaped map can correct systematic nonlinear distortion by moderating the extremes and expanding the middle of the score range."
   },
@@ -88,7 +88,7 @@ const methodContent = {
       "Smooth monotone calibration is appropriate as a default.",
       "Monotone nonlinear miscalibration is expected.",
       "Smoother behavior than isotonic calibration is preferred.",
-      "A middle ground between linear and isotonic recalibration is useful."
+      "A middle ground between linear and isotonic calibration is useful."
     ],
     tradeoffs: [
   "More flexible than linear calibration and sigmoid calibration.",

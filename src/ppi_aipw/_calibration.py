@@ -480,7 +480,7 @@ def fit_calibrator(
             One of:
 
             - ``"aipw"``: no calibration, just pass predictions through.
-            - ``"linear"``: fit a straight-line recalibration map.
+            - ``"linear"``: fit a straight-line calibration map.
             - ``"sigmoid"``: fit a sigmoid-shaped calibration map.
             - ``"isotonic"``: fit a monotone isotonic calibration map.
             - ``"monotone_spline"``: fit a smooth monotone spline calibration map.

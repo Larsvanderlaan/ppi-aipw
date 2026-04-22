@@ -32,4 +32,4 @@ Interpret the plot as follows:
 - the fitted curve is the score-to-outcome map implied by the fitted calibrator
 - the filled raw-score points place each bin's mean outcome at that bin's mean raw score
 - the open calibrated-score points place that same bin mean outcome at the corresponding mean calibrated score
-- horizontal movement toward the identity line means recalibration improved the score scale
+- horizontal movement toward the identity line means calibration improved the score scale

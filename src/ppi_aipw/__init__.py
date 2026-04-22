@@ -65,7 +65,7 @@ Arguments:
 Rule of thumb:
     Use ``method="monotone_spline"`` as the package default, ``"aipw"`` for
     uncalibrated AIPW on the original score, ``"linear"`` when you want the
-    simplest affine recalibration, ``"prognostic_linear"`` when you want linear
+    simplest affine calibration, ``"prognostic_linear"`` when you want linear
     adjustment on the score plus optional extra covariates, ``"sigmoid"`` when
     predictions are probability-like or bounded scores, and ``"isotonic"`` when
     you want the most flexible monotone calibration curve and have enough

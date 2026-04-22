@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Calibeating Prediction-Powered Inference | ppi_aipw</title>
+    <title>Calibrated Prediction-Powered Inference | ppi_aipw</title>
     <meta
       name="description"
-      content="Calibeating prediction-powered inference with post-hoc calibration, AIPW, and semisupervised uncertainty quantification."
+      content="Semisupervised mean estimation with AIPW, calibration, and uncertainty quantification."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -39,9 +39,9 @@
 
         <div class="hero-grid">
           <section class="hero-copy">
-            <p class="eyebrow">Calibeating Prediction-Powered Inference</p>
+            <p class="eyebrow">Calibrated Prediction-Powered Inference</p>
             <div class="hero-head">
-              <h1>Post-hoc calibration for prediction-powered inference</h1>
+              <h1>Calibrated Prediction-Powered Inference</h1>
               <div class="hero-art">
                 <img
                   src="./assets/ppi-aipw-badge-mark.svg"
@@ -52,19 +52,14 @@
               </div>
             </div>
             <p class="lede">
-              <code>ppi_aipw</code> implements the paper
-              <em>Calibeating Prediction-Powered Inference</em> for the
-              small-labeled, large-unlabeled setting where a fixed black-box
-              score may still be useful even when it is miscalibrated. The
-              package recalibrates that score post hoc, averages the calibrated
-              predictions over the pooled sample, and connects the result back
-              to AIPW in one API.
+              <code>ppi_aipw</code> implements methods for the small-labeled,
+              large-unlabeled setting. It includes AIPW, calibration methods,
+              and uncertainty quantification in one API.
             </p>
             <p class="panel-note">
-              The updated paper framing is simple: predict, calibrate, and
-              average. Calibration improves the score itself rather than only
-              correcting its mean, which is why it can sharpen inference
-              without retraining the original model.
+              A prediction score can still be useful even if it is not
+              perfectly calibrated. Calibration puts the score on the outcome
+              scale before averaging.
             </p>
             <div class="hero-actions">
               <a class="button button-primary" href="#quickstart">Quickstart</a>
@@ -259,8 +254,9 @@ print(result.summary())</code></pre>
                 Here we do not just rank units; we average a prediction score
                 and use it inside AIPW-style estimators. That means
                 miscalibration can directly affect bias correction and
-                efficiency, while recalibration can improve semisupervised mean
-                inference without retraining the original model.
+                efficiency, while post-hoc calibration can improve
+                semisupervised mean inference without retraining the original
+                model.
               </p>
             </article>
           </div>
@@ -415,12 +411,11 @@ print(result.summary())</code></pre>
               Main paper themes reflected here:
             </p>
             <ul>
-              <li>The paper studies post-hoc calibration of a miscalibrated black-box score in semisupervised mean estimation, then averages the calibrated score over the pooled labeled and unlabeled sample.</li>
-              <li>The resulting calibrated plug-in estimator has an exact AIPW interpretation, so calibration improves the score while AIPW supplies the debiased safety net.</li>
-              <li>For isotonic calibration, the paper proves a first-order <em>calibeating</em> guarantee: the fitted isotonic score improves on simpler post-processing rules, and further post-processing does not yield additional first-order gain.</li>
-              <li>The original PPI estimator is a special case of AIPW and can be less efficient because it does not fully use labeled-sample covariate information.</li>
-              <li>In the one-score setting, <code>efficiency_maximization=True</code> for <code>method="aipw"</code> targets the same empirical efficiency-maximization problem as PPI++; linearly calibrated PPI is first-order equivalent to PPI++ and to linear prognostic-score regression adjustment.</li>
-              <li>Monotone spline calibration remains the package default as a smoother monotone alternative to isotonic calibration, while linear calibration stays the simplest affine correction.</li>
+              <li>PPI and PPI++ can be understood within the AIPW, semiparametric-efficiency, and debiased machine learning framework.</li>
+              <li>In the one-score setting, <code>efficiency_maximization=True</code> for <code>method="aipw"</code> targets the same empirical efficiency-maximization problem as PPI++; see Rubin and van der Laan (2008). The official <code>ppi_py</code> implementation of PPI++ may differ in finite samples because it clips the optimized scale to lie in <code>[0,1]</code>. Plain PPI is not implemented because raw-score AIPW is typically at least as efficient.</li>
+              <li>In the one-score setting, AIPW with empirical efficiency maximization (PPI++) is asymptotically equivalent to linear calibration and prognostic-score regression adjustment.</li>
+              <li>Calibration is stronger than mean-bias correction alone and can improve semisupervised inference when the score is miscalibrated. Linear calibration is the less flexible parametric option, while isotonic calibration is a nonparametric calibrator.</li>
+              <li>Monotone spline calibration implements a smoothed version of isotonic calibration and is the package default, while linear calibration remains the simplest affine alternative and isotonic calibration provides a more flexible monotone option when the labeled sample is large enough.</li>
               <li>Jackknife and bootstrap intervals are practical complements to Wald intervals when finite-sample variability matters.</li>
             </ul>
             <p>

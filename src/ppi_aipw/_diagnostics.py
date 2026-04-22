@@ -428,7 +428,7 @@ def plot_calibration(
     calibrator. The filled raw-score points place each bin's mean outcome at
     that bin's mean raw score. The hollow calibrated-score points place the
     same bin mean outcome at the corresponding mean calibrated score, so their
-    horizontal shift shows how recalibration moves the score scale.
+    horizontal shift shows how calibration moves the score scale.
     """
 
     try:
