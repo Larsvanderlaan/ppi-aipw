@@ -342,10 +342,17 @@ def test_reproduce_script_smoke_exports_paper_assets(tmp_path: Path) -> None:
     cache_dir = tmp_path / "cache"
     output_root = tmp_path / "outputs"
     paper_assets = tmp_path / "paper_assets"
+    fake_bin = tmp_path / "bin"
     write_fake_dataset_cache(cache_dir)
+    fake_bin.mkdir()
+
+    fake_latexmk = fake_bin / "latexmk"
+    fake_latexmk.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    fake_latexmk.chmod(0o755)
 
     env = os.environ.copy()
     env["PYTHON_BIN"] = sys.executable
+    env["PATH"] = f"{fake_bin}{os.pathsep}{env['PATH']}"
 
     subprocess.run(
         [

@@ -102,14 +102,7 @@ This motivates post-hoc calibration. Rather than correcting only the marginal bi
 \E\!\left[Y \mid m_n^\star(X)\right] = m_n^\star(X).
 \]
 Post-hoc calibration can improve the regression adjustment, and thus efficiency, without retraining the underlying model. Classical post-processing methods include Platt scaling \citep{platt1999probabilistic}, linear calibration \citep{mincer1969evaluation}, histogram binning \citep{zadrozny2001obtaining}, and isotonic regression \citep{zadrozny2002transforming}. Such methods are especially relevant for modern machine-learning predictors, such as neural networks, which are often informative yet systematically miscalibrated \citep{bella2010calibration,guo2017calibration,wang2023calibration}. Figure~\ref{fig:toy-calibration-ppi} illustrates this mechanism in a simple example: post-hoc calibrating a mis-scaled prediction score improves both predictive accuracy and the efficiency of prediction-powered mean estimation.
-
- \begin{figure*}[htb]
-\centering
-\includegraphics[width=\textwidth]{assets/fig_toy_calibration_ppi.pdf}
-\caption{Toy example illustrating how calibration can improve prediction-powered mean estimation. The example is derived from the MATH slice of a public LLM-evaluation benchmark with binary human correctness labels, using the ArmoRM evaluator's raw margin as the prediction score. The target is the average human correctness \(\psi=\mathbb{E}[Y]\), estimated from a small labeled sample together with many unlabeled evaluator scores. Left: the raw margin contains clear signal about correctness, but it is not on the correct numerical scale. Middle: a one-dimensional Platt calibration fit on 100 labeled examples maps the raw margin to estimated correctness probabilities and reduces held-out squared error by about \(57\%\). Right: in Monte Carlo experiments with \(N=2000\) unlabeled scores, calibrated PPI yields substantially shorter \(90\%\) confidence intervals for \(\psi\) than both labeled-only estimation and raw PPI; the mean interval length is about \(17\%\) smaller at \(n=25\) labeled examples and about \(15\%\) smaller at \(n=50\).}
-\label{fig:toy-calibration-ppi}
-\end{figure*}
-
+ 
 
 
 
@@ -120,7 +113,7 @@ First, in Section~\ref{sec:calppi}, we introduce \emph{calibrated prediction-pow
 
 Second, we show that calibration addresses an important limitation of standard AIPW and PPI estimators: a prediction score may rank observations well while still be poorly aligned with the outcome scale, thereby leaving efficiency gains unrealized. In our setting, post-hoc calibration can improve the score as a regression adjustment, yielding sharper point estimates and confidence intervals, while still leading to a simple plug-in estimator with an exact AIPW representation. More broadly, calibration can make the fitted score first-order optimal against further post-processing within a specified class, both for prediction and for semisupervised estimation. In the spirit of \citet{foster2023calibeating}, we refer to these two improvements as \emph{prediction calibeating} and \emph{functional-estimation calibeating}.
 
-Third, we develop asymptotic theory for linearly calibrated and isotonic-calibrated PPI estimators. For linear calibration, we show that PPI++ is asymptotically equivalent both to linearly calibrated PPI and to linear regression adjustment using \(m(X)\) as a prognostic score. For isotonic calibration, Section~\ref{sec:theory} establishes asymptotic normality, valid inference, and efficiency guarantees. In particular, isotonic-calibrated PPI achieves the smallest asymptotic variance among estimators based on monotone transformations of the original score, and is therefore at least as efficient as AIPW and PPI based on the uncalibrated score. We also show that the fitted isotonic score is asymptotically immune to further monotone post-processing for prediction, and that the resulting estimator is first-order equivalent to the oracle estimator based on the conditional mean of the outcome given the calibrated score.
+Third, we develop asymptotic theory for linearly calibrated and isotonic-calibrated PPI estimators. For linear calibration, we show that PPI++ is asymptotically equivalent both to linearly calibrated PPI and to linear regression adjustment using \(m(X)\) as a prognostic score. For isotonic calibration, Section~\ref{sec:theory} establishes asymptotic normality, valid inference, and efficiency guarantees. In particular, isotonic-calibrated PPI achieves the smallest asymptotic variance among estimators based on monotone transformations of the original score, and is therefore at least as efficient as AIPW and PPI based on the uncalibrated score. We also show that the fitted isotonic score is asymptotically immune to further post-processing for prediction, and that the resulting mean estimator is first-order equivalent to the oracle estimator based on the conditional mean of the outcome given the calibrated score.
 
 Our calibrated PPI framework can be viewed as a semisupervised specialization of the calibrated debiased machine learning framework developed by \citet{van2024automatic}. Our estimators can also be interpreted as targeted minimum loss estimators \citep{van2006targeted,vanderLaanRose2011}, with calibration playing the role of the targeting step.
 
@@ -129,6 +122,18 @@ Section~\ref{sec:setup} reviews the two-sample semisupervised model, the AIPW, P
 \textbf{Code.} The accompanying \texttt{Python} package, reproduction code, and documentation are publicly available at
 \href{https://github.com/Larsvanderlaan/ppi-aipw}{github.com/Larsvanderlaan/ppi-aipw}. An interactive package website with examples and API documentation is available at
 \href{https://larsvanderlaan.github.io/ppi-aipw/}{larsvanderlaan.github.io/ppi-aipw/}. Self-contained code is provided in Appendix~\ref{appendix:code}.
+
+
+
+ \begin{figure*}[h]
+\centering
+\includegraphics[width=\textwidth]{assets/fig_toy_calibration_ppi.pdf}
+\caption{Toy example illustrating how calibration can improve prediction-powered mean estimation. The example is derived from the MATH slice of a public LLM-evaluation benchmark with binary human correctness labels, using the ArmoRM evaluator's raw margin as the prediction score. The target is the average human correctness \(\psi=\mathbb{E}[Y]\), estimated from a small labeled sample together with many unlabeled evaluator scores. Left: the raw margin contains clear signal about correctness, but it is not on the correct numerical scale. Middle: a one-dimensional Platt calibration fit on 100 labeled examples maps the raw margin to estimated correctness probabilities and reduces held-out squared error by about \(57\%\). Right: in Monte Carlo experiments with \(N=2000\) unlabeled scores, calibrated PPI yields substantially shorter \(90\%\) confidence intervals for \(\psi\) than both labeled-only estimation and raw PPI; the mean interval length is about \(17\%\) smaller at \(n=25\) labeled examples and about \(15\%\) smaller at \(n=50\).}
+\label{fig:toy-calibration-ppi}
+\end{figure*}
+
+
+
 
 \subsection{Related work}
 Although PPI has been presented as a recent development, the underlying statistical problem and several closely related estimators lie within a much broader literature on semiparametric debiasing and regression adjustment, including work on missing data, causal inference, and debiased machine learning. In particular, the use of machine-learning predictions to improve efficiency under missing at random outcomes is closely connected to the literature on covariate adjustment in randomized trials and causal inference \citep{moore2009covariate,benkeser2021improving,hojbjerre2025powering}, while power-tuning ideas can be viewed as a form of empirical efficiency maximization \citep{rubin2008empirical}.

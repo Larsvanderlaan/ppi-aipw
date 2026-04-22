@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import sys
+import types
 
 import numpy as np
 import pandas as pd
@@ -386,8 +387,6 @@ def test_configure_offline_hf_runtime_sets_offline_defaults(monkeypatch: pytest.
 
 
 def test_resolve_local_hf_snapshot_path_uses_local_cache(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    import huggingface_hub
-
     snapshot_dir = tmp_path / "snapshot"
     snapshot_dir.mkdir()
 
@@ -396,18 +395,20 @@ def test_resolve_local_hf_snapshot_path_uses_local_cache(monkeypatch: pytest.Mon
         assert local_files_only is True
         return str(snapshot_dir)
 
-    monkeypatch.setattr(huggingface_hub, "snapshot_download", fake_snapshot_download)
+    fake_hf_module = types.ModuleType("huggingface_hub")
+    fake_hf_module.snapshot_download = fake_snapshot_download
+    monkeypatch.setitem(sys.modules, "huggingface_hub", fake_hf_module)
 
     assert resolve_local_hf_snapshot_path("Skywork/Skywork-Reward-V2-Qwen3-4B") == str(snapshot_dir)
 
 
 def test_resolve_local_hf_snapshot_path_raises_when_model_not_cached(monkeypatch: pytest.MonkeyPatch) -> None:
-    import huggingface_hub
-
     def fake_snapshot_download(*, repo_id: str, local_files_only: bool) -> str:
         raise FileNotFoundError(repo_id)
 
-    monkeypatch.setattr(huggingface_hub, "snapshot_download", fake_snapshot_download)
+    fake_hf_module = types.ModuleType("huggingface_hub")
+    fake_hf_module.snapshot_download = fake_snapshot_download
+    monkeypatch.setitem(sys.modules, "huggingface_hub", fake_hf_module)
 
     with pytest.raises(RuntimeError, match="not available in the local Hugging Face cache"):
         resolve_local_hf_snapshot_path("Skywork/Skywork-Reward-V2-Qwen3-4B")
