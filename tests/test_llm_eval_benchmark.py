@@ -23,9 +23,11 @@ from experiments.llm_eval_benchmark import (
     orient_ppe_rows_for_target,
     ppe_target_outcome,
     run_target_experiment,
+    select_llm_main_text_n_values,
     select_top_ppe_models,
     summarize_ppe_rankings,
     top1_regret,
+    write_llm_summary_table,
 )
 from experiments.llm_eval_models import (
     PPE_HUMAN_BENCHMARK,
@@ -274,6 +276,76 @@ def test_summarize_ppe_rankings_includes_top1_regret() -> None:
     assert raw_ranking["top1_regret"].tolist() == pytest.approx([0.2])
     assert macro["top1_regret"].tolist() == pytest.approx([0.2])
     assert macro["top1_accuracy"].tolist() == pytest.approx([0.0])
+
+
+def test_llm_summary_table_uses_main_text_budgets_and_label_savings(tmp_path: Path) -> None:
+    assert select_llm_main_text_n_values([25, 50, 100, 200, 400]) == [100, 400]
+    assert select_llm_main_text_n_values([25, 50]) == [25, 50]
+
+    rows = []
+    for track in ("ppe_human", "ppe_correctness"):
+        for n_labeled in (25, 50, 100, 200, 400):
+            for estimator in (
+                "classical",
+                "ppi",
+                "aipw",
+                "linear_calibration",
+                "auto_calibration",
+                "ppi_plus_plus",
+                "aipw_em",
+                "monotone_spline",
+            ):
+                rows.append(
+                    {
+                        "track": track,
+                        "n_labeled": n_labeled,
+                        "estimator": estimator,
+                        "mse_ratio_vs_ppi": 0.3 + 0.001 * n_labeled,
+                        "rel_eff_vs_ppi": 10.0 + n_labeled,
+                        "rel_eff_vs_labeled_only": 1.0 + n_labeled / 1000.0,
+                        "label_savings": 0.01 + n_labeled / 10000.0,
+                        "coverage": 0.90 + n_labeled / 10000.0,
+                    }
+                )
+    summary_df = pd.DataFrame(rows)
+
+    write_llm_summary_table(summary_df, tmp_path)
+
+    written = pd.read_csv(tmp_path / "table_llm_summary.csv")
+    assert written["n_labeled"].tolist() == [100] * 5 + [400] * 5 + [100] * 5 + [400] * 5
+    assert list(written.columns) == [
+        "track",
+        "n_labeled",
+        "estimator",
+        "mse_ratio_vs_ppi",
+        "label_savings",
+        "coverage",
+    ]
+    assert set(written["estimator"]) == {
+        "classical",
+        "ppi",
+        "aipw",
+        "linear_calibration",
+        "auto_calibration",
+    }
+
+    latex = (tmp_path / "table_llm_summary.tex").read_text(encoding="utf-8")
+    assert "RelEff / PPI" not in latex
+    assert "Label savings" in latex
+
+    appendix_written = pd.read_csv(tmp_path / "table_llm_summary_appendix.csv")
+    assert set(appendix_written["estimator"]) == {
+        "classical",
+        "ppi",
+        "aipw",
+        "ppi_plus_plus",
+        "aipw_em",
+        "linear_calibration",
+        "auto_calibration",
+        "monotone_spline",
+    }
+    appendix_latex = (tmp_path / "table_llm_summary_appendix.tex").read_text(encoding="utf-8")
+    assert "AIPW-EM" in appendix_latex
 
 
 def test_ppe_orientation_flips_score_sign_with_model_order() -> None:

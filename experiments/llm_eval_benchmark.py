@@ -85,6 +85,7 @@ DEFAULT_ALPHA = 0.1
 DEFAULT_REPLICATIONS = 200
 DEFAULT_BUDGETS = (25, 50, 100, 200, 400)
 SMOKE_BUDGETS = (25, 50)
+LLM_MAIN_TEXT_BUDGETS = (100, 400)
 SMOKE_PPE_TARGETS = 2
 PPE_TARGET_MODELS = 8
 SMOKE_PPE_ROWS_PER_TARGET = 256
@@ -101,6 +102,25 @@ MAIN_TEXT_ESTIMATORS = (
     "linear_calibration",
 )
 APPENDIX_ESTIMATORS = (
+    "monotone_spline",
+    "isotonic_calibration_min10",
+    "platt_calibration",
+)
+LLM_MAIN_TABLE_ESTIMATORS = (
+    "classical",
+    "ppi",
+    "aipw",
+    "linear_calibration",
+    "auto_calibration",
+)
+LLM_APPENDIX_TABLE_ESTIMATORS = (
+    "classical",
+    "ppi",
+    "aipw",
+    "ppi_plus_plus",
+    "aipw_em",
+    "linear_calibration",
+    "auto_calibration",
     "monotone_spline",
     "isotonic_calibration_min10",
     "platt_calibration",
@@ -124,6 +144,8 @@ ROOT_OUTPUT_FILENAMES = (
     "fig_llm_ppe_ranking.pdf",
     "table_llm_summary.csv",
     "table_llm_summary.tex",
+    "table_llm_summary_appendix.csv",
+    "table_llm_summary_appendix.tex",
     "table_llm_ppe_ranking.csv",
     "table_llm_ppe_ranking.tex",
 )
@@ -231,6 +253,28 @@ def select_representative_n_values(values: Sequence[object]) -> list[int]:
         unique_values[-1],
     ]
     return list(dict.fromkeys(chosen))
+
+
+def select_llm_main_text_n_values(values: Sequence[object]) -> list[int]:
+    unique_values = sorted({int(value) for value in values})
+    if not unique_values:
+        return []
+    preferred = [value for value in LLM_MAIN_TEXT_BUDGETS if value in unique_values]
+    return preferred or select_representative_n_values(unique_values)
+
+
+def sort_llm_summary_table(frame: pd.DataFrame, estimator_order: Sequence[str]) -> pd.DataFrame:
+    if frame.empty:
+        return frame.copy()
+    order_lookup = {name: idx for idx, name in enumerate(estimator_order)}
+    sorted_frame = frame.copy()
+    sorted_frame["_estimator_order"] = sorted_frame["estimator"].map(
+        lambda name: order_lookup.get(str(name), len(order_lookup))
+    )
+    sorted_frame = sorted_frame.sort_values(["track", "n_labeled", "_estimator_order", "estimator"]).drop(
+        columns="_estimator_order"
+    )
+    return sorted_frame.reset_index(drop=True)
 
 
 def build_rewardbench_unit_ids(frame: pd.DataFrame) -> pd.Series:
@@ -1036,7 +1080,7 @@ def build_legend(order: Sequence[str], available: set[str]) -> tuple[list[Line2D
 def plot_llm_eval_main(summary_df: pd.DataFrame, output_path: Path) -> None:
     metrics = [
         ("mse_ratio_vs_ppi", "MSE / PPI MSE"),
-        ("rel_eff_vs_ppi", "Rel. eff. vs PPI"),
+        ("rel_eff_vs_labeled_only", "Rel. eff. vs labeled-only"),
         ("coverage", "Coverage"),
     ]
     active_tracks = [track for track in TRACK_ORDER if track in set(summary_df["track"].unique())]
@@ -1279,32 +1323,43 @@ def write_ppe_ranking_table(ranking_df: pd.DataFrame, output_dir: Path) -> None:
 def write_llm_summary_table(summary_df: pd.DataFrame, output_dir: Path) -> None:
     selected_rows: list[pd.DataFrame] = []
     for track, frame in summary_df.groupby("track", sort=False):
-        n_values = select_representative_n_values(frame["n_labeled"].unique().tolist())
+        n_values = select_llm_main_text_n_values(frame["n_labeled"].unique().tolist())
         if not n_values:
             continue
         selected_rows.append(frame[frame["n_labeled"].isin(n_values)].copy())
     if selected_rows:
-        table = pd.concat(selected_rows, ignore_index=True)
+        full_table = pd.concat(selected_rows, ignore_index=True)
     else:
-        table = pd.DataFrame(columns=["track", "n_labeled", "estimator", "mse_ratio_vs_ppi", "rel_eff_vs_ppi", "coverage", "label_savings"])
+        full_table = pd.DataFrame(
+            columns=["track", "n_labeled", "estimator", "mse_ratio_vs_ppi", "label_savings", "coverage"]
+        )
 
-    table = table[
+    full_table = full_table[
         [
             "track",
             "n_labeled",
             "estimator",
             "mse_ratio_vs_ppi",
-            "rel_eff_vs_ppi",
-            "coverage",
             "label_savings",
+            "coverage",
         ]
-    ].sort_values(["track", "n_labeled", "estimator"])
+    ]
+    appendix_table = sort_llm_summary_table(
+        full_table[full_table["estimator"].isin(LLM_APPENDIX_TABLE_ESTIMATORS)].copy(),
+        LLM_APPENDIX_TABLE_ESTIMATORS,
+    )
+    table = sort_llm_summary_table(
+        full_table[full_table["estimator"].isin(LLM_MAIN_TABLE_ESTIMATORS)].copy(),
+        LLM_MAIN_TABLE_ESTIMATORS,
+    )
+
     atomic_write_csv(output_dir / "table_llm_summary.csv", table)
+    atomic_write_csv(output_dir / "table_llm_summary_appendix.csv", appendix_table)
 
     latex_lines = [
-        r"\begin{tabular}{lllrccc}",
+        r"\begin{tabular}{lllccc}",
         r"\toprule",
-        r"Track & $n$ & Estimator & MSE / PPI & RelEff / PPI & Coverage & Label savings \\",
+        r"Track & $n$ & Estimator & MSE / PPI & Label savings & Coverage \\",
         r"\midrule",
     ]
     for _, row in table.iterrows():
@@ -1313,12 +1368,29 @@ def write_llm_summary_table(summary_df: pd.DataFrame, output_dir: Path) -> None:
             f"{int(row['n_labeled'])} & "
             f"{latex_escape(ESTIMATOR_LABELS.get(row['estimator'], row['estimator']))} & "
             f"{row['mse_ratio_vs_ppi']:.3f} & "
-            f"{row['rel_eff_vs_ppi']:.3f} & "
-            f"{row['coverage']:.3f} & "
-            f"{row['label_savings']:.3f} \\\\"
+            f"{row['label_savings']:.3f} & "
+            f"{row['coverage']:.3f} \\\\"
         )
     latex_lines.extend([r"\bottomrule", r"\end{tabular}"])
     atomic_write_text(output_dir / "table_llm_summary.tex", "\n".join(latex_lines) + "\n")
+
+    appendix_latex_lines = [
+        r"\begin{tabular}{lllccc}",
+        r"\toprule",
+        r"Track & $n$ & Estimator & MSE / PPI & Label savings & Coverage \\",
+        r"\midrule",
+    ]
+    for _, row in appendix_table.iterrows():
+        appendix_latex_lines.append(
+            f"{latex_escape(TRACK_LABELS.get(row['track'], row['track']))} & "
+            f"{int(row['n_labeled'])} & "
+            f"{latex_escape(ESTIMATOR_LABELS.get(row['estimator'], row['estimator']))} & "
+            f"{row['mse_ratio_vs_ppi']:.3f} & "
+            f"{row['label_savings']:.3f} & "
+            f"{row['coverage']:.3f} \\\\"
+        )
+    appendix_latex_lines.extend([r"\bottomrule", r"\end{tabular}"])
+    atomic_write_text(output_dir / "table_llm_summary_appendix.tex", "\n".join(appendix_latex_lines) + "\n")
 
 
 def write_run_status(

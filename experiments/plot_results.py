@@ -16,7 +16,7 @@ if __package__ in (None, ""):
 
 
 ESTIMATOR_LABELS = {
-    "labeled_only": "Naive",
+    "labeled_only": "Labeled-only",
     "ppi": "PPI",
     "ppi_plus_plus": "PPI++",
     "aipw_em": "AIPW-EM",
@@ -282,7 +282,6 @@ def plot_efficiency_gain(summary: pd.DataFrame, output_path: Path) -> None:
 def plot_simulation_main(summary: pd.DataFrame, output_path: Path) -> None:
     keep = summary[summary["dgp"] == "monotone"].copy()
     ratio_keys = sorted(set(keep["unlabeled_ratio"].unique()).intersection({1, keep["unlabeled_ratio"].max()}))
-    keep["abs_mean_bias"] = keep["mean_bias"].abs()
     ppi_sd = (
         keep[keep["estimator"] == "ppi"][
             ["dgp", "score_quality", "n_labeled", "unlabeled_ratio", "emp_sd"]
@@ -299,12 +298,11 @@ def plot_simulation_main(summary: pd.DataFrame, output_path: Path) -> None:
     row_keys = [("monotone", "poorly_calibrated", ratio) for ratio in ratio_keys]
     estimators = SIMULATION_PAPER_LEGEND_ORDER
     metrics = [
-        ("abs_mean_bias", "Absolute Bias"),
         ("emp_sd", "Empirical SD"),
         ("coverage", "Coverage"),
         ("rel_eff_vs_ppi", "Rel. Eff. vs PPI"),
     ]
-    fig, axes = plt.subplots(len(row_keys), len(metrics), figsize=(16.2, 5.4), sharex=True)
+    fig, axes = plt.subplots(len(row_keys), len(metrics), figsize=(12.4, 5.4), sharex=True)
     if len(row_keys) == 1:
         axes = np.expand_dims(axes, axis=0)
     for row_idx, (dgp, quality, ratio) in enumerate(row_keys):

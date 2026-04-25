@@ -213,22 +213,23 @@ if [[ "$INCLUDE_LLM_BENCHMARK" -eq 1 ]]; then
   fi
 fi
 
-if [[ "$ONLY_LLM_BENCHMARK" -eq 0 ]]; then
+if [[ "$ONLY_LLM_BENCHMARK" -eq 0 && "$SMOKE" -eq 0 ]]; then
   run_cmd cp "$SIM_OUTPUT_DIR/fig_simulation_main.pdf" "$PAPER_ASSETS_DIR/sim_fig_main.pdf"
   run_cmd cp "$REAL_OUTPUT_DIR/fig_paper_main_grid.pdf" "$PAPER_ASSETS_DIR/fig_paper_main_grid.pdf"
 fi
 
-if [[ "$ONLY_LLM_BENCHMARK" -eq 0 && "$MAIN_TEXT_ONLY" -eq 0 ]]; then
+if [[ "$ONLY_LLM_BENCHMARK" -eq 0 && "$MAIN_TEXT_ONLY" -eq 0 && "$SMOKE" -eq 0 ]]; then
   run_cmd cp "$SIM_OUTPUT_DIR/fig_bias_coverage.pdf" "$PAPER_ASSETS_DIR/sim_fig_bias_coverage.pdf"
   run_cmd cp "$REAL_OUTPUT_DIR/fig_paper_metric_grid.pdf" "$PAPER_ASSETS_DIR/fig_paper_metric_grid.pdf"
   run_cmd cp "$REAL_OUTPUT_DIR/table_paper_summary.tex" "$PAPER_ASSETS_DIR/table_paper_summary.tex"
 fi
-if [[ "$INCLUDE_LLM_BENCHMARK" -eq 1 ]]; then
+if [[ "$INCLUDE_LLM_BENCHMARK" -eq 1 && "$SMOKE" -eq 0 ]]; then
   run_cmd cp "$SIM_OUTPUT_DIR/fig_toy_calibration_ppi.pdf" "$PAPER_ASSETS_DIR/fig_toy_calibration_ppi.pdf"
   run_cmd cp "$LLM_OUTPUT_DIR/fig_llm_eval_main.pdf" "$PAPER_ASSETS_DIR/fig_llm_eval_main.pdf"
   run_cmd cp "$LLM_OUTPUT_DIR/fig_llm_eval_by_evaluator.pdf" "$PAPER_ASSETS_DIR/fig_llm_eval_by_evaluator.pdf"
   run_cmd cp "$LLM_OUTPUT_DIR/fig_llm_ppe_ranking.pdf" "$PAPER_ASSETS_DIR/fig_llm_ppe_ranking.pdf"
   run_cmd cp "$LLM_OUTPUT_DIR/table_llm_summary.tex" "$PAPER_ASSETS_DIR/table_llm_summary.tex"
+  run_cmd cp "$LLM_OUTPUT_DIR/table_llm_summary_appendix.tex" "$PAPER_ASSETS_DIR/table_llm_summary_appendix.tex"
   run_cmd cp "$LLM_OUTPUT_DIR/table_llm_ppe_ranking.tex" "$PAPER_ASSETS_DIR/table_llm_ppe_ranking.tex"
 fi
 
@@ -249,12 +250,13 @@ if [[ "$ONLY_LLM_BENCHMARK" -eq 0 && "$MAIN_TEXT_ONLY" -eq 0 ]]; then
   echo "  $PAPER_ASSETS_DIR/fig_paper_metric_grid.pdf"
   echo "  $PAPER_ASSETS_DIR/table_paper_summary.tex"
 fi
-if [[ "$INCLUDE_LLM_BENCHMARK" -eq 1 ]]; then
+if [[ "$INCLUDE_LLM_BENCHMARK" -eq 1 && "$SMOKE" -eq 0 ]]; then
   echo "  $PAPER_ASSETS_DIR/fig_toy_calibration_ppi.pdf"
   echo "  $PAPER_ASSETS_DIR/fig_llm_eval_main.pdf"
   echo "  $PAPER_ASSETS_DIR/fig_llm_eval_by_evaluator.pdf"
   echo "  $PAPER_ASSETS_DIR/fig_llm_ppe_ranking.pdf"
   echo "  $PAPER_ASSETS_DIR/table_llm_summary.tex"
+  echo "  $PAPER_ASSETS_DIR/table_llm_summary_appendix.tex"
   echo "  $PAPER_ASSETS_DIR/table_llm_ppe_ranking.tex"
 fi
 echo "  $ROOT_DIR/paper/main.pdf"
