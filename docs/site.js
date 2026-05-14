@@ -3,7 +3,7 @@ const methodContent = {
     badge: "Simple",
     title: "Linear calibration before AIPW",
     summary:
-      "Fits a straight-line calibration map from prediction score to outcome, then runs AIPW on the calibrated scores.",
+      "Fits a straight-line map from prediction score to outcome, then runs AIPW on the calibrated score.",
     good: [
       "A linear calibration map is adequate.",
       "Predictions seem useful but shifted or stretched.",
@@ -11,8 +11,8 @@ const methodContent = {
     ],
     tradeoffs: [
       "Simple and fast.",
-      "Usually more stable than flexible nonlinear calibration.",
-      "Cannot capture strongly nonlinear calibration error."
+      "Uses few degrees of freedom.",
+      "Cannot capture nonlinear calibration error."
     ],
     recommendation:
       "Appropriate when a linear calibration map is adequate and a simple calibrated estimator is sufficient.",
@@ -23,7 +23,7 @@ const methodContent = {
     badge: "Score + X",
     title: "Prognostic linear adjustment",
     summary:
-      "Uses the prediction score together with optional covariates X in a semisupervised linear adjustment before AIPW. The intercept and score are unpenalized; extra covariates are ridge-regularized with tuning on the labeled sample.",
+      "Uses the prediction score and optional covariates X in a linear adjustment before AIPW. The intercept and score are unpenalized; extra covariates use ridge tuning.",
     good: [
       "Extra covariates X may explain residual outcome variation after conditioning on the score.",
       "Linear calibration with linear covariate adjustment is appropriate.",
@@ -31,8 +31,8 @@ const methodContent = {
     ],
     tradeoffs: [
       "Clear, regression-style interpretation.",
-      "Can improve on score-only linear adjustment when X carries additional prognostic information.",
-      "Adjusting for many covariates can require a larger labeled sample; ridge regularization helps stabilize the fit."
+      "Can help when X carries information not captured by the score.",
+      "Requires enough labeled data to support the extra covariates."
     ],
     recommendation:
       "Appropriate when the score is useful and extra covariates are worth adding in a linear adjustment.",
@@ -43,7 +43,7 @@ const methodContent = {
     badge: "Baseline",
     title: "Raw-score AIPW",
     summary:
-      "Uses the original prediction scores directly and applies AIPW with no calibration layer. Add `efficiency_maximization=True` if you want the package to rescale the predictor to `lambda m(X)` using empirical efficiency maximization.",
+      "Uses the original prediction score directly, with no calibration layer.",
     good: [
       "The original score scale is trusted.",
       "A direct uncalibrated baseline is useful.",
@@ -51,19 +51,19 @@ const methodContent = {
     ],
     tradeoffs: [
       "Simple and stable.",
-      "Best when the original model is already well calibrated.",
-      "Can miss efficiency gains when the score is systematically mis-scaled unless you turn on efficiency maximization."
+      "Appropriate when the original model is already well calibrated.",
+      "Can lose precision when the score is systematically mis-scaled."
     ],
     recommendation:
       "Appropriate for uncalibrated AIPW on the original score, optionally with empirical efficiency rescaling.",
     visualNote:
-      "Raw-score AIPW leaves the score on the identity line. Efficiency maximization adds a global rescaling by lambda."
+      "Raw-score AIPW leaves the score on the identity line. Efficiency maximization adds an optional global rescaling."
   },
   sigmoid: {
     badge: "Bounded scores",
     title: "Sigmoid calibration before AIPW",
     summary:
-      "Fits a sigmoid-shaped calibration map before AIPW. For nonbinary outcomes, the package rescales outcomes into the observed labeled range, fits the sigmoid map there, and rescales back.",
+      "Fits a sigmoid-shaped calibration map before AIPW. For nonbinary outcomes, the package rescales to the labeled outcome range and then rescales back.",
     good: [
       "Predictions are probability-like or naturally bounded.",
       "A smooth monotone calibration map is plausible.",
@@ -83,17 +83,16 @@ const methodContent = {
     badge: "Default",
     title: "Smooth monotone calibration map before AIPW",
     summary:
-      "Fits a smooth monotone spline calibration curve, then plugs the calibrated predictions into the AIPW estimator. This is the package's smooth monotone alternative to a stepwise isotonic fit.",
+      "Fits a smooth monotone spline calibration curve, then plugs the calibrated score into AIPW.",
     good: [
-      "Smooth monotone calibration is appropriate as a default.",
+      "A smooth monotone calibration map is a reasonable default.",
       "Monotone nonlinear miscalibration is expected.",
-      "Smoother behavior than isotonic calibration is preferred.",
       "A middle ground between linear and isotonic calibration is useful."
     ],
     tradeoffs: [
-  "More flexible than linear calibration and sigmoid calibration.",
-  "Produces smoother calibration curves than isotonic calibration.",
-  "Retains much of the flexibility of isotonic calibration while often being more stable when the labeled sample is small."
+      "More flexible than linear or sigmoid calibration.",
+      "Smoother than isotonic calibration.",
+      "Still more complex than a linear map."
     ],
     recommendation:
       "Default smooth monotone calibrator for nonlinear adjustment.",
@@ -104,7 +103,7 @@ const methodContent = {
     badge: "Flexible",
     title: "Isotonic calibration before AIPW",
     summary:
-      "Fits a monotone isotonic calibration curve, then plugs the calibrated predictions into the AIPW estimator. The default backend is a one-round monotone XGBoost calibrator with `min_child_weight=10`; switch to `isocal_backend=\"sklearn\"` if you want scikit-learn isotonic regression instead.",
+      "Fits a monotone isotonic calibration curve, then plugs the calibrated score into AIPW. The default backend is a one-round monotone XGBoost calibrator; `isocal_backend=\"sklearn\"` uses scikit-learn isotonic regression.",
     good: [
       "Monotone but nonlinear miscalibration is expected.",
       "Ordering is trustworthy but the numeric scale is not.",
@@ -112,7 +111,7 @@ const methodContent = {
     ],
     tradeoffs: [
       "Most flexible monotone option in the package.",
-      "Can capture nonlinear score distortions that linear or sigmoid calibration miss.",
+      "Can capture nonlinear scale distortions that simpler maps miss.",
       "Less stable than simpler methods when the labeled sample is very small."
     ],
     recommendation:
@@ -124,7 +123,7 @@ const methodContent = {
     badge: "Adaptive",
     title: "Automatic method selection",
     summary:
-      "Compares a candidate shortlist by cross-validated influence-function variance, then refits the selected method on the full labeled sample before the final estimate. By default the shortlist is `(\"aipw\", \"linear\", \"monotone_spline\", \"isotonic\")`.",
+      "Compares a candidate shortlist by cross-validated variance estimates, then refits the selected method on the full labeled sample. By default the shortlist is `(\"aipw\", \"linear\", \"monotone_spline\", \"isotonic\")`.",
     good: [
       "A small interpretable shortlist is preferred over a fixed method.",
       "Extra compute is acceptable to avoid hand-picking a method.",
@@ -133,12 +132,12 @@ const methodContent = {
     tradeoffs: [
       "More compute than fitting one method directly.",
       "Only chooses among the candidate methods you provide.",
-      "If `\"aipw\"` is in the shortlist, the selector also compares an efficiency-maximized AIPW candidate."
+      "If `\"aipw\"` is in the shortlist, the selector also compares a rescaled AIPW candidate."
     ],
     recommendation:
       "Appropriate for data-adaptive selection across a small candidate set rather than committing to one method up front.",
     visualNote:
-      "Shown as a candidate comparison rather than a single calibration map: the selector scores the shortlisted methods and then refits the winner."
+      "Shown as a candidate comparison: the selector scores the shortlisted methods and refits the winner."
   }
 };
 
@@ -322,15 +321,15 @@ const inferenceContent = {
   jackknife: {
     title: "Jackknife intervals",
     summary:
-      "V-fold delete-a-group intervals that refit calibration after dropping one labeled and one unlabeled fold at a time, then use the jackknife SE in a normal approximation.",
+      "Delete-a-group intervals that refit calibration after dropping labeled and unlabeled folds.",
     best: "Finite-sample checks",
     cost: "Moderate compute",
-    when: "Finite-sample check; it may work better than bootstrap in practice."
+    when: "Useful finite-sample check when refitting is affordable."
   },
   bootstrap: {
     title: "Bootstrap intervals",
     summary:
-      "Percentile bootstrap intervals that treat the prediction model as fixed, resample rows, and refit the calibration step inside each replicate.",
+      "Percentile intervals that resample rows and refit calibration inside each replicate.",
     best: "Classical resampling",
     cost: "Higher compute",
     when: "Classical resampling check with percentile intervals."

@@ -53,16 +53,16 @@
             <p class="eyebrow">Theory</p>
             <h1>Theory for Calibrated Prediction-Powered Inference.</h1>
             <p class="lede">
-              In the small-labeled, large-unlabeled setting, a prediction score
-              can improve precision, but it should stay anchored to the
-              observed outcomes. AIPW averages that score and then adds a
-              labeled-sample correction, so the estimator can borrow strength
-              from the score without fully trusting it.
+              Prediction scores can improve precision in semisupervised mean
+              inference when their scale is handled carefully. AIPW averages the
+              score over labeled and unlabeled covariates, then adds a residual
+              correction from the labeled outcomes. Calibration improves the
+              score before this step by putting it closer to the outcome scale.
             </p>
             <p class="panel-note">
-              Here <code>score</code> means the model output you plug into the
-              estimator. It can still be useful before calibration puts it on
-              the right outcome scale.
+              Here <code>score</code> means the model output used as \(f(X)\).
+              It may be raw, calibrated, or otherwise learned from the labeled
+              data.
             </p>
             <div class="hero-actions">
               <a class="button button-primary" href="./index.html#quickstart">Quickstart</a>
@@ -85,8 +85,8 @@
                 </div>
               </div>
               <p class="panel-note">
-                The score drives efficiency. The labeled correction keeps the
-                estimator anchored to observed outcomes.
+                Score choice affects efficiency. The labeled correction uses
+                the observed outcomes.
               </p>
             </div>
             <div class="panel-card code-card">
@@ -169,8 +169,8 @@
             <span class="diagram-kicker">Schematic 1</span>
             <h3>Pooled score average plus labeled residual correction</h3>
             <p>
-              The unlabeled sample contributes scale and precision. The labeled
-              sample tells you how much to correct.
+              The unlabeled sample contributes covariate information. The
+              labeled sample determines the residual correction.
             </p>
             <svg
               class="theory-diagram"
@@ -202,8 +202,8 @@
               <text class="diagram-text-small" x="346" y="252">repairs systematic score error</text>
             </svg>
             <p class="diagram-caption">
-              A useful score helps the pooled plug-in term, and the correction
-              term keeps the estimate tied to observed outcomes.
+              The pooled score average uses all covariates; the correction term
+              uses labeled residuals.
             </p>
           </div>
         </section>
@@ -230,11 +230,11 @@
               </p>
             </article>
             <article class="argument-card">
-              <h3>Better scores improve efficiency</h3>
+              <h3>Score choice affects efficiency</h3>
               <p>
-                If the score is closer to the true outcome regression
-                \(\mu_0(X)=E_0[Y \mid X]\), then the residual correction is
-                smaller and the final estimator is typically more efficient.
+                Scores closer to the outcome regression
+                \(\mu_0(X)=E_0[Y \mid X]\) make the residuals \(Y-f(X)\)
+                smaller on average. The correction then adds less noise.
               </p>
             </article>
           </div>
@@ -242,8 +242,8 @@
           <div class="equation-card">
             <p class="panel-label">Efficiency Target</p>
             <p class="equation-note">
-              Up to a centering constant, the large-sample variance is
-              minimized by choosing \(f\) to make \(E_0[(Y-f(X))^2]\) small.
+              In large samples, smaller \(E_0[(Y-f(X))^2]\) means a
+              lower-variance AIPW estimator.
             </p>
           </div>
         </section>
@@ -326,10 +326,10 @@
             <article class="argument-card">
               <h3>Empirical efficiency maximization</h3>
               <p>
-                This is the broader principle: choose the score inside AIPW to
-                make the estimator as efficient as possible. PPI++ is the
-                one-score special case that only searches over scaled versions
-                of \(m(X)\).
+                Empirical efficiency maximization chooses \(f\) from a
+                candidate class by minimizing an estimated variance for the
+                final estimator. PPI++ is the one-dimensional case
+                \(f(X)=\lambda m(X)\).
               </p>
             </article>
           </div>
@@ -385,9 +385,8 @@
               <text class="diagram-text-small" x="778" y="264">Flexible calibration</text>
             </svg>
             <p class="diagram-caption">
-              Standard AIPW uses the raw score. PPI is the inefficient
-              unlabeled-only variant. PPI++ searches over scaled versions of
-              that score.
+              Standard AIPW uses the raw score. PPI uses the unlabeled-only
+              plug-in form. PPI++ searches over scaled versions of the score.
             </p>
           </div>
         </section>
@@ -396,7 +395,7 @@
           <div class="section-heading split">
             <div>
               <p class="eyebrow">Calibration</p>
-              <h2>Why calibration helps</h2>
+              <h2>Why calibration improves inference</h2>
             </div>
             <p class="section-side-note">
               Ranking helps, but the scale matters too because we average the score.
@@ -405,30 +404,31 @@
 
           <div class="argument-grid">
             <article class="argument-card">
-              <h3>Calibration improves the score</h3>
+              <h3>Calibration corrects scale</h3>
               <p>
-                A score can rank well and still be on the wrong scale.
-                Calibration makes it more faithful to the outcome scale.
+                A score can rank units well while remaining miscalibrated as a
+                numerical predictor. Calibration estimates a map from score
+                values to outcome values.
               </p>
             </article>
             <article class="argument-card">
-              <h3>Mean calibration validates the plug-in view</h3>
+              <h3>Mean calibration gives a plug-in interpretation</h3>
               <p>
-                If the calibrated score has the right average on labeled rows,
-                then averaging it targets the right mean.
+                If the calibrated score satisfies \(E_0[Y-f(X)]=0\), then its
+                population average equals the target mean.
               </p>
             </article>
             <article class="argument-card">
-              <h3>AIPW keeps the safety layer</h3>
+              <h3>AIPW keeps the residual correction</h3>
               <p>
-                Calibration improves the score, and the labeled residual
-                correction guards against remaining error.
+                When calibration is approximate or evaluated out of sample, the
+                residual correction accounts for remaining average error.
               </p>
             </article>
           </div>
 
           <div class="equation-card">
-            <p class="panel-label">Why Mean Calibration Is Enough</p>
+            <p class="panel-label">Mean Calibration and the Plug-in Mean</p>
             <p class="equation-note">
               Write the target mean as \(\theta_0 = E_0[Y]\). If the
               calibrated score satisfies
@@ -447,20 +447,15 @@ E_0[f(X)] = E_0[Y] = \theta_0.
 \]
             </div>
             <p class="equation-note">
-              So the pooled plug-in mean targets the right estimand. For many
-              calibrated methods, the extra correction term
-              \(\frac{1}{n}\sum_{i=1}^{n}\{Y_i-f(X_i)\}\) is exactly zero, or
-              numerically very close to zero, on the sample used to fit the
-              calibration. In those cases the plug-in and AIPW forms are
-              effectively the same. When calibration is only approximate or
-              fitting and evaluation are separated, the correction need not
-              vanish and remains a safety layer.
+              Thus the pooled plug-in mean has the correct population target.
+              If the sample calibration is exact, the residual correction is
+              zero on that sample; otherwise AIPW keeps the correction term.
             </p>
           </div>
 
           <div class="theory-visual">
             <span class="diagram-kicker">Schematic 3</span>
-            <h3>From a mis-scaled score to a better score</h3>
+            <h3>From a mis-scaled score to a calibrated score</h3>
             <p>
               Calibration changes the score that the estimator averages.
             </p>
@@ -498,12 +493,12 @@ E_0[f(X)] = E_0[Y] = \theta_0.
               <text class="diagram-text-small" x="456" y="248">calibrated score</text>
               <text class="diagram-text-small" x="594" y="86">ideal fit</text>
 
-              <text class="diagram-text diagram-text-strong" x="760" y="142">Better efficiency</text>
+              <text class="diagram-text diagram-text-strong" x="760" y="142">Precision gain</text>
               <text class="diagram-text-small" x="760" y="168">mean-calibrated score</text>
             </svg>
             <p class="diagram-caption">
-              Once the score is mean-calibrated, the plug-in and AIPW views
-              agree.
+              Mean calibration makes the plug-in and AIPW views agree on the
+              target.
             </p>
           </div>
         </section>
@@ -512,11 +507,11 @@ E_0[f(X)] = E_0[Y] = \theta_0.
           <div class="section-heading split">
             <div>
               <p class="eyebrow">Flexible Learning</p>
-              <h2>Flexible learning is allowed, but not free</h2>
+              <h2>Flexible learning has a tradeoff</h2>
             </div>
             <p class="section-side-note">
-              Better prediction can help, but small labeled samples still limit
-              how much complexity is worth using.
+              More flexible scores can help, but the labeled sample limits how
+              much complexity is useful.
             </p>
           </div>
 
@@ -524,68 +519,32 @@ E_0[f(X)] = E_0[Y] = \theta_0.
             <article class="argument-card">
               <h3>Use flexibility when it helps</h3>
               <p>
-                The score \(f(X)\) can be learned with modern machine
-                learning if that gives a better approximation to
-                \(\mu_0(X)\). Better approximation usually means better
-                efficiency.
+                Flexible methods can estimate \(f(X)\) when the labeled sample
+                supports them. The gain comes from fitting the outcome
+                regression more closely.
               </p>
             </article>
             <article class="argument-card">
               <h3>There is still a bias-variance tradeoff</h3>
               <p>
-                In small labeled samples, aggressive machine learning can
-                reduce bias but increase variance. That can lead to worse
-                finite-sample performance even when the method is valid.
+                In small labeled samples, highly flexible fitting can fit
+                the regression better but add variance. That tradeoff can
+                worsen finite-sample performance even when the method is valid.
               </p>
             </article>
             <article class="argument-card">
               <h3>Cross-fitting helps with validity</h3>
               <p>
-                If the labeled-sample fitting is very aggressive, cross-fitting
-                avoids overusing the same labels and is the usual safeguard for
-                inference.
+                With highly flexible labeled-sample fitting, cross-fitting
+                helps avoid using the same labels to learn and evaluate the
+                score.
               </p>
             </article>
           </div>
 
           <div class="theory-note">
-            When the labeled sample is small, simpler scores are often the
-            better starting point; add flexibility only when it clearly helps
-            prediction.
-          </div>
-        </section>
-
-        <section class="section" id="takeaway">
-          <div class="section-heading split">
-            <div>
-              <p class="eyebrow">Takeaway</p>
-              <h2>What this means in practice</h2>
-            </div>
-            <p class="section-side-note">
-              Think of the estimator as a careful wrapper around a score you
-              are trying to improve.
-            </p>
-          </div>
-
-          <div class="takeaway-grid">
-            <article class="takeaway-card">
-              <h3>Main idea</h3>
-              <ul>
-                <li>AIPW is the wrapper.</li>
-                <li>\(f(X)\) is the efficiency lever.</li>
-                <li>Calibration is one way to improve that lever.</li>
-                <li>PPI and PPI++ are specific choices within this broader workflow.</li>
-              </ul>
-            </article>
-            <article class="takeaway-card">
-              <h3>Next step</h3>
-              <p>
-                If you want the API details, head back to the
-                <a href="./index.html#quickstart">Python quickstart</a> or the
-                <a href="./r.html">R package page</a>. If you want the formal
-                development, open the <a href="./paper.pdf">paper PDF</a>.
-              </p>
-            </article>
+            When labels are scarce, start simple; add flexibility only when it
+            improves prediction enough to be worth the extra variance.
           </div>
         </section>
 

@@ -53,14 +53,13 @@
             </div>
             <p class="lede">
               <code>ppi_aipw</code> implements methods for semisupervised mean
-              inference in the small-labeled, large-unlabeled setting. It
-              includes AIPW, calibration methods, and uncertainty quantification
-              in one API.
+              inference with few labeled outcomes and many unlabeled
+              predictions. It combines AIPW, calibration, and uncertainty
+              quantification in one API.
             </p>
             <p class="panel-note">
-              A prediction score can still be useful even if it is not
-              perfectly calibrated. Calibration puts the score on the outcome
-              scale before averaging.
+              Calibration puts the prediction score on the outcome scale before
+              the semisupervised mean step.
             </p>
             <div class="hero-actions">
               <a class="button button-primary" href="#quickstart">Quickstart</a>
@@ -120,9 +119,9 @@ print(result.summary())</code></pre>
               <h2>Install from PyPI, GitHub, or locally</h2>
             </div>
             <p class="section-side-note">
-              PyPI for the package release, GitHub for the latest version, or a
-              local editable install for development. If you want the native R
-              package instead, head to the <a href="./r.html">R package page</a>.
+              Use PyPI for the release, GitHub for the current source, or an
+              editable install for local development. The native R package has a
+              separate <a href="./r.html">R page</a>.
             </p>
           </div>
 
@@ -148,26 +147,24 @@ print(result.summary())</code></pre>
             <h2>Core inputs and defaults</h2>
               <p>
                 <code>mean_inference(...)</code> is the main entry point. It
-                returns the point estimate, standard error, confidence
-                interval, fitted calibrator, and diagnostics in one call.
+                returns the point estimate, standard error, confidence interval,
+                fitted calibrator, and diagnostics.
               </p>
               <p>
-                Prefer a runnable walkthrough? The
+                For a runnable example, the
                 <a href="https://colab.research.google.com/github/Larsvanderlaan/ppi-aipw/blob/main/examples/ppi_aipw_quickstart.ipynb">quickstart notebook opens directly in Colab</a>
-                installs <code>ppi-aipw</code> automatically and covers both the mean API and the causal API in one compact example.
+                and covers both the mean and causal APIs.
               </p>
               <p>
                 For data-adaptive selection, set <code>method="auto"</code> and
                 pass <code>candidate_methods=("aipw", "linear", "monotone_spline", "isotonic")</code>.
-                By default, selection uses <code>num_folds=100</code>.
+                Selection uses <code>num_folds=100</code> by default, capped at
+                the labeled sample size.
               </p>
               <p>
-                For a quick human-readable Wald summary, use
-                <code>result.summary()</code>. If you want an optional honest
-                out-of-fold calibration check after fitting, use
-                <code>calibration_diagnostics(result, Y, Yhat)</code>, and
-                optionally <code>plot_calibration(...)</code> if
-                <code>matplotlib</code> is installed.
+                Use <code>result.summary()</code> for a compact Wald summary.
+                Use <code>calibration_diagnostics(result, Y, Yhat)</code> for
+                an optional out-of-fold calibration check.
               </p>
             </div>
 
@@ -177,9 +174,7 @@ print(result.summary())</code></pre>
               <p>
                 <code>mean_inference(...)</code> returns a result object with
                 <code>pointestimate</code>, <code>se</code>, <code>ci</code>,
-                <code>diagnostics</code>, and
-                <code>result.summary()</code> for a quick human-readable Wald
-                summary.
+                <code>diagnostics</code>, and <code>result.summary()</code>.
               </p>
             </article>
             <article class="argument-card">
@@ -200,7 +195,7 @@ print(result.summary())</code></pre>
             </article>
             <article class="argument-card">
               <h3><code>candidate_methods</code></h3>
-              <p>Candidate methods considered when <code>method="auto"</code> minimizes cross-validated influence-function variance. If <code>"aipw"</code> is included, the selector also compares an efficiency-maximized AIPW candidate.</p>
+              <p>Candidate methods considered when <code>method="auto"</code> minimizes a cross-validated variance estimate. If <code>"aipw"</code> is included, the selector also compares a rescaled AIPW candidate.</p>
             </article>
             <article class="argument-card">
               <h3><code>num_folds</code></h3>
@@ -208,19 +203,19 @@ print(result.summary())</code></pre>
             </article>
             <article class="argument-card">
               <h3><code>inference</code></h3>
-              <p>Choose <code>"wald"</code> for a fast analytic interval, <code>"jackknife"</code> for the recommended resampling-style normal interval, or <code>"bootstrap"</code> for percentile bootstrap intervals.</p>
+              <p>Choose <code>"wald"</code> for a fast analytic interval, <code>"jackknife"</code> for a fold-resampling normal interval, or <code>"bootstrap"</code> for percentile bootstrap intervals.</p>
             </article>
             <article class="argument-card">
               <h3><code>efficiency_maximization</code></h3>
-              <p>Optional rescaling to <code>lambda m(X)</code>, where <code>m(X)</code> is the raw prediction score for <code>method="aipw"</code> and the calibrated score otherwise. The scaling factor <code>lambda</code> is chosen by empirical efficiency maximization.</p>
+              <p>Optional rescaling to <code>lambda m(X)</code>. For <code>method="aipw"</code>, <code>m(X)</code> is the raw score; otherwise it is the calibrated score.</p>
             </article>
             <article class="argument-card">
               <h3><code>w</code>, <code>w_unlabeled</code></h3>
-              <p>Optional observation weights for labeled and unlabeled samples. These can be inverse probability of missingness weights to adjust for informative missingness, or balancing weights if you want to reweight toward a covariate-adjusted target population. Uniform weights reproduce the unweighted behavior.</p>
+              <p>Optional observation weights for labeled and unlabeled samples. Uniform weights reproduce the unweighted estimator.</p>
             </article>
             <article class="argument-card">
               <h3><code>X</code>, <code>X_unlabeled</code></h3>
-              <p>Optional extra covariates used by <code>method="prognostic_linear"</code>. The score and intercept stay unpenalized, while the extra covariates get ridge tuning on the labeled sample.</p>
+              <p>Optional extra covariates for <code>method="prognostic_linear"</code>. The score and intercept are unpenalized; extra covariates use ridge tuning on the labeled sample.</p>
             </article>
           </div>
         </section>
@@ -229,7 +224,7 @@ print(result.summary())</code></pre>
           <div class="section-heading split">
             <div>
               <p class="eyebrow">Calibration</p>
-              <h2>What calibration is, and why we care</h2>
+              <h2>What calibration changes</h2>
             </div>
             <p class="section-side-note">
               Calibration is about getting the prediction scale right, not just
@@ -239,25 +234,21 @@ print(result.summary())</code></pre>
 
           <div class="argument-grid">
             <article class="argument-card">
-              <h3>From The ML Perspective</h3>
+              <h3>ML view</h3>
               <p>
-                A prediction score is calibrated when its numeric values mean
-                what they say. If a model outputs values near <code>0.8</code>,
-                we want outcomes near <code>0.8</code> on average for examples
-                scored around <code>0.8</code>. A model output can still be
-                useful before calibration; calibration fixes the scale rather
-                than deciding whether the model helps at all.
+                A calibrated score has the right numeric scale: examples scored
+                near <code>0.8</code> have outcomes near <code>0.8</code> on
+                average. That scale correction can make a useful predictor more
+                accurate without retraining the original model.
               </p>
             </article>
             <article class="argument-card">
-              <h3>From The Inference Perspective</h3>
+              <h3>Inference view</h3>
               <p>
-                Here we do not just rank units; we average a prediction score
-                and use it inside AIPW-style estimators. That means
-                miscalibration can directly affect bias correction and
-                efficiency, while post-hoc calibration can improve
-                semisupervised mean inference without retraining the original
-                model.
+                AIPW averages the score and then corrects it on labeled rows.
+                When calibration moves the score closer to the outcome
+                regression, the correction term is smaller on average, which
+                can improve precision.
               </p>
             </article>
           </div>
@@ -391,7 +382,7 @@ print(result.summary())</code></pre>
             <p class="eyebrow">References</p>
             <h2>Selected References</h2>
             <p>
-              The calibration methods implemented here can be viewed as special cases of
+              The calibration methods here can be viewed as special cases of
               <a href="https://arxiv.org/pdf/2411.02771">calibrated debiased machine learning</a>
               and
               <a href="https://doi.org/10.2202/1557-4679.1043">targeted minimum loss estimation</a>.
@@ -412,12 +403,11 @@ print(result.summary())</code></pre>
               Main paper themes reflected here:
             </p>
             <ul>
-              <li>PPI and PPI++ can be understood within the AIPW, semiparametric-efficiency, and debiased machine learning framework.</li>
-              <li>In the one-score setting, <code>efficiency_maximization=True</code> for <code>method="aipw"</code> targets the same empirical efficiency-maximization problem as PPI++; see Rubin and van der Laan (2008). The official <code>ppi_py</code> implementation of PPI++ may differ in finite samples because it clips the optimized scale to lie in <code>[0,1]</code>. Plain PPI is not implemented because raw-score AIPW is typically at least as efficient.</li>
-              <li>In the one-score setting, AIPW with empirical efficiency maximization (PPI++) is asymptotically equivalent to linear calibration and prognostic-score regression adjustment.</li>
-              <li>Calibration is stronger than mean-bias correction alone and can improve semisupervised inference when the score is miscalibrated. Linear calibration is the less flexible parametric option, while isotonic calibration is a nonparametric calibrator.</li>
-              <li>Monotone spline calibration implements a smoothed version of isotonic calibration and is the package default, while linear calibration remains the simplest affine alternative and isotonic calibration provides a more flexible monotone option when the labeled sample is large enough.</li>
-              <li>Jackknife and bootstrap intervals are practical complements to Wald intervals when finite-sample variability matters.</li>
+              <li>PPI and PPI++ fit inside the AIPW and debiased machine learning framework.</li>
+              <li>In the one-score setting, efficiency maximization, PPI++, linear calibration, and prognostic-score adjustment are closely related.</li>
+              <li>Calibration can improve semisupervised inference when the score is useful but miscalibrated.</li>
+              <li>Monotone spline calibration is the default smooth monotone option; linear and isotonic calibration give simpler and more flexible alternatives.</li>
+              <li>Jackknife and bootstrap intervals complement Wald intervals when finite-sample variability matters.</li>
             </ul>
             <p>
               Calibration references:
