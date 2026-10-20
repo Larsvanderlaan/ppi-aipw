@@ -534,30 +534,8 @@ The resulting estimator averages the calibrated predictions over the labeled and
 \sum_{j=1}^N m_{n,\mathrm{lin}}^\star(\widetilde X_j)
 \right\}.
 \end{equation}
-Linear calibration is practically appealing, as it ensures that the empirical mean squared error of the prediction score cannot be improved by a shift or rescaling. That is, \(m_{n,\mathrm{lin}}^\star(X)\) is empirically calibrated over the class of affine transformations. This yields a family of AIPW representations. 
- 
+Linear calibration is practically appealing, as it ensures that the empirical mean squared error of the prediction score cannot be improved by a shift or rescaling. That is, \(m_{n,\mathrm{lin}}^\star(X)\) is empirically calibrated over the class of affine transformations.
 
- 
-\begin{proposition}[Linear calibration as AIPW]
-\label{prop:linear}
-The normal equations for \cref{eq:linear-cal} imply
-\[
-\Pl\{Y-m_{n,\mathrm{lin}}^\star(X)\}=0
-\qquad\text{and}\qquad
-\Pl\bigl[m_{n,\mathrm{lin}}^\star(X)\{Y-m_{n,\mathrm{lin}}^\star(X)\}\bigr]=0.
-\]
-Hence, for any \(\hat w(X)=a+b\,m_{n,\mathrm{lin}}^\star(X)\),
-\begin{equation}
-\label{eq:linear-ppi}
-\widehat{\psi}_{\mathrm{lin}}
-=
-\rhon \Pl\{m_{n,\mathrm{lin}}^\star(X)\}
-+(1-\rhon)\Pu\{m_{n,\mathrm{lin}}^\star(\widetilde X)\}
-+
-\Pl\bigl[\hat w(X)\{Y-m_{n,\mathrm{lin}}^\star(X)\}\bigr].
-\end{equation}
-\end{proposition}
- 
 One can also extend the linear calibration step by including additional covariates in the regression adjustment when enough labeled data are available; see Algorithm~\ref{alg:linearppi}.
 
 The next result connects linear calibration to PPI++, a closely related estimator obtained by rescaling the original score via empirical efficiency maximization. In the mean-estimation setting, the two methods are first-order equivalent, though they need not coincide exactly in finite samples. The reason is that both target the same one-dimensional regression adjustment: the optimal population rescaling of \(m(X)\) by the slope \(\lambda_0\) in \eqref{opt:scale}, namely, the coefficient from the population linear regression of \(Y\) on \(m(X)\). This equivalence, however, relies on optimizing over all \(\lambda \in \mathbb{R}\). If \(\lambda\) is instead constrained to lie in \([0,(1-\rho_n)^{-1}]\), as appears to be the case in the official \texttt{ppi\_py} implementation, then the equivalence need not hold. Our experiments also suggest that this restriction can reduce performance.
@@ -1704,32 +1682,6 @@ The orthogonality claim \cref{eq:orth} is exactly the conclusion of Lemma~\ref{l
 \]
 where \(\hat f_{\mathrm{id}}(t)=t\).
 \end{proof}
-
-\begin{proof}[Proof of \cref{prop:linear}]
-The normal equations for \cref{eq:linear-cal} are
-\[
-\Pl\{Y-m_{n,\mathrm{lin}}^\star(X)\}=0
-\qquad\text{and}\qquad
-\Pl\bigl[\mhat(X)\{Y-m_{n,\mathrm{lin}}^\star(X)\}\bigr]=0.
-\]
-Because \(m_{n,\mathrm{lin}}^\star(X)=\hat a_{\mathrm{lin}}\mhat(X)+\hat b_{\mathrm{lin}}\), these imply
-\[
-\Pl\bigl[m_{n,\mathrm{lin}}^\star(X)\{Y-m_{n,\mathrm{lin}}^\star(X)\}\bigr]=0.
-\]
-Hence, for any \(\hat w(X)=a+b\,m_{n,\mathrm{lin}}^\star(X)\),
-\[
-\Pl\bigl[\hat w(X)\{Y-m_{n,\mathrm{lin}}^\star(X)\}\bigr]
-=
-a\,\Pl\{Y-m_{n,\mathrm{lin}}^\star(X)\}
-+
-b\,\Pl\bigl[m_{n,\mathrm{lin}}^\star(X)\{Y-m_{n,\mathrm{lin}}^\star(X)\}\bigr]
-=
-0.
-\]
-Adding this zero term to \cref{eq:linear-plugin} yields \cref{eq:linear-ppi}.
-\end{proof}
-
-
 
 \section{Proofs of first-order equivalence between PPI++ and linear calibration}
 \label{sec:ppi++}
