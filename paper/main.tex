@@ -419,35 +419,6 @@ Because \(\mathcal F\) is linear, this is equivalent to the orthogonality condit
 \qquad
 \text{for all } f\in\mathcal F.
 \end{equation}
-As we show next, empirical calibration yields not only the exact AIPW representation in \eqref{eqn::aipwcal}, but also a first-order equivalence to an oracle AIPW estimator based on the best population transformation of the fitted score within \(\mathcal F\).
-
-\begin{theorem}[Representation relative to the population-optimal transformation]
-\label{thm:repr}
-Let \(m_n^\star\) satisfy \eqref{eq:cal-score} over a linear class \(\mathcal F\) containing the constant functions. Define
-\[
-m_{0,\mathcal F}^\dagger := f_{0,\mathcal F}\circ m_n^\star, \qquad
-f_{0,\mathcal F}\in \arg\min_{f\in\mathcal F}
-\E_{P_0}\!\left[(Y-f(m_n^\star(X)))^2\right].
-\]
-Then
-\begin{align*}
-\psihat
-&=
-\rhon \Pl\{m_{0,\mathcal F}^\dagger(X)\}
-+ (1-\rhon)\Pu\{m_{0,\mathcal F}^\dagger(\widetilde X)\}
-+ \Pl\{Y-m_{0,\mathcal F}^\dagger(X)\} \\
-&\qquad
-+ (1-\rhon)(\Pu-\Pl)\{m_n^\star-m_{0,\mathcal F}^\dagger\}.
-\end{align*}
-\end{theorem}
-
-Theorem~\ref{thm:repr} is the key structural result. It shows that \(\psihat\) differs from the AIPW estimator based on \(m_{0,\mathcal F}^\dagger\), the population-optimal transformation of \(m_n^\star\) within \(\mathcal F\), only through the remainder
-\[
-(1-\rhon)(\Pu-\Pl)\{m_n^\star-m_{0,\mathcal F}^\dagger\}.
-\]
-If \(m_n^\star\) is close to \(m_{0,\mathcal F}^\dagger\) in mean squared error, this term is higher order, so \(\psihat\) and the oracle AIPW estimator have the same first-order asymptotic behavior. In this sense, empirical calibration makes the fitted score behave as though it had already been optimally transformed within \(\mathcal F\). It also yields a balancing-weights representation of the form \(\Pl\{\hat w_{\mathrm{bal}}(X)Y\}\); see Appendix~\ref{app:repr}. We make this precise for isotonic calibration in Section~\ref{sec:theory}.
-
-
 \textbf{Why calibration can improve efficiency.}
 Calibration can improve efficiency by improving the regression adjustment in the exact AIPW representation \eqref{eqn::aipwcal}. If \(f_n\) converges to a population minimizer \(g_0\in\mathcal H\), then the post-processed score \(\mtilde=f_n\circ m\) typically converges to
 \[
@@ -1292,7 +1263,7 @@ Because
 =
 \mathbb P_{n,a}\{Y-m_{n,a}^\star(X)\},
 \]
-the residual correction vanishes exactly whenever the calibrator includes the constant score and therefore enforces mean calibration within arm \(a\). This is the randomized-trial analogue of the exact augmented representation in \cref{thm:repr}.
+the residual correction vanishes exactly whenever the calibrator includes the constant score and therefore enforces mean calibration within arm \(a\). This is the randomized-trial analogue of the exact augmented representation in \eqref{eqn::aipwcal}.
 
 
 The average treatment effect is then estimated by
@@ -1596,59 +1567,24 @@ because \(R=1\) on labeled observations and \(R=0\) on unlabeled observations. A
 
 
 
-\section{Proof of Theorem \ref{thm:repr}}
+\section{AIPW comparison and balancing representations}
 \label{app:repr}
 
-\begin{proof}[Proof of Theorem \ref{thm:repr}]
-Taking \(f\equiv 1\) in \eqref{eq:cal-score} gives
+\begin{lemma}[AIPW comparison identity]
+\label{lem:aipw-comparison}
+Suppose \(\Pl\{Y-m_n^\star(X)\}=0\).
+Then, for any comparison score \(g\) for which the empirical averages are finite,
 \[
-\Pl\!\left\{Y-m_n^\star(X)\right\}=0.
-\]
-Hence, by the exact AIPW representation established in \eqref{eqn::aipwcal},
-\begin{equation}
-\label{eq:repr-pop-proof-start}
 \psihat
 =
-\rhon \Pl\!\left\{m_n^\star(X)\right\}
-+ (1-\rhon)\Pu\!\left\{m_n^\star(\widetilde X)\right\}
-+ \Pl\!\left\{Y-m_n^\star(X)\right\}.
-\end{equation}
+\widehat\psi(g)
++(1-\rhon)(\Pu-\Pl)(m_n^\star-g).
+\]
+\end{lemma}
 
-Now add and subtract \(m_{0,\mathcal F}^\dagger\) inside each empirical mean:
-\begin{align*}
-\psihat
-&=
-\rhon \Pl\!\left\{m_{0,\mathcal F}^\dagger(X)\right\}
-+ (1-\rhon)\Pu\!\left\{m_{0,\mathcal F}^\dagger(\widetilde X)\right\}
-+ \Pl\!\left\{Y-m_{0,\mathcal F}^\dagger(X)\right\} \\
-&\qquad
-+ \rho_n \Pl\!\left\{m_n^\star(X)-m_{0,\mathcal F}^\dagger(X)\right\}
-+ (1-\rho_n)\Pu\!\left\{m_n^\star(\widetilde X)-m_{0,\mathcal F}^\dagger(\widetilde X)\right\} \\
-&\qquad
-- \Pl\!\left\{m_n^\star(X)-m_{0,\mathcal F}^\dagger(X)\right\}.
-\end{align*}
-Combining the last three terms gives
-\begin{align*}
-\psihat
-&=
-\rhon \Pl\!\left\{m_{0,\mathcal F}^\dagger(X)\right\}
-+ (1-\rhon)\Pu\!\left\{m_{0,\mathcal F}^\dagger(\widetilde X)\right\}
-+ \Pl\!\left\{Y-m_{0,\mathcal F}^\dagger(X)\right\} \\
-&\qquad
-+ (1-\rhon)\Pu\!\left\{m_n^\star(\widetilde X)-m_{0,\mathcal F}^\dagger(\widetilde X)\right\}
-- (1-\rhon)\Pl\!\left\{m_n^\star(X)-m_{0,\mathcal F}^\dagger(X)\right\}.
-\end{align*}
-Therefore,
-\begin{align*}
-\psihat
-&=
-\rhon \Pl\!\left\{m_{0,\mathcal F}^\dagger(X)\right\}
-+ (1-\rhon)\Pu\!\left\{m_{0,\mathcal F}^\dagger(\widetilde X)\right\}
-+ \Pl\!\left\{Y-m_{0,\mathcal F}^\dagger(X)\right\} \\
-&\qquad
-+ (1-\rhon)(\Pu-\Pl)\{m_n^\star-m_{0,\mathcal F}^\dagger\},
-\end{align*}
-which is the claimed representation.
+\begin{proof}
+By \eqref{eqn::aipwcal}, \(\psihat=\widehat\psi(m_n^\star)\).
+Subtracting \(\widehat\psi(g)\) and collecting terms gives the stated identity.
 \end{proof}
 
 
@@ -1693,7 +1629,7 @@ then
 \end{equation}
 \end{theorem}
 
-Theorem~\ref{thm:repr} gives two useful exact representations of the calibrated PPI estimator. First, \(\psihat\) is exactly an AIPW estimator with regression adjustment \(\mtilde\). In particular, when \(\what\equiv 1\), the residual correction is exactly \(\Pl\{Y-\mtilde(X)\}\), so the plug-in estimator can be written in standard debiased form. Second, under \eqref{eq:F-balance}, the same estimator admits an equivalent balancing-weight representation, $\psihat = \Pl\bigl[\what_n^\star(\mtilde(X))Y\bigr],$
+Theorem~\ref{thm:repr2} gives two useful exact representations of the calibrated PPI estimator. First, \(\psihat\) is exactly an AIPW estimator with regression adjustment \(\mtilde\). In particular, when \(\what\equiv 1\), the residual correction is exactly \(\Pl\{Y-\mtilde(X)\}\), so the plug-in estimator can be written in standard debiased form. Second, under \eqref{eq:F-balance}, the same estimator admits an equivalent balancing-weight representation, $\psihat = \Pl\bigl[\what_n^\star(\mtilde(X))Y\bigr],$
 so it can also be viewed as a weighted average of the labeled outcomes, with the unlabeled sample affecting the estimator only through the weights.
 
 
@@ -2817,16 +2753,10 @@ by \cref{thm:iso-postcal}.
 \label{app:al}
 
 \begin{proof}[Proof of \cref{thm:al}]
-The proof combines the exact AIPW representation from Theorem~\ref{thm:repr} with a localized empirical-process bound for the isotonic calibrator class. The latter controls the remainder generated by estimating the monotone post-processing map and yields the \(n^{-2/3}\) remainder rate. The overall argument is closely related to the calibrated DML framework of \citet{van2024automatic}; see also \citet{kennedy2024semiparametric} for background on semiparametric influence-function arguments.
+The proof combines the AIPW comparison identity in Lemma~\ref{lem:aipw-comparison} with a localized empirical-process bound for the isotonic calibrator class. The latter controls the remainder generated by estimating the monotone post-processing map and yields the \(n^{-2/3}\) remainder rate. The overall argument is closely related to the calibrated DML framework of \citet{van2024automatic}; see also \citet{kennedy2024semiparametric} for background on semiparametric influence-function arguments.
 
 
-By \cref{lem:center}, \(\E_{\Px}[m_0]=\psi_0\). Using \cref{thm:repr} with \(\what \equiv 1\),
-\[
-\widehat{\psi}_{\mathrm{iso}}
-=
-\rhon \Pl\{m_{n,\mathrm{iso}}^\star(X)\}+(1-\rhon)\Pu\{m_{n,\mathrm{iso}}^\star(\widetilde X)\}+\rhon \Pl\{Y-m_{n,\mathrm{iso}}^\star(X)\}.
-\]
-Add and subtract the AIPW form built from \(m_0\):
+By \cref{lem:center}, \(\E_{\Px}[m_0]=\psi_0\). The isotonic fit has mean-zero labeled residuals by Lemma~\ref{lem:block}. Applying Lemma~\ref{lem:aipw-comparison} with \(g=m_0\) gives
 \[
 \widehat{\psi}_{\mathrm{iso}}
 =
