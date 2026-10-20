@@ -314,13 +314,25 @@ Another estimator in this class was considered by \citet{ppi2023} under the name
 \]
 which implicitly corresponds to the choice \(f(X)=m(X)/(1-\rho_n)\). Relative to \(\widehat{\psi}_{\mathrm{AIPW}}\), \(\widehat{\psi}_{\mathrm{PPI}}\) places the plug-in term entirely on the unlabeled sample and rescales the score by the factor \((1-\rho_n)^{-1}>1\). By Proposition~\ref{prop:aipw-class}, this improves efficiency only when the rescaled score is closer to \(\mu_0(X)\) in mean squared error. Consequently, PPI is inefficient when \(m=\mu_0\) and is typically less efficient when \(m\) is already reasonably accurate \citep{han2012note,rotnitzky2012improved}. For this reason, we view AIPW as the more natural default in practice.
 
-\textbf{Improving over a class of AIPW estimators through empirical efficiency maximization.}  Because both \(\widehat{\psi}_{\mathrm{AIPW}}\) and \(\widehat{\psi}_{\mathrm{PPI}}\) use scores in the scaling class \(\{\lambda m(X):\lambda\in\mathbb R\}\), it is natural to choose the scaling factor data-adaptively rather than fixing it in advance. One way to do so is to minimize the estimator's empirical influence-function variance over this class:
+\textbf{Improving over a class of AIPW estimators through empirical efficiency maximization.}  Because both \(\widehat{\psi}_{\mathrm{AIPW}}\) and \(\widehat{\psi}_{\mathrm{PPI}}\) use scores in the scaling class \(\{\lambda m(X):\lambda\in\mathbb R\}\), it is natural to choose the scaling factor data-adaptively rather than fixing it in advance. One way to do so is to minimize an empirical estimate of the asymptotic variance of \(\sqrt{M}\{\widehat{\psi}(f)-\psi_0\}\):
 \[
 \sigma_n^2(f)
 :=
-\rho_n \Pl\left[\left\{f(X)-\widehat{\psi}(f)+\rho_n^{-1}(Y-f(X))\right\}^2\right]
+\rho_n\,\widehat{\operatorname{Var}}_L
+\left\{f(X)+\rho_n^{-1}(Y-f(X))\right\}
 +
-(1-\rho_n)\Pu\left[\left\{f(\widetilde X)-\widehat{\psi}(f)\right\}^2\right].
+(1-\rho_n)\,\widehat{\operatorname{Var}}_U
+\left\{f(\widetilde X)\right\},
+\]
+where the empirical variances are computed separately within the labeled and unlabeled samples:
+\[
+\widehat{\operatorname{Var}}_L(a)
+:=
+\Pl\left[(a-\Pl a)^2\right],
+\qquad
+\widehat{\operatorname{Var}}_U(b)
+:=
+\Pu\left[(b-\Pu b)^2\right].
 \]
 That is, one chooses \(\lambda\) to minimize \(\sigma_n^2(f)\) over \(f(X)=\lambda m(X)\), a procedure known as empirical efficiency maximization \citep{rubin2008empirical,vanderlaanunified}. The resulting estimator, called PPI++ by \citet{angelopoulos2023ppi}, is simply an AIPW estimator with an empirically rescaled prediction rule \(\hat\lambda m(X)\), where \(\hat\lambda\) estimates the population-optimal scaling coefficient
 \begin{equation}
@@ -376,7 +388,7 @@ We learn the post-processing map by empirical risk minimization over a class \(\
 \label{eq:H-erm}
 f_n \in \arg\min_{h\in\mathcal H} \Pl\bigl[(Y-h(m(X)))^2\bigr].
 \end{equation}
-Assume that \(\mathcal H\) contains the constant functions. Then the corresponding first-order condition implies
+Assume that \(\mathcal H\) is closed under addition of constants. Differentiating the empirical risk along \(f_n+c\) at \(c=0\) gives
 \[
 \Pl\!\left\{Y-\mtilde(X)\right\}=0.
 \]
@@ -391,7 +403,7 @@ Therefore, \(\psihat\) is exactly the AIPW estimator \(\widehat{\psi}(\mtilde)\)
 \end{align}
 Important examples we will consider later include linear and isotonic calibration, corresponding to \(\mathcal H\) equal to the classes of affine and monotone functions, respectively.
 
-So far, we have described calibration informally as a population property: the score should be interpretable as a prediction of the outcome and should admit no further improvement within a prescribed transformation class. Since the true distribution \(P_0\) is unknown, we instead impose an empirical analogue on the labeled sample. Let \(\mathcal F\) be a linear class of maps \(f:\mathbb R\to\mathbb R\) containing the constants. We say that \(\mtilde\) is \textit{empirically calibrated} over \(\mathcal F\) if
+So far, we have described calibration informally as a population property: the score should be interpretable as a prediction of the outcome and should admit no further improvement within a prescribed transformation class. Since the true distribution \(P_0\) is unknown, we instead impose an empirical analogue on the labeled sample. Let \(\mathcal F\) be a linear class of maps \(f:\mathbb R\to\mathbb R\) containing all affine maps. We say that \(\mtilde\) is \textit{empirically calibrated} over \(\mathcal F\) if
 \begin{equation}
 \label{eq:cal-risk}
 \Pl\bigl[(Y-\mtilde(X))^2\bigr]
@@ -444,7 +456,7 @@ m_0(X):=g_0\{m(X)\},
 g_0\in\arg\min_{g\in\mathcal H}
 \E_{P_0}\!\left[\{Y-g(m(X))\}^2\right].
 \]
-Thus, \(m_0\) is the best regression adjustment obtainable from the original score \(m\) using transformations in \(\mathcal H\). By Proposition~\ref{prop:aipw-class}, when \(\mathcal H\) contains the constant functions, minimizing prediction error over the class \(\{\theta\circ m:\theta\in\mathcal H\}\) is first-order equivalent to maximizing AIPW efficiency over the same class. Consequently, the resulting AIPW estimator has asymptotic variance no larger than that of any estimator based on \(\theta\circ m\) with \(\theta\in\mathcal H\). In particular, if the identity map belongs to \(\mathcal H\), then calibration cannot do worse than using the raw score \(m\). If \(\mathcal H\) contains the oracle map \(t\mapsto \E_{P_0}[Y\mid m(X)=t]\), then \(m_0(X)=\E_{P_0}[Y\mid m(X)]\), and the resulting estimator is semiparametrically efficient in the reduced model based on the score \(m(X)\) \citep{ji2025predictions}.
+Thus, \(m_0\) is the best regression adjustment obtainable from the original score \(m\) using transformations in \(\mathcal H\). By Proposition~\ref{prop:aipw-class}, when \(\mathcal H\) is closed under addition of constants, minimizing prediction error over the class \(\{\theta\circ m:\theta\in\mathcal H\}\) is first-order equivalent to maximizing AIPW efficiency over the same class. Consequently, the resulting AIPW estimator has asymptotic variance no larger than that of any estimator based on \(\theta\circ m\) with \(\theta\in\mathcal H\). In particular, if the identity map belongs to \(\mathcal H\), then calibration cannot do worse than using the raw score \(m\). If \(\mathcal H\) contains the oracle map \(t\mapsto \E_{P_0}[Y\mid m(X)=t]\), then \(m_0(X)=\E_{P_0}[Y\mid m(X)]\), and the resulting estimator is semiparametrically efficient in the reduced model based on the score \(m(X)\) \citep{ji2025predictions}.
 
 \textbf{Full versus linear calibration.}
 We focus on two main cases. In \emph{full calibration}, the target class \(\mathcal F\) is unrestricted, so that at the population level no further transformation of the calibrated score can reduce mean squared prediction error. In practice, however, the fitted map \(f_n\) is learned over a restricted optimization class \(\mathcal H\), which serves as a regularizer. Important examples include piecewise-constant and monotone classes, corresponding to histogram and isotonic calibration; see Section~\ref{sec:iso}. In \emph{linear calibration}, both \(\mathcal H\) and \(\mathcal F\) are restricted to affine maps \(t\mapsto a+bt\), corresponding to least-squares fitting of the working model \(a+b\,m(X)\); see Section~\ref{sec:linear}.
@@ -590,17 +602,7 @@ Assume Assumption \ref{assump:design} and that \(\Var[m(X)]>0\) and \(\E_{P_0}[m
 (1-\rho_n)\bigl(\hat\lambda_{++}-\hat a_{\mathrm{lin}}\bigr)
 \left\{\Pu\{m(\widetilde X)\}-\Pl\{m(X)\}\right\}.
 \]
-Moreover, \(\hat\lambda_{++}-\hat a_{\mathrm{lin}} = O_p(n^{-1/2})\), and 
-\[
-\widehat\psi_{++}(\hat\lambda_{++})-\widehat\psi_{\mathrm{lin}}
-=
-O_p\!\left(
-\frac{1-\rho_n}{\sqrt{\rho_n}}\,(n+N)^{-1}
-\right)
-=
-O_p\bigl((n+N)^{-1}\bigr).
-\]
-In particular,
+Moreover, \(\hat\lambda_{++}-\hat a_{\mathrm{lin}}=o_p(1)\). In particular,
 \[
 \widehat\psi_{++}(\hat\lambda_{++})-\widehat\psi_{\mathrm{lin}}
 =
@@ -710,11 +712,16 @@ Thus, \(m_0\) is the population \(L^2\)-optimal monotone transformation of the i
 Assume:
 \begin{enumerate}[leftmargin=6mm,label=(\roman*)]
 \item \textbf{Boundedness:} There exists \(C_0<\infty\) such that \(|\E_{P_0}[Y \mid \mhat(X)]|\le C_0\) almost surely and \(\sup_x |m_{n,\mathrm{iso}}^\star(x)| = O_p(1)\). \label{cond::bound}
-\item \textbf{Controlled tails:} The conditional error \(Y-\E_{P_0}[Y\mid \mhat(X)]\) is sub-Gaussian or sub-exponential under \(P_0\). \label{cond::subgaus}
+\item \textbf{Controlled tails:} There exists \(0<K<\infty\) such that, with \(T:=\mhat(X)\) and \(\varepsilon:=Y-\E_{P_0}[Y\mid T]\),
+\[
+\E_{P_0}\{\exp(|\varepsilon|/K)\mid T\}\le 2
+\quad\text{almost surely}.
+\]
+\label{cond::subgaus}
 \end{enumerate}
 \end{assumption}
 
-Condition~\ref{cond::bound} requires only that the regression target be bounded and that the isotonic estimator remain bounded in probability. Condition~\ref{cond::subgaus} allows \(Y\) to be unbounded, covering both Gaussian-like tails and somewhat heavier exponential-type tails. In particular, it holds for binary, Gaussian, Poisson, and bounded outcomes. Existing results on isotonic regression under heavy-tailed errors also suggest some robustness to violations of these conditions \citep{han2018robustness,han2019convergence}.
+Condition~\ref{cond::bound} requires only that the regression target be bounded and that the isotonic estimator remain bounded in probability. Condition~\ref{cond::subgaus} imposes a uniform conditional sub-exponential bound while allowing \(Y\) to be unbounded. It holds for bounded outcomes, conditional Gaussian models with uniformly bounded variances, and conditional Poisson models with uniformly bounded means. Existing results on isotonic regression under heavy-tailed errors also suggest some robustness to violations of these conditions \citep{han2018robustness,han2019convergence}.
 
 
 \begin{theorem}[Asymptotic linearity under the two-sample model]
@@ -782,7 +789,7 @@ The next corollary records two important efficiency regimes: full semiparametric
 Under the conditions of \cref{thm:al}, the following hold.
 \begin{enumerate}[leftmargin=6mm,label=(\roman*)]
 \item If \(m_0=\muzero\) almost surely, then \(\widehat{\psi}_{\mathrm{iso}}\) is efficient for \(\psi_0\) in the full two-sample experiment.
-\item More generally, \(\widehat{\psi}_{\mathrm{iso}}\) is asymptotically at least as efficient, to first order, as any AIPW estimator of the form \(\widehat{\psi}(\theta\circ\mhat)\) for a monotone nondecreasing transformation \(\theta\).
+\item More generally, \(\widehat{\psi}_{\mathrm{iso}}\) is asymptotically at least as efficient, to first order, as any AIPW estimator of the form \(\widehat{\psi}(\theta\circ\mhat)\) for a monotone nondecreasing transformation \(\theta\) such that \(\theta\circ\mhat\) has finite second moment.
 \item If \(\E_{P_0}[Y\mid \mhat(X)]\) is monotone nondecreasing in \(\mhat(X)\), then \(m_0(X)=\E_{P_0}[Y\mid \mhat(X)]\) almost surely. Hence no AIPW estimator based on a post-processing \(\theta\circ\mhat\), with \(\theta:\mathbb{R}\rightarrow\mathbb{R}\), has smaller asymptotic variance than \(\widehat{\psi}_{\mathrm{iso}}\). Equivalently, \(\widehat{\psi}_{\mathrm{iso}}\) is efficient for \(\psi_0\) in the reduced two-sample experiment obtained by replacing \(X\) with the scalar score \(\mhat(X)\).
 \end{enumerate}
 \end{corollary}
@@ -1120,9 +1127,11 @@ We  review \cite{rubin2008empirical}. The empirical variance criterion from Sect
 \[
 \sigma_n^2(f)
 :=
-\rho_n \Pl\left[\left\{f(X)-\widehat{\psi}(f)+\rho_n^{-1}(Y-f(X))\right\}^2\right]
+\rho_n\,\widehat{\operatorname{Var}}_L
+\left\{f(X)+\rho_n^{-1}(Y-f(X))\right\}
 +
-(1-\rho_n)\Pu\left[\left\{f(\widetilde X)-\widehat{\psi}(f)\right\}^2\right],
+(1-\rho_n)\,\widehat{\operatorname{Var}}_U
+\left\{f(\widetilde X)\right\},
 \]
 is not tied to the one-dimensional scaling class \(\{\lambda m(X):\lambda\in\R\}\). For any candidate class \(\mathcal G\subset L^2(\Px)\), one may instead define
 \[
@@ -1591,7 +1600,7 @@ because \(R=1\) on labeled observations and \(R=0\) on unlabeled observations. A
 \label{app:repr}
 
 \begin{proof}[Proof of Theorem \ref{thm:repr}]
-Because \(\mathcal F\) is linear and contains the constant functions, \cref{eq:cal-score} implies that \(m_n^\star\) is empirically calibrated over \(\mathcal F\), and in particular
+Taking \(f\equiv 1\) in \eqref{eq:cal-score} gives
 \[
 \Pl\!\left\{Y-m_n^\star(X)\right\}=0.
 \]
@@ -1832,9 +1841,10 @@ Substituting this into the second equation yields
 \frac{\Pl\bigl[(m(X)-\Pl\{m(X)\})(Y-\Pl\{Y\})\bigr]}
 {\Pl\bigl[(m(X)-\Pl\{m(X)\})^2\bigr]}.
 \]
-Hence \(\hat a_{\mathrm{lin}}\) is the ordinary least-squares slope, and under finite second moments,
+Hence \(\hat a_{\mathrm{lin}}\) is the ordinary least-squares slope. Finite
+second moments and \(\Var\{m(X)\}>0\) give, by the law of large numbers,
 \[
-\hat a_{\mathrm{lin}}=a_0+O_p(n^{-1/2}).
+\hat a_{\mathrm{lin}}=a_0+o_p(1).
 \]
 
 Using
@@ -1895,7 +1905,17 @@ Therefore,
 (1-\rho_n)\bigl(\hat\lambda_{++}-\hat a_{\mathrm{lin}}\bigr)\Delta_n.
 \]
 
-Under the empirical PPI++ variance criterion over the class \(\{\lambda m(X):\lambda\in\R\}\), the selected coefficient satisfies
+Writing \(c_n:=1-\rho_n\), the variance criterion becomes
+\[
+\sigma_n^2(\lambda m)
+=
+\rho_n^{-1}\widehat{\operatorname{Var}}_L
+\{Y-c_n\lambda m(X)\}
++
+c_n\lambda^2\widehat{\operatorname{Var}}_U
+\{m(\widetilde X)\}.
+\]
+Differentiating with respect to \(\lambda\) gives
 \[
 \hat\lambda_{++}
 =
@@ -1911,13 +1931,13 @@ Its population limit is
 \[
 \lambda_0=\frac{\Cov(Y,m(X))}{\Var[m(X)]}=a_0,
 \]
-so standard \(M\)-estimation arguments yield
+and the law of large numbers yields
 \[
-\hat\lambda_{++}=a_0+O_p(n^{-1/2}).
+\hat\lambda_{++}=a_0+o_p(1).
 \]
-Combining this with \(\hat a_{\mathrm{lin}}=a_0+O_p(n^{-1/2})\) gives
+Combining the two consistency statements gives
 \[
-\hat\lambda_{++}-\hat a_{\mathrm{lin}}=O_p(n^{-1/2}).
+\hat\lambda_{++}-\hat a_{\mathrm{lin}}=o_p(1).
 \]
 
 Next, since \(\Pl\{m(X)\}\) and \(\Pu\{m(\widetilde X)\}\) are sample means under the same marginal law of \(X\),
@@ -1926,70 +1946,13 @@ Next, since \(\Pl\{m(X)\}\) and \(\Pu\{m(\widetilde X)\}\) are sample means unde
 =
 O_p(n^{-1/2}+N^{-1/2}).
 \]
-Under the standing assumption \(\rho_n=n/(n+N)\to\rho_0\in(0,1)\), we may write
-\[
-n^{-1/2}=\rho_n^{-1/2}(n+N)^{-1/2},
-\qquad
-N^{-1/2}=(1-\rho_n)^{-1/2}(n+N)^{-1/2},
-\]
-and hence
-\[
-\Delta_n
-=
-O_p\!\left(\left\{\rho_n^{-1/2}+(1-\rho_n)^{-1/2}\right\}(n+N)^{-1/2}\right).
-\]
-Therefore,
-\begin{align*}
-\widehat\psi_{++}(\hat\lambda_{++})-\widehat\psi_{\mathrm{lin}}
-&=
-(1-\rho_n)\bigl(\hat\lambda_{++}-\hat a_{\mathrm{lin}}\bigr)\Delta_n\\
-&=
-(1-\rho_n)\,O_p(n^{-1/2})\,
-O_p\!\left(\left\{\rho_n^{-1/2}+(1-\rho_n)^{-1/2}\right\}(n+N)^{-1/2}\right)\\
-&=
-O_p\!\left(
-(1-\rho_n)\rho_n^{-1/2}
-\left\{\rho_n^{-1/2}+(1-\rho_n)^{-1/2}\right\}
-(n+N)^{-1}
-\right).
-\end{align*}
-Since
-\[
-(1-\rho_n)\rho_n^{-1/2}
-\left\{\rho_n^{-1/2}+(1-\rho_n)^{-1/2}\right\}
-=
-\frac{1-\rho_n}{\rho_n}
-+
-\sqrt{\frac{1-\rho_n}{\rho_n}},
-\]
-It follows that
+Under \(\rho_n\to\rho_0\in(0,1)\), this is
+\(\Delta_n=O_p(M^{-1/2})\). Therefore,
 \[
 \widehat\psi_{++}(\hat\lambda_{++})-\widehat\psi_{\mathrm{lin}}
 =
-O_p\!\left(
-\left\{
-\frac{1-\rho_n}{\rho_n}
-+
-\sqrt{\frac{1-\rho_n}{\rho_n}}
-\right\}
-(n+N)^{-1}
-\right).
-\]
-In particular, this implies the simpler bound
-\[
-\widehat\psi_{++}(\hat\lambda_{++})-\widehat\psi_{\mathrm{lin}}
-=
-O_p\!\left(
-\frac{1-\rho_n}{\rho_n}\,(n+N)^{-1}
-\right).
-\]
-Therefore, under \(\rho_n\to\rho_0\in(0,1)\),
-\[
-\widehat\psi_{++}(\hat\lambda_{++})-\widehat\psi_{\mathrm{lin}}
-=
-O_p\bigl((n+N)^{-1}\bigr)
-=
-o_p\bigl((n+N)^{-1/2}\bigr).
+o_p(1)\,O_p(M^{-1/2})
+=o_p(M^{-1/2}).
 \]
 This proves the claim.
 \end{proof}
@@ -2460,15 +2423,11 @@ Suppose \cref{assump:design,assump:isoreg} holds. Then
  
 
 
-Let \(T:=\mhat(X)\) and let
+Let \(T:=\mhat(X)\), \(g_0(T):=\E_{P_0}[Y\mid T]\), and
 \[
 \mathcal M_C:=\{f(T):f\in\mathcal F_{\mathrm{iso}},\ \|f(T)\|_\infty\le C\}.
 \]
-By \cref{assump:isoreg}, \(g_0(T)\) is bounded by \(C_0\le C\), and on \(A_{n,C}\) we have \(m_{n,\mathrm{iso}}^\star\in\mathcal M_C\). Since clipping any monotone candidate to \([-C,C]\) preserves monotonicity and can only decrease squared risk against \(g_0(T)\), the population isotonic projection \(m_0\) also belongs to \(\mathcal M_C\). Thus the problem is a one-dimensional isotonic least-squares regression of \(Y\) on the score \(T\). Let
-\[
-g_0(T):=\E_{P_0}[Y\mid T].
-\]
-Then, for every \(m\in\mathcal M_C\),
+By \cref{assump:isoreg}, \(g_0(T)\) is bounded by \(C_0\le C\), and on \(A_{n,C}\) we have \(m_{n,\mathrm{iso}}^\star\in\mathcal M_C\). Since clipping any monotone candidate to \([-C,C]\) preserves monotonicity and can only decrease squared risk against \(g_0(T)\), the population isotonic projection \(m_0\) also belongs to \(\mathcal M_C\). For every \(m\in\mathcal M_C\),
 \[
 \E_{P_0}[(Y-m)^2]
 =
@@ -2480,7 +2439,7 @@ Now define the centered class
 \[
 \mathcal F_0:=\{g=m-m_0:\ m\in\mathcal M_C\}.
 \]
-For \(g\in\mathcal F_0\), let \(\ell_g(Z):=(Y-m_0(T)-g(T))^2-(Y-m_0(T))^2\), where \(Z=(X,Y)\). Since \(m_{n,\mathrm{iso}}^\star\) minimizes the empirical squared risk over \(\mathcal F_{\mathrm{iso}}\), on \(A_{n,C}\) the random element \(\hat g:=m_{n,\mathrm{iso}}^\star-m_0\) belongs to \(\mathcal F_0\) and satisfies
+For \(g\in\mathcal F_0\), let \(\ell_g(Z):=(Y-m_0(X)-g(X))^2-(Y-m_0(X))^2\), where \(Z=(X,Y)\). Since \(m_{n,\mathrm{iso}}^\star\) minimizes the empirical squared risk over \(\mathcal F_{\mathrm{iso}}\), on \(A_{n,C}\) the random element \(\hat g:=m_{n,\mathrm{iso}}^\star-m_0\) belongs to \(\mathcal F_0\) and satisfies
 \[
 \Pl\{\ell_{\hat g}\}\le 0=\Pl\{\ell_0\}.
 \]
@@ -2492,7 +2451,7 @@ Moreover,
 \]
 Because \(g\) is measurable with respect to \(T\), the tower property gives
 \[
-=\E_{P_0}[(Y-m_0)g]
+\E_{P_0}[(Y-m_0)g]
 =
 \E_{P_0}[(g_0-m_0)g].
 \]
@@ -2511,44 +2470,54 @@ We next bound the modulus of continuity of the empirical process indexed by the 
 \[
 \mathcal F_\delta:=\{g\in\mathcal F_0:\|g\|_{2,\Px}\le \delta\}.
 \]
-Because every \(m\in\mathcal M_C\) is bounded by \(C\), every \(g\in\mathcal F_\delta\) is uniformly bounded, and the standard bracketing bound for one-dimensional monotone classes gives
+The bracketing bound for bounded monotone functions gives
 \[
 \log N_{[]}(\varepsilon,\mathcal F_\delta,L_2(\Px))
 \lesssim
-\delta/\varepsilon,
+\varepsilon^{-1},
 \qquad 0<\varepsilon<\delta.
 \]
-Therefore
+Consequently,
 \[
 J_{[]}(\delta,\mathcal F_\delta,L_2(\Px))\lesssim \delta^{1/2};
 \]
 see, e.g., \citet{vdvwellner1996}.
 
-Write \(\xi:=Y-m_0(T)\), so that \(\ell_g=g^2-2\xi g\). The class \(\{g^2:g\in\mathcal F_\delta\}\) is a bounded Lipschitz image of \(\mathcal F_\delta\), so by Lemma 3.4.2 of \citet{vdvwellner1996} and the same entropy bound,
+Write \(\xi:=Y-m_0(X)\), so that \(\ell_g=g^2-2\xi g\). By Condition~\ref{cond::subgaus} and the bounds on \(g_0\), \(m_0\), and \(g\), there exists \(A_C<\infty\) such that
+\begin{equation}
+\label{eq:iso-multiplier-moments}
+\E_{P_0}[|\xi g|^k]
+\le k!A_C^k\|g\|_{2,\Px}^2,
+\qquad g\in\mathcal F_0,\quad k\ge2.
+\end{equation}
+The same inequality holds for bounded bracket widths. Thus multiplication by \(\xi\) maps \(L^2(\Px)\) brackets to Bernstein-norm brackets with widths bounded by a constant multiple of their original widths; see Lemmas 8--9 of \citet{Bibaut2019}. The squared class \(\{g^2:g\in\mathcal F_\delta\}\) is a bounded Lipschitz image of \(\mathcal F_\delta\). Applying Lemmas 3.4.2--3.4.3 of \citet{vdvwellner1996} to these two classes gives
+\begin{equation}
+\label{eq:iso-local-modulus}
+E^\star\sup_{g\in\mathcal F_\delta}|(\Pl-P_0)\ell_g|
+\lesssim n^{-1/2}\delta^{1/2}+n^{-1}\delta^{-1}.
+\end{equation}
+For \(\delta\ge n^{-1/3}\), the right-hand side is bounded by a constant times \(n^{-1/2}\delta^{1/2}\).
+
+Set \(\varepsilon_n:=n^{-1/3}\). The empirical risk inequality, the quadratic margin, and \eqref{eq:iso-local-modulus} imply, by peeling into shells \(2^s\varepsilon_n\le\|\hat g\|_{2,\Px}<2^{s+1}\varepsilon_n\) and applying Markov's inequality, that
 \[
-E^\star\sup_{g\in\mathcal F_\delta}\sqrt{n}\,|(\Pl-P_0)\{g^2\}|
-\lesssim
-\delta^{1/2}.
+\begin{aligned}
+\Pr\{\|\hat g\|_{2,\Px}\ge2^S\varepsilon_n,\ A_{n,C}\}
+&\lesssim
+\sum_{s\ge S}
+\frac{n^{-1/2}(2^{s+1}\varepsilon_n)^{1/2}}
+{2^{2s}\varepsilon_n^2}\\
+&\lesssim\sum_{s\ge S}2^{-3s/2}
+\longrightarrow0
+\qquad(S\to\infty).
+\end{aligned}
 \]
-For the multiplier term, \cref{assump:isoreg} implies that \(Y-g_0(T)\) is sub-Gaussian or subexponential. Since both \(g_0(T)\) and \(m_0(T)\) are bounded by \(C\), the difference \(g_0(T)-m_0(T)\) is bounded, and therefore \(\xi=Y-m_0(T)\) is also sub-Gaussian or subexponential. Thus the product class \(\xi\mathcal F_\delta:=\{\xi g:g\in\mathcal F_\delta\}\) satisfies the same localized bracketing bound in the Bernstein-type norm used in the subexponential least-squares proof of \citet{Bibaut2019}, yielding
-\[
-E^\star\sup_{g\in\mathcal F_\delta}\sqrt{n}\,|(\Pl-P_0)\{\xi g\}|
-\lesssim
-\delta^{1/2}.
-\]
-Combining the previous two displays,
-\[
-E^\star\sup_{g\in\mathcal F_\delta}\sqrt{n}\,|(\Pl-P_0)\{\ell_g\}|
-\lesssim
-\delta^{1/2}.
-\]
-We may therefore apply Theorem 3.4.1 of \citet{vdvwellner1996} with \(d(g)=\|g\|_{2,\Px}\), quadratic margin \(P_0\ell_g\gtrsim d^2(g)\), and modulus \(\phi_n(\delta)\asymp\delta^{1/2}\). The fixed-point condition \(r_n^2\phi_n(r_n^{-1})\lesssim \sqrt n\) gives \(r_n\asymp n^{1/3}\), and hence
+Hence
 \[
 \|m_{n,\mathrm{iso}}^\star-m_0\|_{2,\Px}=O_p(n^{-1/3}),
 \qquad
 \|m_{n,\mathrm{iso}}^\star-m_0\|_{2,\Px}^2=O_p(n^{-2/3}).
 \]
-The preceding display is obtained on \(A_{n,C}\). Since \(P_0(A_{n,C}^c)\le \delta\) for all large \(n\), and \(\delta>0\) was arbitrary, the same rate holds unconditionally. This is the classical one-dimensional isotonic rate, stated directly in the random-design \(L^2(\Px)\) norm relevant for the theorem.
+Since \(P_0(A_{n,C}^c)\le \delta\) for all large \(n\), and \(\delta>0\) was arbitrary, the same rate holds unconditionally, proving \cref{lem:isorate}.
 \end{proof}
 
 \begin{theorem}[Calibration error of isotonic post-processing]
@@ -2631,18 +2600,19 @@ Then
 \delta_n:=\|\Delta_n\|_{2,\Px}.
 \]
 
-Because bounded-variation functions are differences of bounded monotone functions, standard entropy-preservation results for Lipschitz transformations imply that the localized entropy integral of \(\mathcal G_{n,C,\delta}\) satisfies
+Write \(\eta(T):=\E_{P_0}[Y\mid T]\) and \(\varepsilon:=Y-\eta(T)\). Each element of \(\mathcal G_{n,C,\delta}\) decomposes as
 \[
-J_{[]}(\delta,\mathcal G_{n,C,\delta},L_2(P_0))
-\lesssim
-\delta^{1/2}.
+(h_1-h_2)(Y-h_2)
+=
+(h_1-h_2)\varepsilon+(h_1-h_2)\{\eta(T)-h_2\}.
 \]
-Moreover, \cref{assump:isoreg} implies that \(Y-\eta(T)\) is sub-Gaussian or subexponential, and on \(A_{n,C}\) the difference \(\eta(T)-S_n\) is bounded. Therefore \(Y-S_n\) has the same tail type, up to constants. The same localized multiplier empirical-process argument used in the proof of \cref{lem:isorate} then gives
+Bounded-variation functions are differences of bounded monotone functions, so their bracketing entropy is \(O(\epsilon^{-1})\). The second term is a bounded Lipschitz transformation of \((h_1,h_2)\). For the first term, Condition~\ref{cond::subgaus} gives the moment bound in \eqref{eq:iso-multiplier-moments}, with \(h_1-h_2\) in place of \(g\) and \(\varepsilon\) in place of \(\xi\). Its Bernstein-norm bracket widths are therefore controlled by \(L^2(\Px)\) bracket widths. The second term has \(L^2(P_0)\) norm \(O(\delta)\), and the first has Bernstein norm \(O(\delta)\); both bracketing entropy integrals are \(O(\delta^{1/2})\). Lemmas 3.4.2--3.4.3 of \citet{vdvwellner1996} give
 \[
 E^\star\sup_{g\in\mathcal G_{n,C,\delta}}|(\Pl-P_0)\{g\}|
 \lesssim
-n^{-1/2}\delta^{1/2}.
+n^{-1/2}\delta^{1/2}+n^{-1}\delta^{-1}.
 \]
+For \(\delta\ge n^{-1/3}\), this is bounded by a constant times \(n^{-1/2}\delta^{1/2}\).
 
 Set \(\varepsilon_n:=n^{-1/3}\). For \(s\ge 0\), let
 \[
@@ -2731,21 +2701,21 @@ By \cref{lem:isorate},
 \[
 \|m_{n,\mathrm{iso}}^\star-m_0\|_{2,\Px}^2=O_p(n^{-2/3}).
 \]
-To control the centered empirical-process term, work on the event \(A_{n,C}\) from the proof convention and consider the localized class
+To control the centered empirical-process term, work on the event \(A_{n,C}\) from the proof convention. For fixed \(R<\infty\), consider the localized class
 \[
 \mathcal F_{n,C}
 :=
-\{g=f\circ\mhat-m_0:\ f\in\mathcal F_{\mathrm{iso}},\ \|f\circ\mhat\|_\infty\le C,\ \|g\|_{2,\Px}\lesssim n^{-1/3}\}.
+\{g=f\circ\mhat-m_0:\ f\in\mathcal F_{\mathrm{iso}},\ \|f\circ\mhat\|_\infty\le C,\ \|g\|_{2,\Px}\le Rn^{-1/3}\}.
 \]
-On \(A_{n,C}\), the function \(m_{n,\mathrm{iso}}^\star-m_0\) belongs to \(\mathcal F_{n,C}\). Because \(\mhat\) is fixed, this is a localized class of bounded monotone functions of a one-dimensional score. Standard bracketing entropy bounds for monotone classes imply
+By \cref{lem:isorate}, the probability of \(A_{n,C}\cap\{m_{n,\mathrm{iso}}^\star-m_0\notin\mathcal F_{n,C}\}\) can be made arbitrarily small by taking \(R\) large. Because \(\mhat\) is fixed, \(\mathcal F_{n,C}\) is a translated class of bounded monotone functions of a one-dimensional score. The monotone bracketing bound implies
 \[
 J_{[]}\!\left(r,\mathcal F_{n,C},L_2(P_0)\right)\lesssim r^{1/2}.
 \]
-Applying a local maximal inequality for empirical processes, such as Lemma 3.4.2 of \citet{vdvwellner1996}, at radius \(r_n\asymp n^{-1/3}\) yields
+Applying Lemma 3.4.2 of \citet{vdvwellner1996} at radius \(r_n=Rn^{-1/3}\) yields
 \[
 \sup_{g\in\mathcal F_{n,C}} |(\Pl-\Px)\{g\}|
 =
-O_p\!\left(n^{-1/2} r_n^{1/2}\right)
+O_p\!\left(n^{-1/2}r_n^{1/2}+n^{-1}r_n^{-1}\right)
 =
 O_p(n^{-2/3}).
 \]
@@ -2804,9 +2774,9 @@ Consider the classes
 \[
 \mathcal F_{\mathrm{iso},C}
 :=
-\{f:\R\to\R:\text{$f$ nondecreasing and }\|f\|_\infty\le C\},
+\{f:\R\to\R:\text{$f$ nondecreasing and }\|f\|_\infty\le C\}.
 \]
-and define
+For fixed \(R<\infty\), define
 \[
 \mathcal H_{n,C}
 :=
@@ -2815,19 +2785,22 @@ h_1-h_2:
 h_1=f_1\circ T,\ h_2=f_2\circ T,\ 
 f_1\in\mathcal F_{\mathrm{TV},C},\ 
 f_2\in\mathcal F_{\mathrm{iso},C},\ 
-\|h_1-h_2\|_{2,\Px}^2\lesssim n^{-2/3}
+\|h_1-h_2\|_{2,\Px}\le Rn^{-1/3}
 \Bigr\}.
 \]
-On \(A_{n,C}\), the random function \(\Delta_n\) belongs to \(\mathcal H_{n,C}\).
+By \cref{thm:iso-postcal}, the probability of \(A_{n,C}\cap\{\Delta_n\notin\mathcal H_{n,C}\}\) can be made arbitrarily small by taking \(R\) large.
 
 Because bounded-variation functions are differences of bounded monotone functions, the localized bracketing entropy of \(\mathcal H_{n,C}\) obeys the same bound as in the proof of \cref{thm:iso-postcal}, namely
 \[
 J_{[]}(\delta,\mathcal H_{n,C},L_2(P_0))\lesssim \delta^{1/2}.
 \]
-Applying the same local maximal inequality at localization radius \(n^{-1/3}\) therefore gives, on \(A_{n,C}\),
+Applying Lemma 3.4.2 of \citet{vdvwellner1996} at radius \(r_n=Rn^{-1/3}\) gives
 \[
-\bigl|(\Pl-\Px)\{\Delta_n(X)\}\bigr|=O_p(n^{-2/3}).
+\sup_{h\in\mathcal H_{n,C}}|(\Pl-\Px)h|
+=O_p\!\left(n^{-1/2}r_n^{1/2}+n^{-1}r_n^{-1}\right)
+=O_p(n^{-2/3}).
 \]
+Taking \(R\) large gives the same bound for \((\Pl-\Px)\Delta_n\) on \(A_{n,C}\).
 Since \(P_0(A_{n,C}^c)\le \delta\) for all large \(n\), and \(\delta>0\) was arbitrary, the same bound holds unconditionally.
 
 For the unlabeled sample, conditional on the labeled data, \(\Delta_n\) is fixed and the unlabeled sample is independent. Hence
@@ -2913,11 +2886,12 @@ For the variance estimator, let \(g_n:=m_{n,\mathrm{iso}}^\star-m_0\). By \cref{
 \[
 \E_{\Px}[g_n^2]=\|g_n\|_{2,\Px}^2=O_p(n^{-2/3}).
 \]
-Moreover, the proof of \cref{lem:isorate} already established the localized empirical-process bound
+Applying Lemma 3.4.2 of \citet{vdvwellner1996} to the squared class gives
 \[
-\sup_{g\in\mathcal F_\delta}|(\Pl-\Px)\{g^2\}|=O_p(n^{-1/2}\delta^{1/2}),
+\sup_{g\in\mathcal F_\delta}|(\Pl-\Px)\{g^2\}|
+=O_p\!\left(n^{-1/2}\delta^{1/2}+n^{-1}\delta^{-1}\right),
 \]
-for the squared class \(\{g^2:g\in\mathcal F_\delta\}\). Taking \(\delta\asymp n^{-1/3}\), which matches the localization radius of \(g_n\), gives
+where \(\mathcal F_\delta\) is the localized class from the proof of \cref{lem:isorate}. By that lemma, on \(A_{n,C}\) the function \(g_n\) belongs to \(\mathcal F_{Rn^{-1/3}}\) with arbitrarily high probability for sufficiently large fixed \(R\). Taking \(\delta=Rn^{-1/3}\) gives
 \[
 (\Pl-\Px)\{g_n^2\}=O_p(n^{-2/3}).
 \]
@@ -3017,43 +2991,28 @@ D_{\mu_0}^U(\widetilde X)=\mu_0(\widetilde X)-\psi_0.
 \]
 By \cref{prop:aipw-class}, this is the efficient influence pair in the unrestricted two-sample model. Therefore \(\widehat{\psi}_{\mathrm{iso}}\) is efficient for \(\psi_0\) in the full two-sample experiment.
 
-For part (ii), let \(g=\theta\circ \mhat\), where \(\theta\) is monotone nondecreasing. Since \(m_0\) is the population isotonic regression of \(Y\) on \(\mhat(X)\), it minimizes
+For part (ii), fix a nondecreasing \(\theta\) such that
+\(g(X):=\theta\{\mhat(X)\}\) has finite second moment, and recenter it as
 \[
-\E_{P_0}\bigl[\{Y-h(\mhat(X))\}^2\bigr]
+g^\circ(X):=g(X)-\E_{\Px}\{g(X)\}+\psi_0.
 \]
-over all monotone nondecreasing functions \(h\). In particular,
+Adding a constant preserves monotonicity, so \(g^\circ\) is an admissible
+competitor in the population isotonic regression. Constant directions in the
+isotonic class imply \(\E_{\Px}\{m_0(X)\}=\psi_0\), and hence
+\(m_0^\circ=m_0\). Population risk optimality gives
 \[
-\E_{P_0}\bigl[\{Y-m_0(X)\}^2\bigr]
+\E_{P_0}\!\left[\{Y-m_0(X)\}^2\right]
 \le
-\E_{P_0}\bigl[\{Y-g(X)\}^2\bigr].
+\E_{P_0}\!\left[\{Y-g^\circ(X)\}^2\right].
 \]
-By the Pythagorean identity for conditional means,
+Equivalently, after subtracting the irreducible conditional variance,
 \[
-\E_{P_0}\bigl[\{Y-g(X)\}^2\bigr]
-=
-\E_{P_0}\bigl[\{Y-\mu_0(X)\}^2\bigr]
-+
-\E_{P_0}\bigl[\{\mu_0(X)-g(X)\}^2\bigr],
-\]
-and likewise
-\[
-\E_{P_0}\bigl[\{Y-m_0(X)\}^2\bigr]
-=
-\E_{P_0}\bigl[\{Y-\mu_0(X)\}^2\bigr]
-+
-\E_{P_0}\bigl[\{\mu_0(X)-m_0(X)\}^2\bigr].
-\]
-Hence
-\[
-\E_{P_0}\bigl[\{\mu_0(X)-m_0(X)\}^2\bigr]
+\E_{P_0}\!\left[\{\mu_0(X)-m_0(X)\}^2\right]
 \le
-\E_{P_0}\bigl[\{\mu_0(X)-g(X)\}^2\bigr].
+\E_{P_0}\!\left[\{\mu_0(X)-g^\circ(X)\}^2\right].
 \]
-By \cref{prop:aipw-class}, the asymptotic variance of an AIPW estimator based on score \(f\) exceeds the efficiency bound by a constant multiple of
-\[
-\E_{P_0}\bigl[\{\mu_0(X)-f(X)\}^2\bigr].
-\]
-Applying this with \(f=m_0\) and \(f=g=\theta\circ\mhat\) shows that \(\widehat{\psi}_{\mathrm{iso}}\) has asymptotic variance no larger than that of \(\widehat{\psi}(\theta\circ\mhat)\). Therefore \(\widehat{\psi}_{\mathrm{iso}}\) is asymptotically at least as efficient, to first order, as any AIPW estimator of the form \(\widehat{\psi}(\theta\circ\mhat)\) for a monotone nondecreasing transformation \(\theta\).
+The variance representation in \cref{prop:aipw-class}, which depends on a
+score only through its recentered version, now proves the stated inequality.
 
 For part (iii), let
 \[
