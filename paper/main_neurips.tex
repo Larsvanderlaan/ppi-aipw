@@ -139,12 +139,11 @@ so that its values better match the outcome scale
 \citep{zadrozny2001obtaining,zadrozny2002transforming,niculescu2005predicting}.
 Ideally, the transformed score \(q(X)\) satisfies
 \(q(X)\approx \E\{Y\mid q(X)\}\): among observations with
-the same calibrated value, the average outcome is close to that value. The
-workflow is simple: start from a black-box score, calibrate it on the labeled
-sample, and average the calibrated predictions over the pooled covariate sample.
-We call this procedure \emph{calibrated prediction-powered inference}. Its
-appeal is inferential as well as predictive: a better-calibrated score is also a
-better regression adjustment for semisupervised inference.
+the same calibrated value, the average outcome is close to that value. We
+calibrate the black-box score on the labeled sample and average the calibrated
+predictions over the pooled covariate sample. We call this procedure
+\emph{calibrated prediction-powered inference}. Calibration can improve both
+predictive accuracy and the efficiency of the resulting mean estimator.
 
 \paragraph{Contributions.}
 Our contributions are threefold. First, we develop a calibrated-PPI framework
@@ -158,12 +157,12 @@ estimator based on the calibrated score. This identity explains why calibration
 can improve efficiency without changing validity: calibration changes the
 regression adjustment, while the estimator remains AIPW/debiased. Third, we
 establish asymptotic theory for the main calibrated estimators. Linearly
-calibrated PPI is first-order equivalent to PPI++, while isotonic calibration
-yields asymptotic linearity and valid Wald inference. We also show that, within
-the class of monotone score transformations, isotonic calibration attains the
-first-order efficiency improvement available from score-only post-processing; in
-this sense, subsequent post-hoc calibration has no additional first-order
-effect. Following the terminology of \citet{foster2023calibeating}, we call
+calibrated PPI is first-order equivalent to unconstrained PPI++, while isotonic
+calibration yields asymptotic linearity and valid Wald inference. Isotonic
+calibration achieves the smallest asymptotic variance among nondecreasing
+transformations of the original score. Further post-processing of the fitted
+isotonic score yields no additional first-order variance reduction. Following
+the terminology of \citet{foster2023calibeating}, we call
 these guarantees \emph{calibeating}: isotonic calibration improves the score as
 a predictor and as a regression adjustment for semisupervised mean estimation.
 
@@ -382,28 +381,46 @@ Hence the calibrated plug-in estimator is exactly the AIPW estimator with score
 \Pmx\mtilde
 + \Pl\{Y-\mtilde(X)\}.
 \end{equation}
-Because \(\mtilde\) is fitted on the same labeled outcomes, \(\psihat\) need
-not be unbiased in finite samples; our guarantees below are asymptotic.
+The exact AIPW representation does not imply exact unbiasedness when \(q_n\)
+is fitted using the same labeled outcomes. Because calibration uses only the
+labeled sample, conditioning on that sample gives, whenever the expectations
+are finite,
+\[
+\E(\psihat-\psi_0)
+=-(1-\rho_n)\E\bigl[(\Pl-\Px)q_n\bigr].
+\]
+The right-hand side is zero for a fixed score, but need not vanish for a fitted
+score. The results below establish asymptotic linearity for linear and
+isotonic calibration without sample splitting. Appendix \ref{sec:crossfit}
+gives exactly unbiased cross-fitted and leave-one-out AIPW estimators that
+retain the residual correction and exclude each observation from its
+calibration fit.
 The main examples below are linear and isotonic calibration, corresponding to
 affine and monotone choices of \(\mathcal H\). Thus post-hoc calibration changes
 the score, not the AIPW form of the estimator.
 
 \paragraph{Why calibration can improve efficiency.}
-If \(g_n\) converges to a population minimizer \(g_0\in\mathcal H\), then
-\(\mtilde=g_n\circ m\) targets
+For a fixed score \(q\), the asymptotic variance of
+\(\sqrt n\{\widehat\psi(q)-\psi_0\}\) can also be written as
 \[
-q_0(X):=g_0(T),
+V(q)=\rho_0\Var(Y)
++(1-\rho_0)\Var\{Y-q(X)\}.
 \]
-the best regression adjustment obtainable from the original score within
-\(\mathcal H\). Since AIPW efficiency is governed by score quality, minimizing
-prediction error over \(\{\theta\circ m:\theta\in\mathcal H\}\) is also the
-first-order objective for improving efficiency within that class. Thus
-calibration cannot do worse than the raw score when the identity map belongs to
-\(\mathcal H\). If \(\mathcal H\) contains the oracle map
-\(t\mapsto \E_{P_0}\{Y\mid m(X)=t\}\), the resulting estimator is efficient in the
-reduced model based on the score alone. We focus on two cases: isotonic
-calibration, a flexible monotone rule, and linear calibration, a stable
-low-dimensional fallback.
+Suppose \(\mathcal H\) is closed under addition of constants, and let \(g_0\)
+minimize \(\E[\{Y-g(T)\}^2]\) over \(g\in\mathcal H\). Because adding a
+constant to a score leaves \(V(q)\) unchanged, \(q_0=g_0\circ m\) also
+minimizes the asymptotic variance over the same class of transformed scores.
+If the identity map belongs to \(\mathcal H\), then \(V(q_0)\leq V(m)\).
+If \(\mathcal H\) contains \(t\mapsto\E(Y\mid T=t)\), then
+\(q_0(X)=\E(Y\mid T)\), and AIPW with this score attains the efficiency bound
+in the model based on \((T,Y)\).
+
+Under the conditions below, linear and isotonic calibration have the same
+first-order variance as their population counterparts. Affine calibration
+estimates an intercept and slope; isotonic calibration allows any
+nondecreasing transformation. The choice determines both the reduction in
+population prediction error and the variability of estimating the calibration
+map from limited labeled data.
 
 \subsection{Isotonic-calibrated PPI}
 \label{sec:iso}
@@ -687,6 +704,16 @@ PPI++ when its fitted scaling coefficient is nonnegative. If
 \(\E_{P_0}[Y\mid \mhat(X)]\) is nondecreasing in \(\mhat(X)\), isotonic calibration is
 first-order optimal among all score-only post-processing rules.
 
+When \(N/n\to\infty\), the limiting labeled fraction is zero, and the
+asymptotic variance reduces to
+\[
+\sigma_0^2=\Var\{Y-q_0^{\mathrm{iso}}(X)\}.
+\]
+If the conditional mean of \(Y\) given \(m(X)\) is nondecreasing in the
+score, this equals \(\E[\Var\{Y\mid m(X)\}]\). The unlabeled contribution
+is negligible at the \(\sqrt n\) scale, and the labeled residuals determine
+first-order uncertainty.
+
 \subsection{No further first-order gain from post-hoc calibration}
 
 The previous result compares isotonic calibration with monotone transformations
@@ -716,6 +743,10 @@ The map \(t\mapsto \E_{P_0}[Y\mid \mhat(X)=t]\) has bounded variation on the sup
 of \(\mhat(X)\).
 \end{assumption}
 
+The bounded-variation assumption permits a nonmonotone conditional mean,
+including functions with jumps. It does not require differentiability or
+Lipschitz continuity.
+
 \begin{theorem}[No further first-order gain from post-hoc calibration]
 \label{prop:eif-red}
 Suppose \cref{assump:design,assump:isoreg,assump:eff-bv} hold. Let
@@ -740,28 +771,49 @@ Thus \(\widehat{\psi}_{\mathrm{iso}}\) and
 \(\widehat{\psi}_{\mathrm{eff}}\) have the same asymptotic variance.
 \end{theorem}
 
-The theorem says that isotonic PPI already matches the reduced-experiment
-oracle at first order. After the isotonic score is fit, no further score-only
-post-hoc calibration can reduce the asymptotic variance. Combined with
-\cref{prop:iso-repr,cor:efficiency}, this gives the main \textit{calibeating} result.
-Among monotone transformations of the original score, isotonic calibration
-minimizes mean squared error and yields the smallest first-order AIPW variance;
-after the isotonic score is fit, even the oracle score-only transformation
-\(\E_{P_0}\{Y\mid q_n^{\mathrm{iso}}(X)\}\) gives no further first-order
-improvement.
+Corollary~\ref{cor:efficiency} compares nondecreasing transformations of the
+original score. Theorem~\ref{prop:eif-red} considers arbitrary measurable
+transformations applied after isotonic calibration. The conditional expectation
+defining \(q_{0\mid n}\) is evaluated for a new observation from \(P_0\), with
+the fitted isotonic map held fixed. Replacing the fitted score by this
+population conditional mean changes the mean estimator by \(o_p(n^{-1/2})\).
+Thus, further calibration of the fitted isotonic score cannot reduce its
+first-order asymptotic variance.
 
 \section{Experiments}
 \label{sec:exp}
 
-The experiments test the same mechanism as the theory: AIPW-style estimators remain valid for a fixed score, but their variance depends on how well that score works as a regression adjustment. We therefore report bias or coverage to check validity, and MSE, Monte Carlo standard deviation, and relative efficiency to measure the efficiency gains from calibration. Across all experiments, the labeled-only estimator is the safety baseline, AIPW is the main raw-score baseline, PPI is the original prediction-powered comparator, PPI++ and \textsc{AIPW-EM} are efficiency-rescaling variants, and the calibration rules are the proposed remedies for score miscalibration.
-Empirical relative efficiency is the ratio of the reference estimator's
-Monte Carlo variance to that of the estimator being evaluated; each caption
-specifies the reference estimator.
+We compare the labeled-only mean, AIPW, PPI, PPI++, and \textsc{AIPW-EM}
+with \texttt{LinearCal}, \texttt{MonoSpline}, \texttt{IsoCal}, and
+\texttt{AutoCal}. Linear calibration fits an affine map, monotone spline
+calibration fits a smooth nondecreasing function, and isotonic calibration
+fits a nondecreasing step function. AutoCal selects among AIPW and these
+calibration methods using cross-validated estimates of the AIPW variance.
+
+We first examine score miscalibration and small labeled samples in
+simulations, then evaluate the methods on public PPI benchmarks and LLM
+evaluation tasks. We report bias, Wald-interval coverage, MSE, and Monte Carlo
+standard deviation. Empirical relative efficiency is the ratio of the
+reference estimator's Monte Carlo variance to that of the estimator being
+evaluated; each caption specifies the reference estimator.
 
 \paragraph{Simulation study}
 \label{sec:simulation}
 \label{sec:empirical} \label{sec:llm-benchmark}
-The first experiment is a controlled binary-outcome simulation designed to isolate the theory's score-quality term. We draw \(S\sim N(0,1)\), set \(\mu_0(S)=\{1+\exp(-5S)\}^{-1}\), and sample \(Y\mid S\sim\mathrm{Bernoulli}\{\mu_0(S)\}\). The observed score is a monotone logit-scale distortion of \(\mu_0(S)\): it preserves the ranking information in the oracle score, but places the score on the wrong numerical scale. This is exactly the regime where the theory predicts that post-hoc calibration can improve first-order efficiency without changing the AIPW validity mechanism. We compare \textsc{Labeled-only}, PPI, AIPW, clipped PPI++, unclipped \textsc{AIPW-EM}, and \texttt{LinearCal}, \texttt{MonoSpline}, \texttt{IsoCal}, and \texttt{AutoCal}. The labeled sample size ranges over \(n\in\{50,100,200,400,800,1200,2400\}\), with \(N/n\in\{1,16\}\). The main-text simulation figure is generated from 500 Monte Carlo repetitions per setting.
+We generate \(S\sim N(0,1)\) and
+\(Y\mid S\sim\mathrm{Bernoulli}\{\mu_0(S)\}\), where
+\(\mu_0(S)=\sigma(5S)\) and \(\sigma(t)=(1+e^{-t})^{-1}\).
+The prediction score is
+\[
+m(X)=C\!\left[-0.15+0.75\,\sigma\!\left\{
+3\,\mathrm{logit}\{\mu_0(S)\}-0.5
+\right\}\right],
+\]
+where \(C(t)=\min\{0.99,\max(0.01,t)\}\). This transformation preserves the
+ordering of the conditional mean, apart from ties induced by clipping, while
+introducing miscalibration on the probability scale. We consider
+\(n\in\{50,100,200,400,800,1200,2400\}\), with \(N/n\in\{1,16\}\), and use
+500 Monte Carlo replications per setting.
 
 \begin{figure}[htb]
 \centering
@@ -770,7 +822,18 @@ The first experiment is a controlled binary-outcome simulation designed to isola
 \label{fig:simulation-rmse}
 \end{figure}
 
-\Cref{fig:simulation-rmse} shows the mechanism directly. The score-based AIPW estimators are essentially unbiased and maintain near-nominal coverage, so the practical distinction is efficiency. AIPW improves on PPI among the raw-score methods, and calibration gives the largest gains when the unlabeled sample is large enough for score quality to dominate. At \(n=400\) and \(N/n=16\), the calibrated methods reduce RMSE from about \(0.0172\) for PPI to about \(0.0164\). The PPI++ comparison is also informative: unclipped \textsc{AIPW-EM} is nearly indistinguishable from \texttt{LinearCal}, whereas clipped PPI++ can fall back toward PPI when the variance-minimizing rescaling exceeds the clipping range.
+At \(n=400\) and \(N/n=16\), \texttt{LinearCal}, \texttt{MonoSpline}, and
+\texttt{IsoCal} have RMSEs between \(0.0164\) and \(0.0166\), compared with
+\(0.0172\) for PPI and \(0.0175\) for AIPW. Their Wald-interval coverage
+ranges from \(0.910\) to \(0.932\).
+
+The PPI++ implementation restricts the scaling coefficient to \([0,1]\) in
+the original PPI parameterization, equivalent to \([0,(1-\rho_n)^{-1}]\) in
+the AIPW parameterization. \textsc{AIPW-EM} minimizes the same empirical
+variance criterion without this constraint and performs similarly to
+\texttt{LinearCal}. Averaged across sample sizes with \(N/n=16\), RMSE is
+approximately \(0.0208\) for PPI++, compared with \(0.0196\) for
+\textsc{AIPW-EM} and \texttt{LinearCal}.
 
 \paragraph{Small-sample comparisons}
 We also examine smaller labeled samples under the same binary-outcome model,
@@ -820,28 +883,48 @@ to clipping rather than empirical efficiency maximization itself.
 Appendix~\ref{app:empirical} gives the dataset-by-regime tables and the full
 calibration comparison.
 
-\paragraph{LLM evaluation benchmark}  The final experiment studies modern LLM evaluation, where proxy-score miscalibration is common and raw reward-model margins can be badly scaled. The first track uses PPE Human Preference V1 \citep{frick2025evaluate}; the second uses a PPE correctness suite built from MMLU-Pro, MATH, GPQA, IFEval, and MBPP+ \citep{frick2025evaluate,wang2024mmlupro,hendrycksmath2021,rein2024gpqa,zhou2023instructionfollowing,liu2023evalplus}. We use four public precomputed evaluator-score sources on the PPE tracks: Skywork-Reward-Llama-3.1-8B, ArmoRM-Llama3-8B-v0.1, Athene-RM-8B, and Starling-RM-7B-alpha. The final run completed all 112 evaluator/benchmark/target stages, and the reported summaries use 200 rerandomized labeled/unlabeled splits per stage.
+\paragraph{LLM evaluation benchmark}  The final experiment studies modern LLM evaluation, where proxy-score miscalibration is common and raw reward-model margins can be badly scaled. The first track uses PPE Human Preference V1 \citep{frick2025evaluate}; the second uses a PPE correctness suite built from MMLU-Pro, MATH, GPQA, IFEval, and MBPP+ \citep{frick2025evaluate,wang2024mmlupro,hendrycksmath2021,rein2024gpqa,zhou2023instructionfollowing,liu2023evalplus}.
+In PPE Human, the estimand for each target model is its human win rate,
+counting ties as half-wins. In PPE Correctness, each observation is a pair
+containing one correct and one incorrect response from the same model, and
+the estimand is the probability that the first response is correct.
+We use four public precomputed evaluator-score sources on the PPE tracks: Skywork-Reward-Llama-3.1-8B, ArmoRM-Llama3-8B-v0.1, Athene-RM-8B, and Starling-RM-7B-alpha. The final run completed all 112 evaluator/benchmark/target stages, and the reported summaries use 200 rerandomized labeled/unlabeled splits per stage.
 
-The raw proxy can be unsafe as a variance-reduction device even though it contains useful signal. On PPE Human at \(n=100\), raw PPI and raw AIPW have MSE \(0.495\) and \(0.440\), compared with \(0.001425\) for labeled-only and \(0.001391\) for \texttt{LinearCal}. On PPE Correctness at \(n=100\), the corresponding MSEs are \(0.534\), \(0.353\), \(0.002010\), and \(0.001813\). Calibration therefore recovers the stability of labeled-only estimation while still extracting modest label savings from the proxy scores: about \(3\%\) on PPE Human and \(10\%\) on PPE Correctness at \(n=100\). \texttt{LinearCal} is the strongest and most stable method overall, with \texttt{AutoCal} close behind. \Cref{tab:llm-summary-main} in Appendix \ref{app:simresults} summarizes the main PPE numbers, and Appendices \ref{app:llm-eval-by-evaluator} and \ref{app:llm-ranking} give evaluator-specific and ranking-task diagnostics.
-For MATH scores from ArmoRM, Appendix~\ref{app:llm-ordering} reports
-increasing correctness across score bins and a held-out improvement from
-Platt calibration.
+On PPE Human at \(n=100\), raw PPI and AIPW have MSEs of \(0.495\) and
+\(0.440\), compared with \(0.001425\) for labeled-only estimation and
+\(0.001391\) for \texttt{LinearCal}. On PPE Correctness, the corresponding
+MSEs are \(0.534\), \(0.353\), \(0.002010\), and \(0.001813\). Relative to
+labeled-only estimation, \texttt{LinearCal} reduces average MSE by \(2.4\%\)
+on PPE Human and \(9.8\%\) on PPE Correctness. Its nominal 90\% Wald
+intervals have empirical coverage of \(0.909\) and \(0.931\), respectively.
+Table~\ref{tab:llm-summary-main} summarizes the results; evaluator-specific
+comparisons and model-ranking results appear in
+Appendices~\ref{app:llm-eval-by-evaluator} and~\ref{app:llm-ranking}.
+
+The ArmoRM results on MATH provide a separate assessment of score ordering
+and calibration. Empirical correctness increases across twelve score bins,
+from \(0.078\) in the lowest bin to \(0.920\) in the highest. Platt
+calibration fitted on 100 labels reduces prediction MSE from \(0.4683\) to
+\(0.2020\) on the held-out observations. Appendix~\ref{app:llm-ordering}
+gives the calibration plot and details.
 
 \section{Conclusion}
 
-Prediction-powered inference can be viewed as using black-box predictions as
-AIPW regression adjustments. These adjustments improve efficiency to the extent
-that they approximate the target outcome regression. Post-hoc calibration offers
-a simple way to improve this approximation without retraining the predictor,
-while preserving AIPW-style validity. This perspective clarifies several existing PPI procedures. In particular,
-PPI++ is first-order equivalent to linear calibration, while isotonic
-calibration provides a nonlinear score-only adjustment with valid inference and
-first-order optimality among monotone transformations. Empirically, raw proxy
-scores can be poorly scaled, especially in LLM evaluation settings; calibration
-often recovers labeled-only stability and can improve efficiency when the score
-contains useful ranking information. Overall, calibration provides a principled post-hoc route for turning an
-informative but miscalibrated score into a more effective regression adjustment
-for prediction-powered inference.
+Calibrated PPI estimates a population mean by calibrating a prediction score
+using labeled observations and averaging the calibrated predictions over the
+pooled covariate sample. Least-squares calibration over a class closed under
+addition of constants gives an exact AIPW representation. Linear calibration
+is first-order equivalent to unconstrained PPI++. For isotonic calibration,
+we establish asymptotic normality and Wald inference without sample splitting,
+optimality among nondecreasing transformations of the original score, and no
+further first-order gain from recalibrating the fitted score.
+
+In the LLM benchmarks, linear calibration substantially reduces MSE relative
+to raw PPI and AIPW, with smaller improvements over labeled-only estimation.
+In simulations with nonlinear miscalibration, monotone spline and isotonic
+calibration can further reduce RMSE relative to affine calibration. These
+comparisons show how the efficiency gains depend on both the original score
+and the class of calibration maps.
 
 \bibliographystyle{plainnat}
 \bibliography{references}
@@ -975,7 +1058,7 @@ $(D_{\mu_0,n}^L,D_{\mu_0,n}^U)$, with efficiency bound $\rhozero\Var_{P_0}[\mu_0
 \E_{P_0}\!\bigl[\Var[Y\mid X]\bigr].$
 \end{proposition}
 
-A key insight of Proposition~\ref{prop:aipw-class} is that the limiting variance of the AIPW estimator depends on the score function \(q\) only through the mean squared error of its recentered version \(q^\circ\), namely \(\E_{P_0}\!\bigl[(q^\circ(X)-\mu_0(X))^2\bigr]\). Thus, within the AIPW class, efficiency is maximized by choosing \(q\) so that \(q^\circ\) approximates \(\mu_0(X)\) as well as possible, with equality when \(q^\circ=\mu_0\), in particular at \(q=\mu_0\). This shows that full efficiency generally requires using the full covariate information \(X\), or at least a summary rich enough to recover \(\mu_0(X)\) \citep{robins1995semiparametric}. In practice, this motivates taking \(q\) to be an estimated prediction score \(m(X)\), learned using flexible black-box methods.
+By Proposition~\ref{prop:aipw-class}, the limiting variance of the AIPW estimator depends on the score function \(q\) only through the mean squared error of its recentered version \(q^\circ\), namely \(\E_{P_0}\!\bigl[(q^\circ(X)-\mu_0(X))^2\bigr]\). Thus, within the AIPW class, efficiency is maximized by choosing \(q\) so that \(q^\circ\) approximates \(\mu_0(X)\) as well as possible, with equality when \(q^\circ=\mu_0\), in particular at \(q=\mu_0\). This shows that full efficiency generally requires using the full covariate information \(X\), or at least a summary rich enough to recover \(\mu_0(X)\) \citep{robins1995semiparametric}. In practice, this motivates taking \(q\) to be an estimated prediction score \(m(X)\), learned using flexible black-box methods.
 
 \textbf{AIPW, PPI, and empirical-efficiency maximization.}
 We now record several familiar choices of \(q\) within the class \eqref{eq:aipw-family}. The most common choice is \(q(X)=m(X)\), where \(m(X)\) is a prediction score, yielding the usual augmented inverse-probability weighted (AIPW) estimator \citep{robins1994estimation}:
@@ -2097,7 +2180,7 @@ The numerical summary includes Monte Carlo standard errors.}
 cross-validated neural-network RePPI implementations.}
 \label{fig:small-n-reppi}
 \end{figure}
-This appendix describes the benchmark construction used in \cref{sec:empirical}. The main-text discussion isolates three headline contrasts: PPI versus AIPW as raw-score baselines, clipped PPI++ versus \textsc{AIPW-EM} as efficiency-maximization variants, and \texttt{LinearCal}/\texttt{AutoCal} as the main calibration-based competitors.
+This appendix describes the benchmark construction used in \cref{sec:empirical}. We compare PPI with AIPW, clipped PPI++ with \textsc{AIPW-EM}, and \texttt{LinearCal} with \texttt{AutoCal}.
 
 We use the official \texttt{ppi\_py} real-data mean-estimation examples and preserve their labeled-sample-size grids. The \texttt{forest} experiment uses \(n \in \{50,100,\dots,500\}\). The \texttt{galaxies} and semisupervised \texttt{census\_income} benchmarks use \(n \in \{50,155,261,366,472,577,683,788,894,1000\}\). For each \(n\), the remaining observations form the unlabeled sample. We rerandomize this split 500 times at each \(n\), always evaluating all estimators on the same split and taking the full-sample mean as the benchmark truth.
 
@@ -2182,7 +2265,7 @@ the largest gains.
 \begin{figure}[ht]
 \centering
 \includegraphics[width=\textwidth]{assets/fig_llm_eval_by_evaluator.pdf}
-\caption{Appendix evaluator-specific PPE summary. Each panel repeats the PPE Human and PPE Correctness comparisons for one public evaluator. The large raw-proxy failures are concentrated in Skywork and Athene, while the other evaluator summaries are more benign.}
+\caption{Appendix evaluator-specific PPE summary. Each panel repeats the PPE Human and PPE Correctness comparisons for one public evaluator. The largest MSE increases relative to labeled-only estimation occur for Skywork and Athene.}
 \label{fig:llm-eval-by-evaluator}
 \end{figure}
 }{}
