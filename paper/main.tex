@@ -174,7 +174,7 @@ A large body of work combines the semiparametric framework above with machine-le
 Related work studies semisupervised or surrogate-assisted estimation in settings where the primary outcome is observed only on a limited subset, while auxiliary outcomes or surrogate measurements are available more broadly \citep{pepe1992inference,pepe1994auxiliary,chen2000miscellanea,chen2008improving,cheng2021robust,ji2025predictions,kallus2025role}. Two-sample semisupervised inference is a special case of two-stage sampling designs \citep{scott1982effect,rose2011targeted,hejazi2021efficient,qiu2026efficient} and, more generally, of data fusion, for which a substantial semiparametric efficiency literature has been developed \citep{li2023efficient,li2025data,graham2024towards,xu2025unified}. More recent papers have used the term \emph{prediction-powered inference} (PPI) for the semisupervised mean-estimation setting in which a black-box predictor is combined with a small labeled sample and a large unlabeled sample \citep{ppi2023,angelopoulos2023ppi,crossppi2024,xu2025unified,song2026demystifying,poulet2025prediction,wang2025efficient,lee2026mec}. These papers also brought such methods to a broader machine-learning audience and provided accessible software. Closely related questions have long been studied in randomized trials, where prognostic scores or other regression adjustments learned from larger historical, external-control, or auxiliary data sources are used to improve precision in smaller trials \citep{hansen2008prognostic,rosenblum2009using,moore2009covariate,moore2009increasing,moore2011robust,vanderweele2019selecting,benkeser2021improving,burger2021use,schuler2022increasing,li2023estimating,balzer2024adaptive,van2024covariate,hojbjerre2025powering,yang2026improving}. Methodologically, however, PPI estimators can often be viewed as instances or refinements of existing semiparametric procedures. For example, PPI++ is an AIPW estimator \citep{robins1994estimation,vanderlaanunified} obtained by empirical efficiency maximization \citep{rubin2008empirical} over a scaling parameter, while cross-PPI \citep{crossppi2024} is a cross-fitted AIPW estimator \citep{zheng2010asymptotic,DoubleML}. More fundamentally, in settings with known missingness probability, the ability to combine black-box prediction models with valid semiparametric inference is closely tied to the robustness properties of AIPW and is therefore not unique to semisupervised mean estimation \citep{bang2005doubly,seaman2018introduction,rotnitzky2021characterization}.
 
 \textbf{Calibrated DML and Recalibrated PPI.}
-In our mean-estimation setting, the closest precursor is the calibrated debiased machine-learning framework of \citet{van2024automatic}, which studies calibration of the outcome regression in AIPW estimators for doubly robust inference. Our setting can be viewed as a semisupervised specialization of that perspective, adapted to prediction-powered inference and aimed at improving efficiency in randomized designs. This connection also motivates our term \emph{calibrated PPI}. A related paper is \citet{ji2025predictions}, who study recalibrated prediction-powered inference for general estimating equations. Rather than correcting the predictive model itself, their approach modifies the imputed loss in the PPI estimating equation, thereby ``recalibrating” the estimator rather than the predictions. In the mean-estimation setting under squared loss, the target correction reduces to the conditional mean of the outcome given the initial prediction score, which is also the efficient regression adjustment in the reduced model based only on that score. Thus, this conditional mean may be viewed as an oracle calibrator. The main differences lie in the estimators, emphasis, and theory. \citet{ji2025predictions} use flexible machine learning to estimate this oracle target and thereby pursue semiparametric efficiency \citep{robins1994estimation}. They do not study specific calibration procedures, and their method remains in AIPW form. By contrast, we study simple, widely used post-hoc calibration maps applied directly to a fixed score, and ask what can be guaranteed even without consistent estimation of the oracle target. Our estimators retain a simple plug-in form, yielding lightweight methods that can be incorporated into an existing prediction pipeline without retraining. We also develop calibration-specific results: an exact AIPW interpretation of the plug-in estimator, first-order equivalence between linear calibration and PPI++, and a first-order calibeating guarantee for isotonic calibration.
+In our mean-estimation setting, the closest precursor is the calibrated debiased machine-learning framework of \citet{van2024automatic}, which studies calibration of the outcome regression in AIPW estimators for doubly robust inference. Our setting can be viewed as a semisupervised specialization of that perspective, adapted to prediction-powered inference and aimed at improving efficiency in randomized designs. This connection also motivates our term \emph{calibrated PPI}. A related method is recalibrated prediction-powered inference (RePPI) \citep{ji2025predictions}, which applies to general estimating equations. Rather than correcting the predictive model itself, their approach modifies the imputed loss in the PPI estimating equation, thereby ``recalibrating” the estimator rather than the predictions. In the mean-estimation setting under squared loss, the target correction reduces to the conditional mean of the outcome given the initial prediction score, which is also the efficient regression adjustment in the reduced model based only on that score. Thus, this conditional mean may be viewed as an oracle calibrator. The main differences lie in the estimators, emphasis, and theory. \citet{ji2025predictions} use flexible machine learning to estimate this oracle target and thereby pursue semiparametric efficiency \citep{robins1994estimation}. They do not study specific calibration procedures, and their method remains in AIPW form. By contrast, we study simple, widely used post-hoc calibration maps applied directly to a fixed score, and ask what can be guaranteed even without consistent estimation of the oracle target. Our estimators retain a simple plug-in form, yielding lightweight methods that can be incorporated into an existing prediction pipeline without retraining. We also develop calibration-specific results: an exact AIPW interpretation of the plug-in estimator, first-order equivalence between linear calibration and PPI++, and a first-order calibeating guarantee for isotonic calibration.
 
 \textbf{From missing data to causal inference.} From the perspective of estimation and efficiency theory, semisupervised mean estimation with missing-at-random outcomes is equivalent to randomized experiments, controlled trials, and survey-sampling designs once the missingness indicator is reinterpreted as a treatment or sampling indicator, so that the relevant potential outcomes are viewed as missing \citep{rubin1978bayesian,vanderlaanunified,licausal,mozer2026ppi}. This equivalence allows tools from covariate adjustment, causal inference, and model-assisted estimation to be transferred directly to the semisupervised setting; see, for example, \citet{mozer2026ppi} for results relating prediction-powered inference to model-assisted survey-sampling estimators. The two-sample formulation we study is also equivalent to a one-sample i.i.d.\ model \citep{li2023efficient}. In particular, our methods apply to inference on the counterfactual mean \(\mathbb{E}[Y(1)]\) in a randomized trial with binary treatment, where treated units form the labeled sample and control units contribute covariate information only; see Appendix~\ref{app:causal}.
 
@@ -404,16 +404,16 @@ minimizing an empirical estimate of the asymptotic variance,
 a procedure known as empirical efficiency maximization
 \citep{rubin2008empirical,vanderlaanunified}.
 Writing
-$H_{f,n}(X,Y)=f(X)+\rho_n^{-1}\{Y-f(X)\}$,
+$H_{f,n}(X,Y)=Y-(1-\rho_n)f(X)$,
 the empirical variance criterion is
 \[
 \widehat\sigma_n^2(f)
 :=
-\rho_n\Pl\left[
+\Pl\left[
 \{H_{f,n}(X,Y)-\Pl H_{f,n}\}^2
 \right]
 +
-(1-\rho_n)\Pu\left[
+\rho_n(1-\rho_n)\Pu\left[
 \{f(\widetilde X)-\Pu f\}^2
 \right].
 \]
@@ -516,6 +516,8 @@ admits the exact AIPW representation
 +
 \Pl\{Y-\mtilde(X)\}.
 \end{equation}
+Because \(\mtilde\) is fitted on the same labeled outcomes, \(\psihat\) need
+not be unbiased in finite samples; our guarantees below are asymptotic.
 
 The goal is to obtain a calibrated score satisfying, at least
 approximately,
@@ -875,57 +877,47 @@ Platt scaling in online settings are studied by
 \citet{gupta2023online}.
 \end{remark}
 
-\subsection{Cross-fitting and cross-calibration}
+\subsection{Cross-fitting and leave-one-out calibration}
 \label{sec:crossfit}
 
-The preceding analysis treats the initial black-box predictor as
-fixed. When the predictor is trained on the labeled sample,
-using the same observations for prediction and calibration
-may introduce overfitting. We therefore consider a cross-fitted
-implementation in which calibration is performed using
-out-of-fold predictions.
+Fitting a calibrator to pooled out-of-fold predictions still uses each labeled
+outcome in the calibration fit. To hold out both steps, partition the labeled
+indices into folds \(I_1,\ldots,I_K\) independently of the observations, and
+fit each calibrated score \(q^{(-k)}\) without the pairs indexed by \(I_k\).
+Any predictor fitting and tuning used to construct \(q^{(-k)}\) also exclude
+\(I_k\). Let \(k(i)\) be the fold containing \(i\) and
+\(c_n:=N/(n+N)\). The cross-fitted AIPW estimator is
+\begin{equation}
+\label{eq:calibration-crossfit}
+\widehat\psi_{\mathrm{CF}}
+:=\frac1n\sum_{i=1}^n
+\left[Y_i+c_n\{\Pu q^{(-k(i))}-q^{(-k(i))}(X_i)\}\right].
+\end{equation}
+For each \(i\), conditional on the training sample,
+\(\E[q^{(-k(i))}(X_i)]=\E[\Pu q^{(-k(i))}]\).
+Thus \eqref{eq:calibration-crossfit} is unbiased when these predictions are
+integrable and the fitted scores do not use the unlabeled observations.
 
-\begin{enumerate}[leftmargin=6mm,label=\arabic*.]
-\item Partition the labeled sample into $K$ folds
-$I_1,\dots,I_K$.
-
-\item For each fold $k$, fit the black-box predictor
-$\mhat^{(-k)}$ using the labeled observations outside $I_k$.
-Compute predictions $\mhat^{(-k)}(X_i)$ for $i\in I_k$
-and $\mhat^{(-k)}(\widetilde X_j)$ for each unlabeled
-observation.
-
-\item Pool the labeled out-of-fold predictions
-$\{\mhat^{(-k(i))}(X_i)\}_{i=1}^n$ and fit the calibration
-map $\fhat$ using the corresponding outcomes $Y_i$.
-
-\item Construct the calibrated predictions
-\[
-\mtilde(X_i)
-=
-\fhat(\mhat^{(-k(i))}(X_i))
-\]
-for the labeled sample and
-\[
-\mtilde(\widetilde X_j)
-=
-\frac{1}{K}\sum_{k=1}^K
-\fhat(\mhat^{(-k)}(\widetilde X_j))
-\]
-for the unlabeled sample. Substituting these predictions
-into \eqref{eq:plugin} gives the cross-fitted estimator.
-\end{enumerate}
-
-This procedure ensures that each labeled prediction is
-obtained from a model trained without the corresponding
-outcome, while retaining the pooled out-of-fold predictions
-for calibration. It follows the cross-fitting approach used
-in semiparametric estimation
-\citep{zheng2010asymptotic,vanderLaanRose2011,DoubleML}.
-Related procedures have been developed by
-\citet{van2024stabilized,van2024automatic,rabenseifner2025causal},
-with a cross-calibration variant studied by
-\citet{van2023causal}.
+Leave-one-out calibration takes \(K=n\). Writing \(q_{-i}\) for the score
+fitted without \((X_i,Y_i)\), we obtain
+\begin{equation}
+\label{eq:calibration-loo}
+\widehat\psi_{\mathrm{LOO}}
+=\frac1n\sum_{i=1}^n
+\left[Y_i+c_n\{\Pu q_{-i}-q_{-i}(X_i)\}\right].
+\end{equation}
+The residual correction is retained because the held-out residuals need not
+average to zero. In the simulation, we use
+\begin{equation}
+\label{eq:loo-se}
+\widehat{\mathrm{se}}_{\mathrm{LOO}}^2
+=\frac{\widehat{\Var}_L\{Y_i-c_nq_{-i}(X_i)\}}{n}
++\frac{\widehat{\Var}_U\{c_n\bar q(\widetilde X_j)\}}{N},
+\qquad \bar q:=\frac1n\sum_{i=1}^n q_{-i},
+\end{equation}
+where the empirical variances use denominators \(n-1\) and \(N-1\).
+The bias, coverage, and interval widths of this procedure are reported in
+Appendix~\ref{app:small-n}.
 
 \section{Theory for isotonic-calibrated PPI}
 \label{sec:theory}
@@ -1115,6 +1107,10 @@ model obtained by replacing $X$ with $\mhat(X)$.
 \end{enumerate}
 \end{corollary}
 
+Taking \(\theta\) constant in part (ii) shows that isotonic calibration is
+asymptotically at least as efficient as the labeled mean.
+At the \(\sqrt n\) scale, the variance reduction is
+\[\Var(Y)-\sigma_0^2=(1-\rhozero)\Var\{m_0(X)\}.\]
 Corollary~\ref{cor:efficiency} shows that isotonic calibration
 is at least as efficient as other monotone transformations,
 including AIPW, PPI, PPI++, and linear calibration when
@@ -1228,6 +1224,9 @@ We first examine the effects of score miscalibration in
 controlled simulations, then evaluate the methods on
 established benchmarks and an application involving
 LLM-generated predictions.
+Empirical relative efficiency is the ratio of the reference estimator's
+Monte Carlo variance to that of the estimator being evaluated; each caption
+specifies the reference estimator.
 
 \subsection{Simulation study}
 \label{sec:simulation}
@@ -1242,7 +1241,7 @@ We construct a miscalibrated prediction score by applying
 a nonlinear monotone transformation:
 \[
 m(X)=\mathrm{clip}\left[
--0.15+0.75\,\sigma\bigl\{0.8\,z(S)+0.1\,z(S)^3-1\bigr\},
+-0.15+0.75\,\sigma\bigl\{3\,z(S)-0.5\bigr\},
 \,0.01,\,0.99
 \right],
 \]
@@ -1309,6 +1308,34 @@ comparably to the best fixed calibration methods, while
 \textsc{MonoSpline} achieves similar accuracy to
 \textsc{IsoCal}.
 
+\subsection{Small-sample comparisons}
+We also examine smaller labeled samples under the same binary-outcome model,
+using mild and strong score miscalibration as specified in
+Appendix~\ref{app:small-n}. We set \(N=16n\) for
+\(n\in\{20,50,100,200,400,800,1200\}\) and use 1,000 replications per setting.
+The labeled mean, PPI, AIPW, PPI++, linear, smooth monotone, and isotonic
+calibration are evaluated on the same samples, together with the leave-one-out
+linear and isotonic estimators in \eqref{eq:calibration-loo}.
+
+Under strong miscalibration, linear, smooth monotone, and isotonic calibration
+each have lower RMSE than PPI++ at all seven sample sizes. At \(n=20\),
+isotonic coverage ranges from \(0.814\) to \(0.871\) across the two settings;
+leave-one-out calibration increases it to \(0.905\)--\(0.925\), with wider
+intervals and larger RMSE. Across all 14 settings, leave-one-out calibration
+lowers linear-calibration RMSE by at most \(1.99\%\), but lowers isotonic RMSE
+in only one setting. The RePPI random-forest and neural-network comparisons
+are reported in Appendix~\ref{app:small-n}.
+
+\begin{figure}[htb]
+\centering
+\includegraphics[width=\textwidth]{assets/fig_small_n_rmse.pdf}
+\caption{RMSE across labeled sample sizes under mild and strong score
+miscalibration, with \(N=16n\) and 1,000 replications per setting. Solid and
+dashed curves distinguish calibration on the labeled sample from
+leave-one-out calibration.}
+\label{fig:small-n-rmse}
+\end{figure}
+
 \subsection{Empirical benchmarks}
 \label{sec:empirical}
 
@@ -1331,7 +1358,7 @@ Appendix~\ref{app:empirical}.
 
 \begin{figure}[htb]
 \centering
-\includegraphics[width=\textwidth]{assets/sim_fig_main.pdf}
+\includegraphics[width=\textwidth]{assets/fig_paper_main_grid.pdf}
 \caption{Results on the \texttt{ppi\_py} benchmarks.
 Panels show MSE normalized by that of PPI, relative efficiency
 compared with PPI, and coverage of nominal 95\% confidence
@@ -1444,6 +1471,9 @@ achieves the highest average Spearman correlation of $0.905$.
 At $n=400$, \texttt{LinearCal} achieves a Spearman correlation
 of $0.941$ and identifies the top-ranked model in $64.6\%$
 of repetitions; see Appendix~\ref{app:llm-ranking}.
+For MATH scores from ArmoRM, Appendix~\ref{app:llm-ordering} reports
+increasing correctness across score bins and a held-out improvement from
+Platt calibration.
 
 \section{Conclusion  }
 
@@ -2459,6 +2489,12 @@ m_0(X)=\eta_0\{\mhat(X)\}
 \qquad\text{almost surely.}
 \]
 Therefore, the influence pair in \cref{thm:al} coincides with the reduced-model efficient influence pair above, so \(\widehat{\psi}_{\mathrm{iso}}\) is efficient for \(\psi_0\) in the reduced experiment indexed by \(\mhat(X)\).
+The isotonic class is closed under constant shifts and positive rescaling.
+The corresponding population first-order conditions give
+\(\E[Y-m_0]=\E[m_0(Y-m_0)]=0\), so
+\(\Cov(Y,m_0)=\Var(m_0)\).
+Substitution into \(\sigma_0^2\) gives the stated variance reduction relative
+to the labeled mean.
 \end{proof}
 
 \section{Pooled i.i.d.\ Missing-Data Formulation}
@@ -2476,6 +2512,62 @@ which is the single-sample analogue of the efficient influence pair obtained by 
 
  \section{Additional empirical details}
 \label{app:empirical}
+
+\subsection{Small-sample comparisons and RePPI}
+\label{app:small-n}
+
+The small-sample experiment uses \(S\sim N(0,1)\),
+\(p(S)=\{1+\exp(-5S)\}^{-1}\), and \(Y\mid S\sim\mathrm{Bernoulli}\{p(S)\}\).
+Let \(C(t)=\min\{0.99,\max(0.01,t)\}\), \(\sigma(t)=(1+e^{-t})^{-1}\),
+and \(Z\sim N(0,1)\) independently of \((S,Y)\).
+The mildly miscalibrated score is
+\(C[\sigma\{1.5\,\mathrm{logit}(C[p(S)+0.005Z])\}]\);
+the strongly miscalibrated score is
+\(C[-0.15+0.75\,\sigma\{3\,\mathrm{logit}(p(S))-0.5\}]\).
+The simulation seed is 20260411. Figure~\ref{fig:small-n-diagnostics} reports
+signed bias, coverage of nominal 95\% intervals, interval width, and relative
+efficiency versus PPI++.
+
+We implement two scalar-score versions of RePPI Algorithm~1
+\citep{ji2025predictions}, using three-way sample splitting and
+evaluation-fold-size weighting. RePPI-RF uses a 100-tree random forest.
+RePPI-MLP-CV selects hidden-layer widths from \((8)\), \((32,32)\), and
+\((32,32,32)\), and penalties from \(\{10^{-2},10^{-4}\}\), by two-fold
+validation MSE within each outer training fold. Both estimate the scalar
+power-tuning coefficient on the evaluation fold, use the global factor
+\(N/(n+N)\), and set the coefficient to zero when fitted-score variance is
+numerically singular. The neural implementation uses the feature vector
+\([1,m(X)]\). Its prediction map and the scalar single-fold calculation were
+checked against the public implementation; the three-way aggregation follows
+the paper's Algorithm~1.
+
+RePPI-RF has lower RMSE than PPI++ in one of 14 settings; RePPI-MLP-CV does
+so in five. For \(n\ge50\), the neural estimator's RMSE is
+\(0.576\)--\(0.668\) times that of the labeled mean. At \(n=20\), the ratios
+are \(1.450\) and \(9.690\) under mild and strong miscalibration.
+Neither RePPI implementation has lower RMSE than smooth monotone calibration
+in these settings. The largest neural-estimator error occurs when a
+fitted-score variance of \(1.04\times10^{-7}\) produces a coefficient of
+\(1238.2\). All replications are retained. Singular-variance fallbacks occur
+in 175 random-forest replications and 46 neural-network replications;
+the neural fits produce 2,120 convergence warnings.
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{assets/fig_small_n_diagnostics.pdf}
+\caption{Signed bias, coverage of nominal 95\% intervals, interval width,
+and relative efficiency versus PPI++ in the small-sample experiment.
+The numerical summary includes Monte Carlo standard errors.}
+\label{fig:small-n-diagnostics}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{assets/fig_small_n_reppi.pdf}
+\caption{Small-sample RMSE comparison including the random-forest and
+cross-validated neural-network RePPI implementations.}
+\label{fig:small-n-reppi}
+\end{figure}
 
 This appendix records the benchmark construction used in \cref{sec:empirical}. We use the official \texttt{ppi\_py} real-data mean-estimation examples and preserve their labeled-sample-size grids. The \texttt{forest} experiment uses \(n \in \{50,100,\dots,500\}\). The \texttt{galaxies} and semisupervised \texttt{census\_income} benchmarks use \(n \in \{50,155,261,366,472,577,683,788,894,1000\}\). For each \(n\), the remaining observations form the unlabeled sample. We repeat each random split 500 times at each \(n\), evaluate all estimators on the same split, and use the full-sample mean as the benchmark target.
 
@@ -2518,6 +2610,24 @@ and relative efficiency versus PPI.
 \includegraphics[width=\textwidth]{assets/fig_paper_metric_grid.pdf}
 \caption{Full diagnostic grid for the reproduced PPI benchmarks, showing bias, empirical variance, normalized MSE relative to PPI, coverage, and relative efficiency versus PPI across labeled-sample-size regimes. In the normalized-MSE and relative-efficiency panels, the dashed horizontal line marks parity with PPI; in the coverage panels it marks the nominal target coverage \(1-\alpha\). \texttt{AutoCal}, \texttt{MonoSpline}, and \texttt{IsoCal} appear alongside PPI, AIPW, PPI++, \textsc{AIPW-EM}, and the fixed calibration rules, while Platt scaling and Venn--Abers appear only on the binary-outcome datasets where they are well defined.}
 \label{fig:ppi-benchmarks-full}
+\end{figure}
+
+\subsection{LLM score ordering and held-out calibration}
+\label{app:llm-ordering}
+
+For MATH responses evaluated by ArmoRM, empirical correctness increases across
+twelve score bins, from \(0.078\) in the lowest bin to \(0.920\) in the
+highest. Platt calibration fitted on 100 randomly selected labels reduces
+mean squared prediction error from \(0.4683\) to \(0.2020\) on the remaining
+held-out observations, a reduction of \(56.9\%\).
+
+\begin{figure}[htb]
+\centering
+\includegraphics[width=\textwidth]{assets/fig_toy_calibration_ppi.pdf}
+\caption{ArmoRM scores and observed MATH correctness. The calibration map is
+fitted on 100 labeled observations; prediction error is evaluated on the
+remaining observations.}
+\label{fig:llm-ordering}
 \end{figure}
 
 \subsection{LLM evaluator breakdown}

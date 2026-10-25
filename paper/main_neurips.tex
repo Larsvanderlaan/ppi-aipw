@@ -78,7 +78,8 @@ Prediction-powered inference uses black-box predictions to improve estimation
 from small labeled samples and large unlabeled samples, but raw prediction
 scores are often miscalibrated and can be inefficient regression adjustments.
 We study semisupervised mean estimation with a black-box score, a small labeled
-sample, and a large unlabeled sample. AIPW and PPI give valid inference for
+sample, and a large unlabeled sample. Augmented inverse-probability weighting
+(AIPW) and PPI give valid inference for
 fixed or cross-fitted scores, but their efficiency depends on how well the score
 predicts the outcome. We propose \emph{calibrated prediction-powered
 inference}: post-hoc calibrate the score on the labeled sample, then average the
@@ -187,8 +188,8 @@ which calibrates outcome-regression and debiasing nuisance estimators inside
 AIPW procedures \citep{van2024automatic}. That work targets robustness to
 nuisance misspecification in nonrandomized settings; here, random sampling
 already gives unbiasedness for any fixed score, so calibration is used to
-improve efficiency and justify post-processing a fixed score. Related work on
-recalibrated PPI modifies the estimating equation with a flexible
+improve efficiency and justify post-processing a fixed score. Recalibrated
+prediction-powered inference (RePPI) modifies the estimating equation with a flexible
 machine-learned correction to target full semiparametric efficiency
 \citep{ji2025predictions}. In contrast, we post-process the fixed prediction
 score using standard calibration maps and characterize the resulting guarantees
@@ -239,7 +240,8 @@ The following hold:
 \begin{enumerate}[leftmargin=6mm,label=(\roman*)]
 \item \(\mathcal D_L\) is i.i.d.\ from \(P_0\), \(\mathcal D_U\) is i.i.d.\ from \(\Px\), and the two samples are independent.
 \item \(Y\) has finite second moment under \(P_0\).
-\item With \(M:=n+N\), the labeled fraction \(\rhon=n/M\) satisfies \(\rhon\to\rhozero\) for some \(\rhozero\in(0,1)\).
+\item As \(n\to\infty\), the labeled fraction \(\rhon=n/(n+N)\) satisfies
+\(\rhon\to\rhozero\) for some \(\rhozero\in[0,1)\).
 \end{enumerate}
 \end{assumption}
 
@@ -267,16 +269,16 @@ not unbiasedness.
 Appendix \ref{app:semicolon} gives the asymptotic expansion of $\widehat\psi(q)$. Its main
 consequence is
 \[
-\mathrm{AVar}\!\left\{\sqrt{M}\,(\widehat\psi(q)-\psi_0)\right\}
+\mathrm{AVar}\!\left\{\sqrt n\,(\widehat\psi(q)-\psi_0)\right\}
 =
 V_{\mathrm{eff}}
 +
-\frac{1-\rho_0}{\rho_0}
+(1-\rho_0)
 \E_{P_0}\!\left[(q^\circ(X)-\mu_0(X))^2\right],
 \]
 where
 \(q^\circ(X):=q(X)-\E_{\Px}\{q(X)\}+\psi_0\) is the recentered score and
-\(V_{\mathrm{eff}}\) is the semiparametric efficiency bound
+\(V_{\mathrm{eff}}=\rhozero\Var\{\mu_0(X)\}+\E[\Var(Y\mid X)]\) is the semiparametric efficiency bound
 \citep{bickel1993efficient}. Hence efficiency is governed by how well
 \(q^\circ\) approximates \(\mu_0\), and is optimized when
 \(q^\circ=\mu_0\).
@@ -380,59 +382,11 @@ Hence the calibrated plug-in estimator is exactly the AIPW estimator with score
 \Pmx\mtilde
 + \Pl\{Y-\mtilde(X)\}.
 \end{equation}
+Because \(\mtilde\) is fitted on the same labeled outcomes, \(\psihat\) need
+not be unbiased in finite samples; our guarantees below are asymptotic.
 The main examples below are linear and isotonic calibration, corresponding to
 affine and monotone choices of \(\mathcal H\). Thus post-hoc calibration changes
 the score, not the AIPW form of the estimator.
-
-To state the calibration property used below, let \(\mathcal F\) be a linear
-class of maps \(g:\mathbb R\to\mathbb R\) containing the constants and the
-identity map. We say that \(\mtilde\) is \emph{empirically calibrated over
-\(\mathcal F\)} if
-\begin{equation}
-\label{eq:cal-risk}
-\Pl\bigl[(Y-\mtilde(X))^2\bigr]
-\le
-\Pl\bigl[(Y-g(\mtilde(X)))^2\bigr],
-\qquad
-\text{for all } g\in\mathcal F.
-\end{equation}
-Equivalently, the residuals are orthogonal to every allowed post-hoc
-calibration:
-\begin{equation}
-\label{eq:cal-score}
-\Pl\bigl[g(\mtilde(X))\{Y-\mtilde(X)\}\bigr]=0,
-\qquad
-\text{for all } g\in\mathcal F.
-\end{equation}
-
-\begin{theorem}[AIPW representation after calibration]
-\label{thm:repr}
-Suppose \(q_n\) satisfies \eqref{eq:cal-score} over a linear class
-\(\mathcal F\) containing the constants and the identity map. Define
-\[
-q_{0,\mathcal F}^\dagger := g_{0,\mathcal F}\circ q_n,
-\qquad
-g_{0,\mathcal F}\in \arg\min_{g\in\mathcal F}
-\E_{P_0}\!\left[(Y-g(q_n(X)))^2\right].
-\]
-Then
-\begin{align*}
-\psihat
-&=
-\Pmx q_{0,\mathcal F}^\dagger
-+ \Pl\{Y-q_{0,\mathcal F}^\dagger(X)\}
-+ (1-\rhon)(\Pu-\Pl)\{q_n-q_{0,\mathcal F}^\dagger\}.
-\end{align*}
-\end{theorem}
-
-Theorem~\ref{thm:repr} compares the empirical calibrated estimator with the
-AIPW estimator based on \(q_{0,\mathcal F}^\dagger\), the best population
-post-hoc calibration of the fitted score within \(\mathcal F\). The only
-difference is the last empirical-process term. When \(q_n\) is close to
-\(q_{0,\mathcal F}^\dagger\) in mean squared error, this term is higher order.
-Thus empirical calibration lets us analyze the estimator as if the fitted score
-had been optimally calibrated within \(\mathcal F\), up to a negligible
-remainder.
 
 \paragraph{Why calibration can improve efficiency.}
 If \(g_n\) converges to a population minimizer \(g_0\in\mathcal H\), then
@@ -533,25 +487,11 @@ The corresponding plug-in estimator is
 After linear calibration, no further shift or rescaling of the score can reduce
 the labeled-sample squared error.
 
-\begin{proposition}[Linear calibration as AIPW]
-\label{prop:linear}
-The normal equations for \cref{eq:linear-cal} imply
-\[
-\Pl\{Y-q_n^{\mathrm{lin}}(X)\}=0
-\qquad\text{and}\qquad
-\Pl\bigl[q_n^{\mathrm{lin}}(X)\{Y-q_n^{\mathrm{lin}}(X)\}\bigr]=0.
-\]
-Hence, for any \(\hat w(X)=a+b\,q_n^{\mathrm{lin}}(X)\),
-\begin{equation}
-\label{eq:linear-ppi}
-\widehat{\psi}_{\mathrm{lin}}
-=
-\rhon \Pl\{q_n^{\mathrm{lin}}(X)\}
-+(1-\rhon)\Pu\{q_n^{\mathrm{lin}}(\widetilde X)\}
-+
-\Pl\bigl[\hat w(X)\{Y-q_n^{\mathrm{lin}}(X)\}\bigr].
-\end{equation}
-\end{proposition}
+The least-squares normal equations give
+\(\Pl\{Y-q_n^{\mathrm{lin}}(X)\}=0\) and
+\(\Pl[q_n^{\mathrm{lin}}(X)\{Y-q_n^{\mathrm{lin}}(X)\}]=0\).
+Thus every affine weight \(a+bq_n^{\mathrm{lin}}\) gives a zero empirical
+residual correction in the AIPW representation.
 
 The next result connects linear calibration to PPI++
 \citep{angelopoulos2023ppi}. Intuitively, PPI++ chooses a linear rescaling by
@@ -573,7 +513,7 @@ Moreover, \(\hat\lambda_{++}-\hat a_{\mathrm{lin}}=o_p(1)\), and hence
 \[
 \widehat\psi_{++}(\hat\lambda_{++})-\widehat\psi_{\mathrm{lin}}
 =
-o_p(M^{-1/2}).
+o_p(n^{-1/2}).
 \]
 \end{proposition}
 
@@ -625,70 +565,88 @@ The following conditions hold.
 \end{enumerate}
 \end{assumption}
 
-\begin{theorem}[Asymptotic expansion]
+\begin{theorem}[Asymptotic linearity under the two-sample model]
 \label{thm:al}
 Suppose \cref{assump:design,assump:isoreg} hold. Then
 \[
-\|q_n^{\mathrm{iso}}-q_0^{\mathrm{iso}}\|_{2,\Px}^2 = O_p(n^{-2/3}),
-\]
-and
-\begin{align}
-\widehat{\psi}_{\mathrm{iso}}-\psi_0
-&=
-\rhon(\Pl-P_0)
-\Bigl[
-q_0^{\mathrm{iso}}(X)-\psi_0+\rhon^{-1}\{Y-q_0^{\mathrm{iso}}(X)\}
-\Bigr]
-\nonumber\\
-&\quad
-+
-(1-\rhon)(\Pu-\Px)\{q_0^{\mathrm{iso}}(\widetilde X)-\psi_0\}
-+
-O_p(n^{-2/3})
-+
-O_p(n^{-1/3}N^{-1/2}).
-\label{eq:al}
-\end{align}
-\end{theorem}
-
-Thus \(\widehat\psi_{\mathrm{iso}}\) has the same first-order behavior as the
-oracle AIPW estimator that uses the population isotonic score \(q_0^{\mathrm{iso}}\). Since
-\(n/M\to\rho_0\in(0,1)\), the extra error from estimating the calibration map is
-\(o_p(M^{-1/2})\).
-
-\begin{corollary}[Wald inference]
-\label{cor:normal}
-Under the conditions of \cref{thm:al}, assume \(\sigma_0^2>0\), where
-\[
-\sigma_0^2
-:=
-\rhozero\,\Var\!\left[
-q_0^{\mathrm{iso}}(X)-\psi_0+\rhozero^{-1}\{Y-q_0^{\mathrm{iso}}(X)\}
-\right]
-+
-(1-\rhozero)\,\Var\{q_0^{\mathrm{iso}}(\widetilde X)-\psi_0\}.
+\|q_n^{\mathrm{iso}}-q_0^{\mathrm{iso}}\|_{2,\Px}^2
+=
+O_p(n^{-2/3}).
 \]
 Define
 \[
+D_{q_0^{\mathrm{iso}},n}^L(X,Y)
+:=
+Y-\psi_0-(1-\rhon)\{q_0^{\mathrm{iso}}(X)-\psi_0\},
+\qquad
+D_{q_0^{\mathrm{iso}},n}^U(\widetilde X)
+:=
+(1-\rhon)\{q_0^{\mathrm{iso}}(\widetilde X)-\psi_0\}.
+\]
+Then
+\begin{align}
+\widehat{\psi}_{\mathrm{iso}}-\psi_0
+&=
+(\Pl-P_0)D_{q_0^{\mathrm{iso}},n}^L
++
+(\Pu-\Px)D_{q_0^{\mathrm{iso}},n}^U
++
+R_{n,N},
+\label{eq:al}\\
+R_{n,N}
+&=
+O_p\bigl((1-\rhon)n^{-2/3}\bigr)
++
+O_p\bigl((1-\rhon)n^{-1/3}N^{-1/2}\bigr)
+=o_p(n^{-1/2}).
+\nonumber
+\end{align}
+Consequently, $\widehat{\psi}_{\mathrm{iso}}$ is
+asymptotically linear at the $\sqrt n$ rate with triangular
+influence pair $(D_{q_0^{\mathrm{iso}},n}^L,D_{q_0^{\mathrm{iso}},n}^U)$.
+\end{theorem}
+
+The asymptotic linear representation yields a mean-zero
+normal limit for
+$\sqrt n(\widehat{\psi}_{\mathrm{iso}}-\psi_0)$ with variance
+\[
+\sigma_0^2
+:=
+\Var\!\left[
+Y-\psi_0-(1-\rhozero)\{q_0^{\mathrm{iso}}(X)-\psi_0\}
+\right]
++
+\rhozero(1-\rhozero)\Var\{q_0^{\mathrm{iso}}(X)\}.
+\]
+The following corollary establishes asymptotic normality
+and valid Wald inference using an empirical estimate of
+this variance.
+
+\begin{corollary}[Asymptotic normality and Wald inference]
+\label{cor:normal}
+Under the conditions of \cref{thm:al}, assume that
+$\sigma_0^2>0$. Define the empirical variance estimator
+\[
 \widehat \sigma^2
 :=
-\rhon \Pl\{(\widehat D^L-\Pl\widehat D^L)^2\}
-+(1-\rhon)\Pu\{(\widehat D^U-\Pu\widehat D^U)^2\},
+\Pl\{(\widehat D^L-\Pl\widehat D^L)^2\}
++
+\frac{n}{N}\Pu\{(\widehat D^U-\Pu\widehat D^U)^2\},
 \]
 where
 \[
 \widehat D_i^L
 :=
-q_n^{\mathrm{iso}}(X_i)-\widehat{\psi}_{\mathrm{iso}}
-+\rhon^{-1}\{Y_i-q_n^{\mathrm{iso}}(X_i)\},
+Y_i-\widehat{\psi}_{\mathrm{iso}}
+-(1-\rhon)\{q_n^{\mathrm{iso}}(X_i)-\widehat{\psi}_{\mathrm{iso}}\},
 \qquad
 \widehat D_j^U
 :=
-q_n^{\mathrm{iso}}(\widetilde X_j)-\widehat{\psi}_{\mathrm{iso}} .
+(1-\rhon)\{q_n^{\mathrm{iso}}(\widetilde X_j)-\widehat{\psi}_{\mathrm{iso}}\}.
 \]
 Then
 \[
-\frac{\sqrt{M}\,(\widehat{\psi}_{\mathrm{iso}}-\psi_0)}
+\frac{\sqrt n\,(\widehat{\psi}_{\mathrm{iso}}-\psi_0)}
 {\widehat\sigma}
 \overset{d}{\longrightarrow}
 N(0,1).
@@ -716,7 +674,11 @@ is efficient in the reduced two-sample model that observes the scalar score
 \end{enumerate}
 \end{corollary}
 
-The takeaway is that isotonic calibration is fully efficient only if the score
+Taking \(\theta\) constant in part (ii) shows that isotonic calibration is
+asymptotically at least as efficient as the labeled mean.
+At the \(\sqrt n\) scale, the variance reduction is
+\[\Var(Y)-\sigma_0^2=(1-\rhozero)\Var\{q_0^{\mathrm{iso}}(X)\}.\]
+Isotonic calibration is fully efficient only if the score
 contains enough information to recover \(\muzero(X)\). Even when the score is
 only a one-dimensional summary, isotonic calibration is first-order at least as
 efficient as any nondecreasing post-processing of that score. This includes
@@ -772,7 +734,7 @@ Then
 \qquad
 \widehat{\psi}_{\mathrm{eff}}-\widehat{\psi}_{\mathrm{iso}}
 =
-o_p(M^{-1/2}).
+o_p(n^{-1/2}).
 \]
 Thus \(\widehat{\psi}_{\mathrm{iso}}\) and
 \(\widehat{\psi}_{\mathrm{eff}}\) have the same asymptotic variance.
@@ -792,11 +754,14 @@ improvement.
 \label{sec:exp}
 
 The experiments test the same mechanism as the theory: AIPW-style estimators remain valid for a fixed score, but their variance depends on how well that score works as a regression adjustment. We therefore report bias or coverage to check validity, and MSE, Monte Carlo standard deviation, and relative efficiency to measure the efficiency gains from calibration. Across all experiments, the labeled-only estimator is the safety baseline, AIPW is the main raw-score baseline, PPI is the original prediction-powered comparator, PPI++ and \textsc{AIPW-EM} are efficiency-rescaling variants, and the calibration rules are the proposed remedies for score miscalibration.
+Empirical relative efficiency is the ratio of the reference estimator's
+Monte Carlo variance to that of the estimator being evaluated; each caption
+specifies the reference estimator.
 
 \paragraph{Simulation study}
 \label{sec:simulation}
 \label{sec:empirical} \label{sec:llm-benchmark}
-The first experiment is a controlled binary-outcome simulation designed to isolate the theory's score-quality term. We draw \(S\sim N(0,1)\), set \(\mu_0(S)=\{1+\exp(-5S)\}^{-1}\), and sample \(Y\mid S\sim\mathrm{Bernoulli}\{\mu_0(S)\}\). The observed score is a monotone logit-scale distortion of \(\mu_0(S)\): it preserves the ranking information in the oracle score, but places the score on the wrong numerical scale. This is exactly the regime where the theory predicts that post-hoc calibration can improve first-order efficiency without changing the AIPW validity mechanism. We compare \textsc{Labeled-only}, PPI, AIPW, clipped PPI++, unclipped \textsc{AIPW-EM}, and \texttt{LinearCal}, \texttt{MonoSpline}, \texttt{IsoCal}, and \texttt{AutoCal}. The labeled sample size ranges over \(n\in\{50,100,200,400,800,1200,2400\}\), with \(N/n\in\{1,16\}\). The main-text simulation figure is generated from 2,000 Monte Carlo repetitions per setting.
+The first experiment is a controlled binary-outcome simulation designed to isolate the theory's score-quality term. We draw \(S\sim N(0,1)\), set \(\mu_0(S)=\{1+\exp(-5S)\}^{-1}\), and sample \(Y\mid S\sim\mathrm{Bernoulli}\{\mu_0(S)\}\). The observed score is a monotone logit-scale distortion of \(\mu_0(S)\): it preserves the ranking information in the oracle score, but places the score on the wrong numerical scale. This is exactly the regime where the theory predicts that post-hoc calibration can improve first-order efficiency without changing the AIPW validity mechanism. We compare \textsc{Labeled-only}, PPI, AIPW, clipped PPI++, unclipped \textsc{AIPW-EM}, and \texttt{LinearCal}, \texttt{MonoSpline}, \texttt{IsoCal}, and \texttt{AutoCal}. The labeled sample size ranges over \(n\in\{50,100,200,400,800,1200,2400\}\), with \(N/n\in\{1,16\}\). The main-text simulation figure is generated from 500 Monte Carlo repetitions per setting.
 
 \begin{figure}[htb]
 \centering
@@ -806,6 +771,34 @@ The first experiment is a controlled binary-outcome simulation designed to isola
 \end{figure}
 
 \Cref{fig:simulation-rmse} shows the mechanism directly. The score-based AIPW estimators are essentially unbiased and maintain near-nominal coverage, so the practical distinction is efficiency. AIPW improves on PPI among the raw-score methods, and calibration gives the largest gains when the unlabeled sample is large enough for score quality to dominate. At \(n=400\) and \(N/n=16\), the calibrated methods reduce RMSE from about \(0.0172\) for PPI to about \(0.0164\). The PPI++ comparison is also informative: unclipped \textsc{AIPW-EM} is nearly indistinguishable from \texttt{LinearCal}, whereas clipped PPI++ can fall back toward PPI when the variance-minimizing rescaling exceeds the clipping range.
+
+\paragraph{Small-sample comparisons}
+We also examine smaller labeled samples under the same binary-outcome model,
+using mild and strong score miscalibration as specified in
+Appendix~\ref{app:small-n}. We set \(N=16n\) for
+\(n\in\{20,50,100,200,400,800,1200\}\) and use 1,000 replications per setting.
+The labeled mean, PPI, AIPW, PPI++, linear, smooth monotone, and isotonic
+calibration are evaluated on the same samples, together with the leave-one-out
+linear and isotonic estimators in \eqref{eq:calibration-loo}.
+
+Under strong miscalibration, linear, smooth monotone, and isotonic calibration
+each have lower RMSE than PPI++ at all seven sample sizes. At \(n=20\),
+isotonic coverage ranges from \(0.814\) to \(0.871\) across the two settings;
+leave-one-out calibration increases it to \(0.905\)--\(0.925\), with wider
+intervals and larger RMSE. Across all 14 settings, leave-one-out calibration
+lowers linear-calibration RMSE by at most \(1.99\%\), but lowers isotonic RMSE
+in only one setting. The RePPI random-forest and neural-network comparisons
+are reported in Appendix~\ref{app:small-n}.
+
+\begin{figure}[htb]
+\centering
+\includegraphics[width=\textwidth]{assets/fig_small_n_rmse.pdf}
+\caption{RMSE across labeled sample sizes under mild and strong score
+miscalibration, with \(N=16n\) and 1,000 replications per setting. Solid and
+dashed curves distinguish calibration on the labeled sample from
+leave-one-out calibration.}
+\label{fig:small-n-rmse}
+\end{figure}
 
 \paragraph{Reproduced PPI benchmarks} We next evaluate the same idea on the standard PPI mean-estimation benchmarks of \cite{ppi2023},
 where any score miscalibration is present in the public score rather than
@@ -830,6 +823,9 @@ calibration comparison.
 \paragraph{LLM evaluation benchmark}  The final experiment studies modern LLM evaluation, where proxy-score miscalibration is common and raw reward-model margins can be badly scaled. The first track uses PPE Human Preference V1 \citep{frick2025evaluate}; the second uses a PPE correctness suite built from MMLU-Pro, MATH, GPQA, IFEval, and MBPP+ \citep{frick2025evaluate,wang2024mmlupro,hendrycksmath2021,rein2024gpqa,zhou2023instructionfollowing,liu2023evalplus}. We use four public precomputed evaluator-score sources on the PPE tracks: Skywork-Reward-Llama-3.1-8B, ArmoRM-Llama3-8B-v0.1, Athene-RM-8B, and Starling-RM-7B-alpha. The final run completed all 112 evaluator/benchmark/target stages, and the reported summaries use 200 rerandomized labeled/unlabeled splits per stage.
 
 The raw proxy can be unsafe as a variance-reduction device even though it contains useful signal. On PPE Human at \(n=100\), raw PPI and raw AIPW have MSE \(0.495\) and \(0.440\), compared with \(0.001425\) for labeled-only and \(0.001391\) for \texttt{LinearCal}. On PPE Correctness at \(n=100\), the corresponding MSEs are \(0.534\), \(0.353\), \(0.002010\), and \(0.001813\). Calibration therefore recovers the stability of labeled-only estimation while still extracting modest label savings from the proxy scores: about \(3\%\) on PPE Human and \(10\%\) on PPE Correctness at \(n=100\). \texttt{LinearCal} is the strongest and most stable method overall, with \texttt{AutoCal} close behind. \Cref{tab:llm-summary-main} in Appendix \ref{app:simresults} summarizes the main PPE numbers, and Appendices \ref{app:llm-eval-by-evaluator} and \ref{app:llm-ranking} give evaluator-specific and ranking-task diagnostics.
+For MATH scores from ArmoRM, Appendix~\ref{app:llm-ordering} reports
+increasing correctness across score bins and a held-out improvement from
+Platt calibration.
 
 \section{Conclusion}
 
@@ -873,7 +869,7 @@ The appendix is ordered from background and practical guidance to extensions, pr
 \item \hyperref[app:causal]{Calibrated DML for randomized trials}
 \item \hyperref[appendix::momentgeneral]{Moment equations under missing at random}
 \item \hyperref[app:iid]{Pooled i.i.d. missing-data formulation}
-\item \hyperref[app:repr]{Proof of the representation theorem}
+\item \hyperref[app:repr]{AIPW comparison identity}
 \item \hyperref[sec:ppi++]{PPI++ and linear calibration}
 \item \hyperref[app:eif]{Proof of the AIPW influence-pair characterization}
 \item \hyperref[app:iso-lemmas]{Supporting lemmas for calibration}
@@ -913,50 +909,70 @@ Although PPI is often presented as a recent development, the underlying estimati
 \end{equation}
 This estimator combines a plug-in term that imputes \(Y\) from \(q(X)\) with a residual correction from the labeled sample. For any fixed \(q\), \(\widehat\psi(q)\) is unbiased in finite samples for \(\psi_0=\E_{P_0}[Y]\). In particular, \(q(X)=0\) yields the empirical mean estimator \(\mathbb{P}_n^L\{Y\}\). Thus, the choice of \(q\) affects efficiency, through the estimator's variance, but not validity, in the sense that the resulting confidence intervals remain valid. This makes AIPW a ``safe'' estimator \citep{xu2025unified}. This property can be viewed as a particularly simple instance of double robustness\footnote{In more general missing-at-random settings with unknown, covariate-dependent missingness probabilities, the analogous AIPW estimator remains doubly robust asymptotically, but it no longer enjoys the same finite-sample unbiasedness as in the present known-\(\rho_n\) setting \citep{seaman2018introduction}.} \citep{bang2005doubly}. The same basic principle underlies the use of flexible machine learning for covariate adjustment in randomized trials while retaining valid inference \citep{moore2009covariate,moore2009increasing,schuler2022increasing,hojbjerre2025powering}.
 
-\textbf{Asymptotic linearity and efficiency.} To characterize the leading large-sample error in the two-sample model, we decompose the estimation error into one contribution from the labeled sample and one from the unlabeled sample. We say that \(\widehat\psi\) is asymptotically linear with influence pair \((D^L,D^U)\) if
+\textbf{Asymptotic linearity and efficiency.} We say that
+$\widehat\psi$ is asymptotically linear with triangular influence
+pair $(D_n^L,D_n^U)$ if
 \[
 \widehat\psi-\psi_0
 =
-\frac{1}{M}\sum_{i=1}^n D^L(X_i,Y_i)
+\frac{1}{n}\sum_{i=1}^n D_n^L(X_i,Y_i)
 +
-\frac{1}{M}\sum_{j=1}^N D^U(\widetilde X_j)
+\frac{1}{N}\sum_{j=1}^N D_n^U(\widetilde X_j)
 +
-o_p(M^{-1/2}),
+o_p(n^{-1/2}),
 \]
-where \(\E_{P_0}[D^L(X,Y)]=0\) and \(\E_{\Px}[D^U(\widetilde X)]=0\). By the central limit theorem and the independence of the two samples,
+where $\E_{P_0}[D_n^L(X,Y)]=0$ and
+$\E_{\Px}[D_n^U(\widetilde X)]=0$.
+If the influence functions converge in $L^2$ and $n/N$ converges
+to a finite limit, the central limit theorem and independence
+of the two samples yield
 \[
-\sqrt{M}\,(\widehat\psi-\psi_0)
+\sqrt n\,(\widehat\psi-\psi_0)
 \rightsquigarrow
 N\!\left(0,\,
-\rhozero \Var_{P_0}\{D^L(X,Y)\}
+\lim_{n\to\infty}\left[
+\Var_{P_0}\{D_n^L(X,Y)\}
 +
-(1-\rhozero)\Var_{\Px}\{D^U(\widetilde X)\}\right).
+\frac{n}{N}\Var_{\Px}\{D_n^U(\widetilde X)\}
+\right]\right).
 \]
-The influence pair therefore determines the estimator's asymptotic variance and provides a convenient way to compare efficiency across different choices of \(q\). The next result uses this representation to characterize the AIPW class, identify the efficient influence pair in the unrestricted two-sample model, and thereby obtain the semiparametrically efficient variance bound \citep{bickel1993efficient}.
+The influence pair thus determines the asymptotic variance,
+accounting for variability in both samples. The following
+result characterizes the influence pair for the AIPW class,
+identifies the efficient choice of $q$, and derives the
+semiparametric efficiency bound in the unrestricted two-sample
+model \citep{bickel1993efficient,robins1994estimation,robins1995semiparametric}.
 
-\begin{proposition}[Influence pair for the AIPW class]
+\begin{proposition}[Influence pair and efficiency of AIPW]
 \label{prop:aipw-class}
-Under \cref{assump:design}, for any fixed \(q:\mathcal X\to\R\) with finite second moment, the estimator \(\widehat\psi(q)\) is asymptotically linear with influence pair \((D_q^L,D_q^U)\), where
-\begin{align}
-\label{eq:if-class-L}
-D_q^L(X,Y)
-&=
-q^\circ(X)-\psi_0+\rhozero^{-1}\{Y-q^\circ(X)\},\\
-\label{eq:if-class-U}
-D_q^U(\widetilde X)
-&=
-q^\circ(\widetilde X)-\psi_0,
-\end{align}
-with \(q^\circ(X):=q(X)-\E_{\Px}\{q(X)\}+\psi_0\)
-denoting the recentered version of \(q(X)\). The resulting asymptotic variance of \(\sqrt{M}\,(\widehat\psi(q)-\psi_0)\) is
+Under \cref{assump:design}, for any fixed square-integrable
+function $q:\mathcal X\to\R$, the estimator $\widehat\psi(q)$
+is asymptotically linear with triangular influence pair
+$(D_{q,n}^L,D_{q,n}^U)$, where
 \begin{align*}
-\Var\{\mu_0(X)\}
-+
-\rho_0^{-1}\E_{P_0}\!\bigl[\Var(Y\mid X)\bigr]
-+
-\frac{1-\rho_0}{\rho_0}\E_{P_0}\!\bigl[(q^\circ(X)-\mu_0(X))^2\bigr].
+D_{q,n}^L(X,Y)
+&=
+Y-\psi_0-(1-\rho_n)\{q^\circ(X)-\psi_0\},\\
+D_{q,n}^U(\widetilde X)
+&=
+(1-\rho_n)\{q^\circ(\widetilde X)-\psi_0\},
 \end{align*}
-This variance is minimized over the AIPW class when \(q^\circ=\mu_0\), in particular at \(q=\mu_0\). Therefore, the efficient influence pair for \(\psi_0=\E_{P_0}[Y]\) in the unrestricted two-sample model is \((D_{\mu_0}^L,D_{\mu_0}^U)\), and the corresponding asymptotic variance is the efficiency bound \citep{robins1995analysis,robins1995semiparametric,tsiatis2006semiparametric}.
+and $q^\circ(X):=q(X)-\E_{\Px}[q(X)]+\psi_0$
+is the recentered prediction function. The asymptotic variance
+of $\sqrt n\{\widehat\psi(q)-\psi_0\}$ is
+\[
+\rhozero\Var_{P_0}[\mu_0(X)]
++
+\E_{P_0}\!\bigl[\Var[Y\mid X]\bigr]
++
+(1-\rhozero)\Var_{P_0}[q(X)-\mu_0(X)].
+\]
+This variance is minimized when $q=\mu_0$ up to an additive
+constant. Consequently, the efficient triangular influence
+pair in the unrestricted two-sample model is
+$(D_{\mu_0,n}^L,D_{\mu_0,n}^U)$, with efficiency bound $\rhozero\Var_{P_0}[\mu_0(X)]
++
+\E_{P_0}\!\bigl[\Var[Y\mid X]\bigr].$
 \end{proposition}
 
 A key insight of Proposition~\ref{prop:aipw-class} is that the limiting variance of the AIPW estimator depends on the score function \(q\) only through the mean squared error of its recentered version \(q^\circ\), namely \(\E_{P_0}\!\bigl[(q^\circ(X)-\mu_0(X))^2\bigr]\). Thus, within the AIPW class, efficiency is maximized by choosing \(q\) so that \(q^\circ\) approximates \(\mu_0(X)\) as well as possible, with equality when \(q^\circ=\mu_0\), in particular at \(q=\mu_0\). This shows that full efficiency generally requires using the full covariate information \(X\), or at least a summary rich enough to recover \(\mu_0(X)\) \citep{robins1995semiparametric}. In practice, this motivates taking \(q\) to be an estimated prediction score \(m(X)\), learned using flexible black-box methods.
@@ -999,12 +1015,12 @@ Substituting this choice into \eqref{eq:aipw-family} gives
 Relative to \(\widehat{\psi}_{\mathrm{AIPW}}\), \(\widehat{\psi}_{\mathrm{PPI}}\) uses only the unlabeled sample in the plug-in term and rescales the score by the factor \((1-\rho_n)^{-1}>1\). By Proposition~\ref{prop:aipw-class}, this helps only if the rescaled score is closer to \(\mu_0(X)\) in mean squared error. Thus, PPI is inefficient when \(m=\mu_0\), and is typically less efficient when \(m\) is already reasonably accurate. When \(\rho_n\) is small and \(m\) is sufficiently inaccurate, however, neither estimator is necessarily more efficient than the other \citep{han2012note,rotnitzky2012improved}.
 
 Because both \(\widehat{\psi}_{\mathrm{AIPW}}\) and \(\widehat{\psi}_{\mathrm{PPI}}\) use scores in the scaling class \(\{\lambda m(X):\lambda\in\mathbb R\}\), one can choose the scaling factor data-adaptively rather than fixing it in advance. One way to do so is to minimize an empirical estimate of the asymptotic
-variance of \(\sqrt M\{\widehat\psi(q)-\psi_0\}\):
+variance of \(\sqrt n\{\widehat\psi(q)-\psi_0\}\):
 \[
 \sigma_n^2(q):=
-\rho_n\,\widehat{\operatorname{Var}}_L
-\{q(X)+\rho_n^{-1}(Y-q(X))\}
-+(1-\rho_n)\,\widehat{\operatorname{Var}}_U\{q(\widetilde X)\},
+\widehat{\operatorname{Var}}_L
+\{Y-(1-\rho_n)q(X)\}
++\rho_n(1-\rho_n)\,\widehat{\operatorname{Var}}_U\{q(\widetilde X)\},
 \]
 where \(\widehat{\operatorname{Var}}_L(a):=\Pl[(a-\Pl a)^2]\) and
 \(\widehat{\operatorname{Var}}_U(b):=\Pu[(b-\Pu b)^2]\).
@@ -1057,41 +1073,63 @@ q_n^{\mathrm{platt}}(X)
 where \(\sigma(t):=(1+e^{-t})^{-1}\). Platt scaling may be preferred over linear regression calibration when predicted probabilities are systematically over- or under-confident, in which case the calibration curve is often approximately sigmoidal. More generally, outcomes can be rescaled to \([0,1]\) before applying this procedure. In online settings, calibration properties of Platt scaling are developed in \cite{gupta2023online}.
 \end{remark}
 
-\subsection{Cross-Fitting and Cross-Calibration}
+\subsection{Cross-fitting and leave-one-out calibration}
 \label{sec:crossfit}
 
-In the main exposition, we assume for simplicity that the initial black-box predictor is fixed. In practice, however, it may be trained on the labeled sample itself, in which case the same labeled observations are used both to fit the predictor and to calibrate its scores. A cross-fitted version avoids this reuse by replacing the single prediction function with out-of-fold predictions and then fitting the calibrator to the resulting labeled out-of-fold scores.
+Fitting a calibrator to pooled out-of-fold predictions still uses each labeled
+outcome in the calibration fit. To hold out both steps, partition the labeled
+indices into folds \(I_1,\ldots,I_K\) independently of the observations, and
+fit each calibrated score \(q^{(-k)}\) without the pairs indexed by \(I_k\).
+Any predictor fitting and tuning used to construct \(q^{(-k)}\) also exclude
+\(I_k\). Let \(k(i)\) be the fold containing \(i\) and
+\(c_n:=N/(n+N)\). The cross-fitted AIPW estimator is
+\begin{equation}
+\label{eq:calibration-crossfit}
+\widehat\psi_{\mathrm{CF}}
+:=\frac1n\sum_{i=1}^n
+\left[Y_i+c_n\{\Pu q^{(-k(i))}-q^{(-k(i))}(X_i)\}\right].
+\end{equation}
+For each \(i\), conditional on the training sample,
+\(\E[q^{(-k(i))}(X_i)]=\E[\Pu q^{(-k(i))}]\).
+Thus \eqref{eq:calibration-crossfit} is unbiased when these predictions are
+integrable and the fitted scores do not use the unlabeled observations.
 
-\begin{enumerate}[leftmargin=6mm,label=\arabic*.]
-\item Partition the labeled sample indices into folds \(I_1,\dots,I_K\).
-\item For each fold \(k\), train the black-box regression \(\mhat^{(-k)}\) on the labeled observations outside \(I_k\), compute out-of-fold predictions \(\mhat^{(-k)}(X_i)\) for \(i\in I_k\), and compute predictions \(\mhat^{(-k)}(\widetilde X_j)\) on the unlabeled sample.
-\item Pool the labeled out-of-fold predictions \(\{\mhat^{(-k(i))}(X_i)\}_{i=1}^n\) and fit a calibrator \(\fhat\) to the labeled pairs \((\mhat^{(-k(i))}(X_i),Y_i)\).
-\item Form calibrated predictions
-\[
-\mtilde(X_i)=\fhat(\mhat^{(-k(i))}(X_i))
-\]
-and
-\[
-\mtilde(\widetilde X_j)=\frac{1}{K}\sum_{k=1}^K \fhat(\mhat^{(-k)}(\widetilde X_j)),
-\]
-and then compute the plug-in estimator in \cref{eq:plugin}.
-\end{enumerate}
-
-This cross-fitted modification is the natural DML-style implementation when one wishes to reduce overfitting from using the same labeled data both to estimate the initial regression and to calibrate it for inference \citep{zheng2010asymptotic,vanderLaanRose2011,DoubleML}. Related procedures have been used for debiased inference in \citet{van2024stabilized,van2024automatic,rabenseifner2025causal}, and a related cross-calibration variant appears in \citet{van2023causal}.
+Leave-one-out calibration takes \(K=n\). Writing \(q_{-i}\) for the score
+fitted without \((X_i,Y_i)\), we obtain
+\begin{equation}
+\label{eq:calibration-loo}
+\widehat\psi_{\mathrm{LOO}}
+=\frac1n\sum_{i=1}^n
+\left[Y_i+c_n\{\Pu q_{-i}-q_{-i}(X_i)\}\right].
+\end{equation}
+The residual correction is retained because the held-out residuals need not
+average to zero. In the simulation, we use
+\begin{equation}
+\label{eq:loo-se}
+\widehat{\mathrm{se}}_{\mathrm{LOO}}^2
+=\frac{\widehat{\Var}_L\{Y_i-c_nq_{-i}(X_i)\}}{n}
++\frac{\widehat{\Var}_U\{c_n\bar q(\widetilde X_j)\}}{N},
+\qquad \bar q:=\frac1n\sum_{i=1}^n q_{-i},
+\end{equation}
+where the empirical variances use denominators \(n-1\) and \(N-1\).
+The bias, coverage, and interval widths of this procedure are reported in
+Appendix~\ref{app:small-n}.
 
 \begin{remark}[Empirical efficiency maximization over a prediction class]
-The empirical variance criterion \(\sigma_n^2(q)\) in Section~\ref{sec:effreview}
-can be minimized over any candidate class \(\mathcal G\subset L^2(\Px)\):
+The empirical variance criterion \(\sigma_n^2(q)\) in
+Section~\ref{sec:effreview} can be minimized over any candidate class
+\(\mathcal G\subset L^2(\Px)\), rather than only over rescalings of one score:
 \[
 \hat q\in\arg\min_{q\in\mathcal G}\sigma_n^2(q),
-\qquad \widehat\psi_{\mathrm{eem}}:=\widehat\psi(\hat q).
+\qquad
+\widehat\psi_{\mathrm{eem}}:=\widehat\psi(\hat q).
 \]
-For a fixed score, Proposition~\ref{prop:aipw-class} gives the population criterion
+At the \(\sqrt n\) scale, Proposition~\ref{prop:aipw-class} gives the limiting variance
 \[
-V(q)=\Var(Y)+\frac{1-\rhozero}{\rhozero}\Var\{Y-q(X)\}.
+V(q)=\rhozero\Var[Y]+(1-\rhozero)\Var[Y-q(X)].
 \]
 Writing \(q^\circ=q-\E_{\Px}q+\psi_0\), we have
-\(\Var\{Y-q(X)\}=\E[(Y-q^\circ(X))^2]\).
+\(\Var[Y-q(X)]=\E_{P_0}[(Y-q^\circ(X))^2]\).
 If \(\mathcal G\) is closed under constant shifts, population least-squares
 regression therefore targets a variance-minimizing score.
 For tuning, average held-out estimates of the influence-function variance
@@ -1180,7 +1218,7 @@ are studied in \citet{robins1994estimation,robins1995analysis,van2024automatic}.
 \section{Pooled i.i.d.\ Missing-Data Formulation}
 \label{app:iid}
 
-The joint two-sample setup can be embedded into a pooled i.i.d.\ model by introducing a sample-membership indicator \(R \in \{0,1\}\), where \(R=1\) denotes labeled observations and \(R=0\) denotes unlabeled observations. In that formulation one observes i.i.d.\ data \(O=(X,R,RY)\) with \(\Prob(R=1)=\rhozero\), and the calibrated estimator becomes
+When \(\rhozero>0\), the joint two-sample setup can be embedded into a pooled i.i.d.\ model by introducing a sample-membership indicator \(R \in \{0,1\}\), where \(R=1\) denotes labeled observations and \(R=0\) denotes unlabeled observations. In that formulation one observes i.i.d.\ data \(O=(X,R,RY)\) with \(\Prob(R=1)=\rhozero\), and the calibrated estimator becomes
 \[
 \psihat = \mathbb P_M(\mtilde) + \mathbb P_M\left[\frac{R}{\rhozero}\{Y-\mtilde\}\right]
 \]
@@ -1190,7 +1228,7 @@ q_0(X)-\psi_0+\frac{R}{\rhozero}\{Y-q_0(X)\},
 \]
 which is the single-sample analogue of the efficient influence pair obtained by applying \cref{prop:aipw-class} to the reduced model with scalar covariate \(\mhat(X)\). Thus the usual i.i.d.\ missing-data formulation is a convenient special case, but the main text keeps the two-dataset structure explicit.
 
-\section{Proof of the representation theorem}
+\section{AIPW comparison identity}
 \label{app:repr}
 
 \begin{lemma}[AIPW comparison identity]
@@ -1204,12 +1242,6 @@ empirical averages,
 \begin{proof}
 The residual equation gives \(\psihat=\widehat\psi(q_n)\).
 Subtracting \(\widehat\psi(g)\) and collecting terms proves the identity.
-\end{proof}
-
-\begin{proof}[Proof of Theorem~\ref{thm:repr}]
-Taking the constant score in \eqref{eq:cal-score} gives
-\(\Pl\{Y-q_n(X)\}=0\).
-Apply Lemma~\ref{lem:aipw-comparison} with \(g=q_{0,\mathcal F}^\dagger\).
 \end{proof}
 
 \section{PPI++ and linear calibration}
@@ -1249,10 +1281,10 @@ For \(\Delta_n:=\Pu m-\Pl m\), substituting the fitted intercept gives
 Subtracting proves the exact identity in the proposition.
 Independence and finite second moments give
 \(\Delta_n=O_p(n^{-1/2}+N^{-1/2})\).
-Since \(\rhon\to\rhozero\in(0,1)\), both \(n\) and \(N\) are proportional to \(M\), so
+Since \(\rhon\to\rhozero<1\), the ratio \(n/N\) is bounded, so
 \[
 \widehat\psi_{++}-\widehat\psi_{\mathrm{lin}}
-=(1-\rhon)o_p(1)\Delta_n=o_p(M^{-1/2}).
+=(1-\rhon)o_p(1)\Delta_n=o_p(n^{-1/2}).
 \]
 \end{proof}
 
@@ -1260,36 +1292,33 @@ Since \(\rhon\to\rhozero\in(0,1)\), both \(n\) and \(N\) are proportional to \(M
 \label{app:eif}
 
 \begin{proof}[Proof of Proposition~\ref{prop:aipw-class}]
-Adding a constant to \(q\) leaves \(\widehat\psi(q)\) unchanged, so replace
-\(q\) by \(q^\circ=q-\E_{\Px}q+\psi_0\).
-Centering the empirical means gives
+Adding a constant to \(q\) leaves \(\widehat\psi(q)\) unchanged.
+Thus \(\widehat\psi(q)=\widehat\psi(q^\circ)\), where
+\(q^\circ=q-\E_{\Px}q+\psi_0\).
+Centering the empirical means gives the exact identity
 \[
 \widehat\psi(q)-\psi_0
-=\rhon(\Pl-P_0)D_{q,n}^L+(1-\rhon)(\Pu-\Px)D_q^U,
+=(\Pl-P_0)D_{q,n}^L+(\Pu-\Px)D_{q,n}^U.
 \]
-where \(D_{q,n}^L=q^\circ-\psi_0+\rhon^{-1}(Y-q^\circ)\).
-Replacing \(\rhon^{-1}\) by \(\rhozero^{-1}\) changes this expression by
+Both components have mean zero.
+Write \(A=\mu_0-\psi_0\), \(\delta=q^\circ-\mu_0\),
+and \(\varepsilon=Y-\mu_0\). Then
 \[
-\left(1-\frac{\rhon}{\rhozero}\right)(\Pl-P_0)(Y-q^\circ)
-=o_p(M^{-1/2}),
+D_{q,n}^L=\varepsilon+\rhon A-(1-\rhon)\delta,
+\qquad
+D_{q,n}^U=(1-\rhon)(A+\delta).
 \]
-since \(n/M\to\rhozero>0\) and \(Y-q^\circ\) has finite second moment.
-This proves the stated influence-pair expansion.
-
-Write \(A=\mu_0-\psi_0\), \(\delta=q^\circ-\mu_0\), and
-\(\varepsilon=Y-\mu_0\). Then
-\[
-D_q^L=A+\rhozero^{-1}\varepsilon+(1-\rhozero^{-1})\delta,
-\qquad D_q^U=A+\delta.
-\]
-Because \(\E[\varepsilon\mid X]=0\), the covariance terms cancel in
-\[
-\rhozero\Var(D_q^L)+(1-\rhozero)\Var(D_q^U)
-=\Var(\mu_0)+\rhozero^{-1}\E[\Var(Y\mid X)]
-+\frac{1-\rhozero}{\rhozero}\E[\delta^2].
-\]
-The choice \(q^\circ=\mu_0\) removes the last term and gives the missing-data
-efficiency bound
+Since \(\E[\varepsilon\mid X]=0\) and
+\(n/N=\rhon/(1-\rhon)\), the covariance terms cancel in
+\begin{align*}
+\Var(D_{q,n}^L)+\frac nN\Var(D_{q,n}^U)
+&=\E[\Var(Y\mid X)]+\rhon\Var(\mu_0)
++(1-\rhon)\Var(\delta).
+\end{align*}
+Taking limits gives the stated variance, since
+\(\Var(\delta)=\Var(q-\mu_0)\).
+The choice \(q=\mu_0\) removes the last term and gives the
+missing-data efficiency bound
 \citep{robins1995analysis,robins1995semiparametric,tsiatis2006semiparametric}.
 \end{proof}
 
@@ -1326,16 +1355,6 @@ By definition, the fitted isotonic score minimizes the empirical squared loss
 among all nondecreasing transformations of \(\mhat\), proving the risk
 comparison. Taking the identity transformation gives the comparison with the
 raw score.
-\end{proof}
-
-\begin{proof}[Proof of Proposition~\ref{prop:linear}]
-The least-squares normal equations give
-\(\Pl(Y-q_n^{\mathrm{lin}})=\Pl[\mhat(Y-q_n^{\mathrm{lin}})]=0\).
-Since \(q_n^{\mathrm{lin}}\) is affine in \(\mhat\), this also gives
-\(\Pl[q_n^{\mathrm{lin}}(Y-q_n^{\mathrm{lin}})]=0\).
-Every affine weight \(a+bq_n^{\mathrm{lin}}\) therefore has zero empirical
-residual correction. Adding it to \eqref{eq:linear-plugin} proves
-\eqref{eq:linear-ppi}.
 \end{proof}
 
 \begin{lemma}[Bounded variation after isotonic post-processing]
@@ -1805,41 +1824,70 @@ by \cref{thm:iso-postcal}.
 \section{Proof of asymptotic linearity}
 \label{app:al}
 
-\begin{proof}[Proof of Theorem~\ref{thm:al}]
-Lemma~\ref{lem:isorate} gives the stated \(L^2\) rate.
-By Lemma~\ref{lem:center}, \(\Px q_0^{\mathrm{iso}}=\psi_0\).
-Lemma~\ref{lem:aipw-comparison} with \(q_n=q_n^{\mathrm{iso}}\) and
-\(g=q_0^{\mathrm{iso}}\) gives
-\begin{align*}
-\widehat\psi_{\mathrm{iso}}-\psi_0
-&=\rhon(\Pl-P_0)
-  \{q_0^{\mathrm{iso}}-\psi_0+\rhon^{-1}(Y-q_0^{\mathrm{iso}})\}\\
-&\quad +(1-\rhon)(\Pu-\Px)(q_0^{\mathrm{iso}}-\psi_0)
-+(1-\rhon)(\Pu-\Pl)(q_n^{\mathrm{iso}}-q_0^{\mathrm{iso}}).
-\end{align*}
-Lemma~\ref{lem:eprate} bounds the last term by
-\(O_p(n^{-2/3})+O_p(n^{-1/3}N^{-1/2})\), proving \eqref{eq:al}.
-Both terms are \(o_p(M^{-1/2})\) because \(n\) and \(N\) are proportional
-to \(M\). Replacing \(\rhon^{-1}\) by \(\rhozero^{-1}\) changes the expansion by
+\begin{proof}[Proof of \cref{thm:al}]
+
+By \cref{lem:center}, \(\E_{\Px}[q_0^{\mathrm{iso}}]=\psi_0\). The isotonic fit has mean-zero labeled residuals by \cref{lem:block}. Applying \cref{lem:aipw-comparison} with \(g=q_0^{\mathrm{iso}}\) gives
 \[
-\left(1-\frac{\rhon}{\rhozero}\right)(\Pl-P_0)(Y-q_0^{\mathrm{iso}})
-=o_p(M^{-1/2}).
+\widehat{\psi}_{\mathrm{iso}}
+=
+\rhon \Pl\left\{q_0^{\mathrm{iso}}+\rhon^{-1}(Y-q_0^{\mathrm{iso}})\right\}
++
+(1-\rhon)\Pu\{q_0^{\mathrm{iso}}(\widetilde X)\}
++
+(1-\rhon)(\Pu-\Pl)\{q_n^{\mathrm{iso}}-q_0^{\mathrm{iso}}\}.
 \]
-This gives the limiting influence pair used in Corollary~\ref{cor:normal}.
+Subtracting \(\psi_0\) gives
+\[
+\begin{aligned}
+\widehat{\psi}_{\mathrm{iso}}-\psi_0
+&=
+(\Pl-P_0)D_{q_0^{\mathrm{iso}},n}^L
++
+(\Pu-\Px)D_{q_0^{\mathrm{iso}},n}^U\\
+&\quad +
+(1-\rhon)(\Pu-\Pl)\{q_n^{\mathrm{iso}}-q_0^{\mathrm{iso}}\}.
+\end{aligned}
+\]
+Also,
+\[
+\begin{aligned}
+(1-\rhon)(\Pu-\Pl)\{q_n^{\mathrm{iso}}-q_0^{\mathrm{iso}}\}
+&=(1-\rhon)(\Pu-\Px)\{q_n^{\mathrm{iso}}-q_0^{\mathrm{iso}}\}\\
+&\quad -(1-\rhon)(\Pl-\Px)\{q_n^{\mathrm{iso}}-q_0^{\mathrm{iso}}\}.
+\end{aligned}
+\]
+By \cref{lem:eprate}, the labeled term is \(O_p(n^{-2/3})\) and the unlabeled term is \(O_p(n^{-1/3}N^{-1/2})\). Hence the remainder satisfies the bound in \cref{eq:al}. Moreover,
+\[
+\sqrt n(1-\rhon)n^{-2/3}\le n^{-1/6}
+\]
+and, writing \(t_n=N/n\),
+\[
+\sqrt n(1-\rhon)n^{-1/3}N^{-1/2}
+=
+n^{-1/3}\frac{\sqrt{t_n}}{1+t_n}
+\le \frac12n^{-1/3}.
+\]
+Therefore \(R_{n,N}=o_p(n^{-1/2})\), which proves \cref{eq:al}.
 \end{proof}
 
 \begin{proof}[Proof of \cref{cor:normal}]
 By \cref{thm:al},
 \[
-\sqrt{M}\,(\widehat{\psi}_{\mathrm{iso}}-\psi_0)
+\sqrt n\,(\widehat{\psi}_{\mathrm{iso}}-\psi_0)
 =
-\frac{1}{\sqrt{M}}\sum_{i=1}^n D_{q_0^{\mathrm{iso}}}^L(X_i,Y_i)
+\frac{1}{\sqrt n}\sum_{i=1}^n D_{q_0^{\mathrm{iso}},n}^L(X_i,Y_i)
 +
-\frac{1}{\sqrt{M}}\sum_{j=1}^N D_{q_0^{\mathrm{iso}}}^U(\widetilde X_j)
+\frac{\sqrt n}{N}\sum_{j=1}^N D_{q_0^{\mathrm{iso}},n}^U(\widetilde X_j)
 +
 o_p(1).
 \]
-The labeled and unlabeled samples are independent, each summand has mean zero, and \(\rhon\to\rhozero\in(0,1)\) by \cref{assump:design}. A standard triangular-array central limit theorem therefore yields the stated asymptotic normal law with variance \(\sigma_0^2\).
+The labeled and unlabeled samples are independent and each summand has mean zero. Moreover,
+\[
+\frac{n}{N}\Var\{D_{q_0^{\mathrm{iso}},n}^U(\widetilde X)\}
+=
+\rhon(1-\rhon)\Var\{q_0^{\mathrm{iso}}(X)\}.
+\]
+Since \(\rhon\to\rhozero\in[0,1)\), a triangular-array central limit theorem yields the stated asymptotic normal law with variance \(\sigma_0^2\).
 
 For the variance estimator, let \(g_n:=q_n^{\mathrm{iso}}-q_0^{\mathrm{iso}}\). By \cref{lem:isorate},
 \[
@@ -1877,22 +1925,35 @@ Since \(P_0(A_{n,C}^c)\le \delta\) for all large \(n\) and arbitrary \(\delta>0\
 
 Finally,
 \[
-\widehat D^L-D_{q_0^{\mathrm{iso}}}^L
+\widehat D^L-D_{q_0^{\mathrm{iso}},n}^L
 =
-(1-\rhon^{-1})g_n-(\widehat{\psi}_{\mathrm{iso}}-\psi_0)+(\rhon^{-1}-\rhozero^{-1})(Y-q_0^{\mathrm{iso}}),
+-(1-\rhon)g_n-\rhon(\widehat{\psi}_{\mathrm{iso}}-\psi_0),
 \]
 and
 \[
-\widehat D^U-D_{q_0^{\mathrm{iso}}}^U
+\widehat D^U-D_{q_0^{\mathrm{iso}},n}^U
 =
-g_n(\widetilde X)-(\widehat{\psi}_{\mathrm{iso}}-\psi_0).
+(1-\rhon)\{g_n(\widetilde X)-(\widehat{\psi}_{\mathrm{iso}}-\psi_0)\}.
 \]
-Because \(\rhon\to\rhozero\), \(Y-q_0^{\mathrm{iso}}\) has finite second moment, and \(\Pl(g_n^2),\Pu(g_n^2)=o_p(1)\), it follows that
+Because \(\Pl(g_n^2),\Pu(g_n^2)=o_p(1)\) and \(\widehat{\psi}_{\mathrm{iso}}\to_p\psi_0\), it follows that
 \[
-\Pl\!\left[\{\widehat D^L-D_{q_0^{\mathrm{iso}}}^L\}^2\right]=o_p(1),
+\Pl\!\left[\{\widehat D^L-D_{q_0^{\mathrm{iso}},n}^L\}^2\right]=o_p(1),
 \qquad
-\Pu\!\left[\{\widehat D^U-D_{q_0^{\mathrm{iso}}}^U\}^2\right]=o_p(1).
+\frac{n}{N}\Pu\!\left[\{\widehat D^U-D_{q_0^{\mathrm{iso}},n}^U\}^2\right]=o_p(1),
 \]
+where the second conclusion uses
+\[
+\frac{n}{N}(1-\rhon)^2=\rhon(1-\rhon)\le \frac14.
+\]
+The law of large numbers and \(\rhon\to\rhozero\) also give
+\[
+\Pl\{(D_{q_0^{\mathrm{iso}},n}^L)^2\}
++
+\frac{n}{N}\Pu\{(D_{q_0^{\mathrm{iso}},n}^U)^2\}
+\ \to_p\ \sigma_0^2.
+\]
+The empirical means of both estimated influence components converge to zero,
+so within-sample centering does not change this limit.
 Therefore \(\widehat\sigma^2\to_p \sigma_0^2\). The Wald interval claim then follows by Slutsky's theorem.
 \end{proof}
 
@@ -1907,7 +1968,12 @@ Lemma~\ref{lem:aipw-comparison} with \(g=q_{0\mid n}\) gives
 =(1-\rhon)(\Pu-\Pl)\Delta_n.
 \]
 By Lemma~\ref{lem:post-eprate}, the right-hand side is
-\(O_p(n^{-2/3})+O_p(n^{-1/3}N^{-1/2})=o_p(M^{-1/2})\).
+\[
+O_p((1-\rhon)n^{-2/3})
++O_p((1-\rhon)n^{-1/3}N^{-1/2})
+=o_p(n^{-1/2}),
+\]
+using the same bounds as in the proof of Theorem~\ref{thm:al}.
 The calibration-error rate is Theorem~\ref{thm:iso-postcal}.
 Together these prove both conclusions.
 \end{proof}
@@ -1915,21 +1981,25 @@ Together these prove both conclusions.
 \begin{proof}[Proof of \cref{cor:efficiency}]
 For part (i), if \(q_0^{\mathrm{iso}}=\muzero\) almost surely, then the asymptotic influence pair in \cref{thm:al} is
 \[
-D_{\mu_0}^L(X,Y)=\mu_0(X)-\psi_0+\rhozero^{-1}\{Y-\mu_0(X)\},
+D_{\mu_0,n}^L(X,Y)
+=
+Y-\psi_0-(1-\rhon)\{\mu_0(X)-\psi_0\},
 \qquad
-D_{\mu_0}^U(\widetilde X)=\mu_0(\widetilde X)-\psi_0.
+D_{\mu_0,n}^U(\widetilde X)
+=
+(1-\rhon)\{\mu_0(\widetilde X)-\psi_0\}.
 \]
 By \cref{prop:aipw-class}, this is the efficient influence pair in the unrestricted two-sample model. Therefore \(\widehat{\psi}_{\mathrm{iso}}\) is efficient for \(\psi_0\) in the full two-sample experiment.
 
-For part (ii), fix a square-integrable nondecreasing score
+For part (ii), fix a square-integrable nondecreasing transformation
 \(g=\theta\circ\mhat\), and let \(g^\circ=g-\E_{\Px}g+\psi_0\).
-Adding a constant preserves monotonicity. Population isotonic optimality
+Adding a constant preserves monotonicity, so population isotonic optimality
 and Lemma~\ref{lem:center} give
 \[
 \Var(Y-q_0^{\mathrm{iso}})=\E[(Y-q_0^{\mathrm{iso}})^2]
 \le\E[(Y-g^\circ)^2]=\Var(Y-g).
 \]
-Proposition~\ref{prop:aipw-class} gives the variance comparison.
+Proposition~\ref{prop:aipw-class} now gives the efficiency comparison.
 
 For part (iii), let
 \[
@@ -1937,15 +2007,15 @@ S:=\mhat(X),
 \qquad
 \eta_0(s):=\E_{P_0}[Y\mid S=s].
 \]
-\cref{prop:aipw-class} applied to the reduced two-sample experiment with scalar covariate \(S\) shows that the efficient influence pair in that reduced experiment is
+\cref{prop:aipw-class} applied to the reduced two-sample experiment with scalar covariate \(S\) shows that the efficient triangular influence pair in that reduced experiment is
 \[
-D_{\eta_0}^L(S,Y)
+D_{\eta_0,n}^L(S,Y)
 =
-\eta_0(S)-\psi_0+\rhozero^{-1}\{Y-\eta_0(S)\},
+Y-\psi_0-(1-\rhon)\{\eta_0(S)-\psi_0\},
 \qquad
-D_{\eta_0}^U(\widetilde S)
+D_{\eta_0,n}^U(\widetilde S)
 =
-\eta_0(\widetilde S)-\psi_0.
+(1-\rhon)\{\eta_0(\widetilde S)-\psi_0\}.
 \]
 If \(\eta_0\) is monotone increasing, then \(\eta_0\) belongs to the isotonic class and
 \[
@@ -1961,10 +2031,72 @@ q_0^{\mathrm{iso}}(X)=\eta_0\{\mhat(X)\}
 \qquad\text{almost surely.}
 \]
 Therefore, the influence pair in \cref{thm:al} coincides with the reduced-model efficient influence pair above, so \(\widehat{\psi}_{\mathrm{iso}}\) is efficient for \(\psi_0\) in the reduced experiment indexed by \(\mhat(X)\).
+The isotonic class is closed under constant shifts and positive rescaling.
+The corresponding population first-order conditions give
+\(\E[Y-q_0^{\mathrm{iso}}]=\E[q_0^{\mathrm{iso}}(Y-q_0^{\mathrm{iso}})]=0\), so
+\(\Cov(Y,q_0^{\mathrm{iso}})=\Var(q_0^{\mathrm{iso}})\).
+Substitution into \(\sigma_0^2\) gives the stated variance reduction relative
+to the labeled mean.
 \end{proof}
 
 \section{Additional empirical details}
 \label{app:empirical}
+
+\subsection{Small-sample comparisons and RePPI}
+\label{app:small-n}
+
+The small-sample experiment uses \(S\sim N(0,1)\),
+\(p(S)=\{1+\exp(-5S)\}^{-1}\), and \(Y\mid S\sim\mathrm{Bernoulli}\{p(S)\}\).
+Let \(C(t)=\min\{0.99,\max(0.01,t)\}\), \(\sigma(t)=(1+e^{-t})^{-1}\),
+and \(Z\sim N(0,1)\) independently of \((S,Y)\).
+The mildly miscalibrated score is
+\(C[\sigma\{1.5\,\mathrm{logit}(C[p(S)+0.005Z])\}]\);
+the strongly miscalibrated score is
+\(C[-0.15+0.75\,\sigma\{3\,\mathrm{logit}(p(S))-0.5\}]\).
+The simulation seed is 20260411. Figure~\ref{fig:small-n-diagnostics} reports
+signed bias, coverage of nominal 95\% intervals, interval width, and relative
+efficiency versus PPI++.
+
+We implement two scalar-score versions of RePPI Algorithm~1
+\citep{ji2025predictions}, using three-way sample splitting and
+evaluation-fold-size weighting. RePPI-RF uses a 100-tree random forest.
+RePPI-MLP-CV selects hidden-layer widths from \((8)\), \((32,32)\), and
+\((32,32,32)\), and penalties from \(\{10^{-2},10^{-4}\}\), by two-fold
+validation MSE within each outer training fold. Both estimate the scalar
+power-tuning coefficient on the evaluation fold, use the global factor
+\(N/(n+N)\), and set the coefficient to zero when fitted-score variance is
+numerically singular. The neural implementation uses the feature vector
+\([1,m(X)]\). Its prediction map and the scalar single-fold calculation were
+checked against the public implementation; the three-way aggregation follows
+the paper's Algorithm~1.
+
+RePPI-RF has lower RMSE than PPI++ in one of 14 settings; RePPI-MLP-CV does
+so in five. For \(n\ge50\), the neural estimator's RMSE is
+\(0.576\)--\(0.668\) times that of the labeled mean. At \(n=20\), the ratios
+are \(1.450\) and \(9.690\) under mild and strong miscalibration.
+Neither RePPI implementation has lower RMSE than smooth monotone calibration
+in these settings. The largest neural-estimator error occurs when a
+fitted-score variance of \(1.04\times10^{-7}\) produces a coefficient of
+\(1238.2\). All replications are retained. Singular-variance fallbacks occur
+in 175 random-forest replications and 46 neural-network replications;
+the neural fits produce 2,120 convergence warnings.
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{assets/fig_small_n_diagnostics.pdf}
+\caption{Signed bias, coverage of nominal 95\% intervals, interval width,
+and relative efficiency versus PPI++ in the small-sample experiment.
+The numerical summary includes Monte Carlo standard errors.}
+\label{fig:small-n-diagnostics}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{assets/fig_small_n_reppi.pdf}
+\caption{Small-sample RMSE comparison including the random-forest and
+cross-validated neural-network RePPI implementations.}
+\label{fig:small-n-reppi}
+\end{figure}
 This appendix describes the benchmark construction used in \cref{sec:empirical}. The main-text discussion isolates three headline contrasts: PPI versus AIPW as raw-score baselines, clipped PPI++ versus \textsc{AIPW-EM} as efficiency-maximization variants, and \texttt{LinearCal}/\texttt{AutoCal} as the main calibration-based competitors.
 
 We use the official \texttt{ppi\_py} real-data mean-estimation examples and preserve their labeled-sample-size grids. The \texttt{forest} experiment uses \(n \in \{50,100,\dots,500\}\). The \texttt{galaxies} and semisupervised \texttt{census\_income} benchmarks use \(n \in \{50,155,261,366,472,577,683,788,894,1000\}\). For each \(n\), the remaining observations form the unlabeled sample. We rerandomize this split 500 times at each \(n\), always evaluating all estimators on the same split and taking the full-sample mean as the benchmark truth.
@@ -2008,6 +2140,24 @@ and relative efficiency versus PPI.
 \includegraphics[width=\textwidth]{assets/fig_paper_metric_grid.pdf}
 \caption{Full diagnostic grid for the reproduced PPI benchmarks, showing bias, empirical variance, normalized MSE relative to PPI, coverage, and relative efficiency versus PPI across labeled-sample-size regimes. In the normalized-MSE and relative-efficiency panels, the dashed horizontal line marks parity with PPI; in the coverage panels it marks the nominal target coverage \(1-\alpha\). \texttt{AutoCal}, \texttt{MonoSpline}, and \texttt{IsoCal} appear alongside PPI, AIPW, PPI++, \textsc{AIPW-EM}, and the fixed calibration rules, while Platt scaling and Venn--Abers appear only on the binary-outcome datasets where they are well defined.}
 \label{fig:ppi-benchmarks-full}
+\end{figure}
+
+\subsection{LLM score ordering and held-out calibration}
+\label{app:llm-ordering}
+
+For MATH responses evaluated by ArmoRM, empirical correctness increases across
+twelve score bins, from \(0.078\) in the lowest bin to \(0.920\) in the
+highest. Platt calibration fitted on 100 randomly selected labels reduces
+mean squared prediction error from \(0.4683\) to \(0.2020\) on the remaining
+held-out observations, a reduction of \(56.9\%\).
+
+\begin{figure}[htb]
+\centering
+\includegraphics[width=\textwidth]{assets/fig_toy_calibration_ppi.pdf}
+\caption{ArmoRM scores and observed MATH correctness. The calibration map is
+fitted on 100 labeled observations; prediction error is evaluated on the
+remaining observations.}
+\label{fig:llm-ordering}
 \end{figure}
 
 \subsection{LLM evaluator breakdown}
@@ -2065,9 +2215,9 @@ The PPE human-preference track also induces a downstream ranking problem across 
 
 All empirical results use public benchmark sources cited in the main text and appendix. The tabular reproductions use the official \texttt{ppi\_py} mean-estimation datasets; the LLM experiments use PPE Human Preference V1 and PPE correctness data derived from MMLU-Pro, MATH, GPQA, IFEval, and MBPP+. The submission does not introduce a new dataset or foundation model. Figures and tables are generated from the experiment scripts and cached CSV summaries; raw public data and evaluator-score sources remain governed by their upstream licenses and terms.
 
-The main synthetic simulation figure was generated with 2,000 Monte Carlo repetitions per setting. The reproduced PPI benchmark refresh uses 500 random labeled/unlabeled splits for each dataset-size cell. The final PPE run uses 200 rerandomized splits per stage and completed all 112 evaluator/benchmark/target stages. PPE evaluator scores were read from cached or precomputed public score files, so the final aggregation did not run new reward-model inference.
+The main synthetic simulation figure was generated with 500 Monte Carlo repetitions per setting. The reproduced PPI benchmark refresh uses 500 random labeled/unlabeled splits for each dataset-size cell. The final PPE run uses 200 rerandomized splits per stage and completed all 112 evaluator/benchmark/target stages. PPE evaluator scores were read from cached or precomputed public score files, so the final aggregation did not run new reward-model inference.
 
-The local runs used Python 3.9.6 with \texttt{numpy} 2.0.2, \texttt{pandas} 2.3.3, \texttt{scikit-learn} 1.6.1, \texttt{xgboost} 2.1.4, \texttt{lightgbm} 4.6.0, \texttt{matplotlib} 3.9.4, and \texttt{ppi-python} 0.2.3. The longest recorded run was the 2,000-repetition main-text simulation sweep, which took about 27,577 seconds on an Apple M1 Pro machine with 10 logical CPUs and 16 GB RAM. The smaller all-comparator simulation refresh took about 1,318 seconds on the same machine.
+The local runs used Python 3.9.6 with \texttt{numpy} 2.0.2, \texttt{pandas} 2.3.3, \texttt{scikit-learn} 1.6.1, \texttt{xgboost} 2.1.4, \texttt{lightgbm} 4.6.0, \texttt{matplotlib} 3.9.4, and \texttt{ppi-python} 0.2.3. The longest recorded run was a 2,000-repetition simulation sweep, which took about 27,577 seconds on an Apple M1 Pro machine with 10 logical CPUs and 16 GB RAM. The smaller all-comparator simulation refresh took about 1,318 seconds on the same machine.
 
 \section{Anonymous implementation sketch}
 \label{appendix:code}
@@ -2086,9 +2236,9 @@ supplementary code. The algorithms below use the notation of the paper.
 \State Fit \(\hat f\in\arg\min_{f\in\mathcal F_{\mathrm{iso}}}\sum_{i=1}^n\{Y_i-f(T_i)\}^2\)
 \State Set \(q_n^{\mathrm{iso}}(X_i)=\hat f(T_i)\) and \(q_n^{\mathrm{iso}}(\widetilde X_j)=\hat f(\widetilde T_j)\)
 \State Form \(\widehat\psi_{\mathrm{iso}}\gets (n+N)^{-1}\{\sum_{i=1}^n q_n^{\mathrm{iso}}(X_i)+\sum_{j=1}^N q_n^{\mathrm{iso}}(\widetilde X_j)\}\)
-\State Set \(\widehat D_i^L=q_n^{\mathrm{iso}}(X_i)-\widehat\psi_{\mathrm{iso}}+\rhon^{-1}\{Y_i-q_n^{\mathrm{iso}}(X_i)\}\) and \(\widehat D_j^U=q_n^{\mathrm{iso}}(\widetilde X_j)-\widehat\psi_{\mathrm{iso}}\)
+\State Set \(\widehat D_i^L=Y_i-\widehat\psi_{\mathrm{iso}}-(1-\rhon)\{q_n^{\mathrm{iso}}(X_i)-\widehat\psi_{\mathrm{iso}}\}\) and \(\widehat D_j^U=(1-\rhon)\{q_n^{\mathrm{iso}}(\widetilde X_j)-\widehat\psi_{\mathrm{iso}}\}\)
 \State Set \(\overline D_L=n^{-1}\sum_{i=1}^n\widehat D_i^L\) and \(\overline D_U=N^{-1}\sum_{j=1}^N\widehat D_j^U\)
-\State Set \(\widehat{\mathrm{SE}}_{\mathrm{iso}}^2=(n+N)^{-2}\{\sum_{i=1}^n(\widehat D_i^L-\overline D_L)^2+\sum_{j=1}^N(\widehat D_j^U-\overline D_U)^2\}\)
+\State Set \(\widehat{\mathrm{SE}}_{\mathrm{iso}}^2=n^{-2}\sum_{i=1}^n(\widehat D_i^L-\overline D_L)^2+N^{-2}\sum_{j=1}^N(\widehat D_j^U-\overline D_U)^2\)
 \State Return \(\widehat\psi_{\mathrm{iso}} \pm z_{1-\alpha/2}\widehat{\mathrm{SE}}_{\mathrm{iso}}\)
 \end{algorithmic}
 \end{algorithm}
@@ -2102,9 +2252,9 @@ supplementary code. The algorithms below use the notation of the paper.
 \State Fit \((\hat a,\hat b)\in\arg\min_{a,b}\sum_{i=1}^n\{Y_i-(aT_i+b)\}^2\)
 \State Set \(q_n^{\mathrm{lin}}(X_i)=\hat aT_i+\hat b\) and \(q_n^{\mathrm{lin}}(\widetilde X_j)=\hat a\widetilde T_j+\hat b\)
 \State Form \(\widehat\psi_{\mathrm{lin}}\gets (n+N)^{-1}\{\sum_{i=1}^n q_n^{\mathrm{lin}}(X_i)+\sum_{j=1}^N q_n^{\mathrm{lin}}(\widetilde X_j)\}\)
-\State Set \(\widehat D_i^L=q_n^{\mathrm{lin}}(X_i)-\widehat\psi_{\mathrm{lin}}+\rhon^{-1}\{Y_i-q_n^{\mathrm{lin}}(X_i)\}\) and \(\widehat D_j^U=q_n^{\mathrm{lin}}(\widetilde X_j)-\widehat\psi_{\mathrm{lin}}\)
+\State Set \(\widehat D_i^L=Y_i-\widehat\psi_{\mathrm{lin}}-(1-\rhon)\{q_n^{\mathrm{lin}}(X_i)-\widehat\psi_{\mathrm{lin}}\}\) and \(\widehat D_j^U=(1-\rhon)\{q_n^{\mathrm{lin}}(\widetilde X_j)-\widehat\psi_{\mathrm{lin}}\}\)
 \State Set \(\overline D_L=n^{-1}\sum_{i=1}^n\widehat D_i^L\) and \(\overline D_U=N^{-1}\sum_{j=1}^N\widehat D_j^U\)
-\State Set \(\widehat{\mathrm{SE}}_{\mathrm{lin}}^2=(n+N)^{-2}\{\sum_{i=1}^n(\widehat D_i^L-\overline D_L)^2+\sum_{j=1}^N(\widehat D_j^U-\overline D_U)^2\}\)
+\State Set \(\widehat{\mathrm{SE}}_{\mathrm{lin}}^2=n^{-2}\sum_{i=1}^n(\widehat D_i^L-\overline D_L)^2+N^{-2}\sum_{j=1}^N(\widehat D_j^U-\overline D_U)^2\)
 \State Return \(\widehat\psi_{\mathrm{lin}} \pm z_{1-\alpha/2}\widehat{\mathrm{SE}}_{\mathrm{lin}}\)
 \end{algorithmic}
 \end{algorithm}
@@ -2118,9 +2268,9 @@ supplementary code. The algorithms below use the notation of the paper.
 \State Fit \((\hat a,\hat\beta,\hat b)\in\arg\min_{a,\beta,b}\sum_{i=1}^n\{Y_i-(a+X_i^\top\beta+bT_i)\}^2\)
 \State Set \(q_n^{\mathrm{lin}}(X_i)=\hat a+X_i^\top\hat\beta+\hat bT_i\) and \(q_n^{\mathrm{lin}}(\widetilde X_j)=\hat a+\widetilde X_j^\top\hat\beta+\hat b\widetilde T_j\)
 \State Form \(\widehat\psi_{\mathrm{lin}}\gets (n+N)^{-1}\{\sum_{i=1}^n q_n^{\mathrm{lin}}(X_i)+\sum_{j=1}^N q_n^{\mathrm{lin}}(\widetilde X_j)\}\)
-\State Set \(\widehat D_i^L=q_n^{\mathrm{lin}}(X_i)-\widehat\psi_{\mathrm{lin}}+\rhon^{-1}\{Y_i-q_n^{\mathrm{lin}}(X_i)\}\) and \(\widehat D_j^U=q_n^{\mathrm{lin}}(\widetilde X_j)-\widehat\psi_{\mathrm{lin}}\)
+\State Set \(\widehat D_i^L=Y_i-\widehat\psi_{\mathrm{lin}}-(1-\rhon)\{q_n^{\mathrm{lin}}(X_i)-\widehat\psi_{\mathrm{lin}}\}\) and \(\widehat D_j^U=(1-\rhon)\{q_n^{\mathrm{lin}}(\widetilde X_j)-\widehat\psi_{\mathrm{lin}}\}\)
 \State Set \(\overline D_L=n^{-1}\sum_{i=1}^n\widehat D_i^L\) and \(\overline D_U=N^{-1}\sum_{j=1}^N\widehat D_j^U\)
-\State Set \(\widehat{\mathrm{SE}}_{\mathrm{lin}}^2=(n+N)^{-2}\{\sum_{i=1}^n(\widehat D_i^L-\overline D_L)^2+\sum_{j=1}^N(\widehat D_j^U-\overline D_U)^2\}\)
+\State Set \(\widehat{\mathrm{SE}}_{\mathrm{lin}}^2=n^{-2}\sum_{i=1}^n(\widehat D_i^L-\overline D_L)^2+N^{-2}\sum_{j=1}^N(\widehat D_j^U-\overline D_U)^2\)
 \State Return \(\widehat\psi_{\mathrm{lin}} \pm z_{1-\alpha/2}\widehat{\mathrm{SE}}_{\mathrm{lin}}\)
 \end{algorithmic}
 \end{algorithm}
