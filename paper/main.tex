@@ -92,9 +92,9 @@ A standard approach is to use the labeled sample to debias a plug-in estimator b
 
 These estimators protect against bias from an imperfect prediction model, but they typically treat \(m(X)\) as fixed. This can be problematic because efficiency depends on how well \(m(X)\) serves as a regression adjustment, that is, on how well it approximates the conditional mean of \(Y\), not merely on whether it ranks observations correctly. A score may be informative for ranking individuals while still being poorly calibrated, in the sense that its numerical values systematically overstate or understate the outcome. In that case, the residuals \(Y-m(X)\) remain unnecessarily variable, and the resulting semisupervised estimator can be far from efficient. Such miscalibration may arise because the model was trained on a different population, or because of temporal drift, distribution shift, or regularization bias.
 
-This motivates post-hoc calibration. Rather than correcting only the marginal bias \(\E\{Y-m(X)\}\), one can use the labeled sample to transform \(m(X)\) so that its numerical values better align with the outcomes they are meant to predict \citep{zadrozny2001obtaining,zadrozny2002transforming,niculescu2005predicting}. An ideal target is a \textit{perfectly calibrated} score \(m_n^\star(X)\) satisfying
+This motivates post-hoc calibration. Rather than correcting only the marginal bias \(\E\{Y-m(X)\}\), one can use the labeled sample to transform \(m(X)\) so that its numerical values better align with the outcomes they are meant to predict \citep{zadrozny2001obtaining,zadrozny2002transforming,niculescu2005predicting}. An ideal target is a \textit{perfectly calibrated} score \(m^\star(X)\) satisfying
 \[
-\E\!\left[Y \mid m_n^\star(X)\right] = m_n^\star(X).
+\E\!\left[Y \mid m^\star(X)\right] = m^\star(X).
 \]
 Post-hoc calibration can improve the regression adjustment, and thus efficiency, without retraining the underlying model. Classical post-processing methods include Platt scaling \citep{platt1999probabilistic}, linear calibration \citep{mincer1969evaluation}, histogram binning \citep{zadrozny2001obtaining}, and isotonic regression \citep{zadrozny2002transforming}. Such methods are especially relevant for modern machine-learning predictors, such as neural networks, which are often informative yet systematically miscalibrated \citep{bella2010calibration,guo2017calibration,wang2023calibration}.
 
@@ -403,20 +403,15 @@ Rather than fixing the scaling factor, one can choose it by
 minimizing an empirical estimate of the asymptotic variance,
 a procedure known as empirical efficiency maximization
 \citep{rubin2008empirical,vanderlaanunified}.
-Writing
-$H_{f,n}(X,Y)=Y-(1-\rho_n)f(X)$,
-the empirical variance criterion is
+The empirical variance criterion is
 \[
 \widehat\sigma_n^2(f)
 :=
-\Pl\left[
-\{H_{f,n}(X,Y)-\Pl H_{f,n}\}^2
-\right]
-+
-\rho_n(1-\rho_n)\Pu\left[
-\{f(\widetilde X)-\Pu f\}^2
-\right].
+\widehat{\Var}_L\{Y-(1-\rho_n)f(X)\}
++\rho_n(1-\rho_n)\widehat{\Var}_U\{f(\widetilde X)\},
 \]
+where \(\widehat{\Var}_L(a):=\Pl[(a-\Pl a)^2]\) and
+\(\widehat{\Var}_U(b):=\Pu[(b-\Pu b)^2]\).
 Minimizing $\widehat\sigma_n^2(\lambda m)$ over
 $\lambda\in\mathbb R$ yields an AIPW estimator with the
 rescaled prediction function $\hat\lambda m$. This is
@@ -593,10 +588,10 @@ The resulting isotonic-calibrated PPI estimator is
 
 Isotonic regression is tuning-free and can be computed
 efficiently using the pooled-adjacent-violators algorithm
-(PAVA) \citep{barlow1972isotonic}. The fitted score is
-piecewise constant, with each fitted value equal to the
-empirical mean of the outcome among observations assigned
-that value. Consequently, no further transformation of
+(PAVA) \citep{barlow1972isotonic}. The fitted values on the labeled sample are constant on PAVA blocks,
+with each block value equal to the empirical mean outcome in that block.
+For new score values, we interpolate linearly between the fitted values
+at distinct observed scores and use the endpoint values outside the observed range. Consequently, no further transformation of
 the fitted score can reduce empirical squared prediction
 error. Thus, isotonic regression achieves full empirical
 calibration despite restricting the fitted transformation
@@ -623,10 +618,6 @@ In particular,
 \Pl\bigl[(Y-\mhat(X))^2\bigr].
 \]
 \end{proposition}
-
-In the algorithms below, \(\widehat{\Var}_L\) and
-\(\widehat{\Var}_U\) denote empirical within-sample variances
-with denominators \(n\) and \(N\), respectively.
 
 \begin{algorithm}[t]
 \caption{Isotonic-calibrated PPI}
@@ -726,7 +717,7 @@ The next result connects linear calibration to PPI++, which
 rescales the original score by empirical efficiency maximization.
 For mean estimation, the two methods are first-order equivalent,
 although they need not coincide in finite samples. Both target
-the population-optimal scaling coefficient $\lambda_0$ in
+the population-optimal scaling coefficient $\lambda^\star$ in
 \eqref{opt:scale}, corresponding to the slope in the population
 linear regression of $Y$ on $m(X)$. This equivalence requires
 optimization over all $\lambda\in\mathbb R$. Restricting
@@ -814,13 +805,13 @@ score $\mhat$, confidence level $1-\alpha$
 $\widetilde T_j=\mhat(\widetilde X_j)$
 \State Fit
 $(\hat a,\hat\beta,\hat b)\in\arg\min_{a,\beta,b}
-\sum_{i=1}^n\{Y_i-(a+X_i^\top\beta+bT_i)\}^2$
+\sum_{i=1}^n\{Y_i-(aT_i+X_i^\top\beta+b)\}^2$
 \State Set
 $m_{n,\mathrm{lin}}^\star(X_i)
-=\hat a+X_i^\top\hat\beta+\hat bT_i$
+=\hat aT_i+X_i^\top\hat\beta+\hat b$
 and
 $m_{n,\mathrm{lin}}^\star(\widetilde X_j)
-=\hat a+\widetilde X_j^\top\hat\beta+\hat b\widetilde T_j$
+=\hat a\widetilde T_j+\widetilde X_j^\top\hat\beta+\hat b$
 \State Compute
 $\widehat\psi_{\mathrm{lin}}\gets
 (n+N)^{-1}
@@ -1113,12 +1104,12 @@ for $\psi_0$ in the full two-sample model.
 \item More generally, $\widehat{\psi}_{\mathrm{iso}}$ is
 asymptotically at least as efficient as any AIPW estimator
 of the form $\widehat{\psi}(\theta\circ\mhat)$, where
-$\theta$ is monotone nondecreasing.
+$\theta$ is nondecreasing and $\theta\circ\mhat$ is square-integrable.
 
 \item If $\E_{P_0}[Y\mid \mhat(X)]$ is monotone nondecreasing
 in $\mhat(X)$, then
 $m_0(X)=\E_{P_0}[Y\mid \mhat(X)]$ almost surely.
-In this case, no AIPW estimator based on a transformation
+In this case, no AIPW estimator based on a square-integrable transformation
 $\theta\circ\mhat$, with
 $\theta:\mathbb R\to\mathbb R$, has smaller asymptotic
 variance than $\widehat{\psi}_{\mathrm{iso}}$.
@@ -1164,8 +1155,6 @@ depends on the covariates only through the fitted score
 $m_{n,\mathrm{iso}}^\star(X)$, we consider the reduced
 two-sample experiment
 \[
-\mathcal E_{m_{n,\mathrm{iso}}^\star}
-:=
 \Bigl(
 \{(m_{n,\mathrm{iso}}^\star(X_i),Y_i)\}_{i=1}^n,\,
 \{m_{n,\mathrm{iso}}^\star(\widetilde X_j)\}_{j=1}^N
@@ -1199,16 +1188,16 @@ Suppose \cref{assump:design,assump:isoreg,assump:eff-bv} hold. Let
 \[
 \widehat{\psi}_{\mathrm{eff}}
 :=
-\widehat{\psi}(\widehat{m}_0),
+\widehat{\psi}(m_{0\mid n}),
 \qquad
-\widehat{m}_0(X)
+m_{0\mid n}(X)
 :=
 \E_{P_0}[Y \mid m_{n,\mathrm{iso}}^\star(X)]
 \]
 denote the oracle AIPW estimator in the reduced experiment
 based on the fitted isotonic score. Then
 \[
-\|\widehat{m}_0-m_{n,\mathrm{iso}}^\star\|_{2,\Px}^2
+\|m_{0\mid n}-m_{n,\mathrm{iso}}^\star\|_{2,\Px}^2
 =
 O_p(n^{-2/3}),
 \]
@@ -1234,7 +1223,7 @@ original score. This is calibeating in terms of squared prediction error.
 
 The theorem also establishes first-order equivalence between
 $\widehat{\psi}_{\mathrm{iso}}$ and the oracle AIPW estimator
-based on $\widehat{m}_0$. Thus, further post-processing of
+based on $m_{0\mid n}$. Thus, further post-processing of
 the fitted isotonic score cannot reduce the leading
 asymptotic variance. Moreover, by \cref{thm:al,prop:aipw-class},
 isotonic calibration achieves the smallest limiting variance
@@ -1385,7 +1374,10 @@ level.}
 We compare PPI, AIPW, PPI++, \textsc{AIPW-EM},
 \texttt{LinearCal}, and \texttt{AutoCal}. Additional calibration
 methods and dataset-specific results are reported in
-Appendix~\ref{app:empirical}.
+Appendix~\ref{app:empirical}. In these benchmarks and the LLM experiments,
+\texttt{LinearCal} clips affine predictions to the labeled outcome range,
+and \texttt{IsoCal} first groups observations into bins of at least 10
+before fitting isotonic regression.
 
 \begin{figure}[htb]
 \centering
@@ -1451,6 +1443,18 @@ Results are averaged across the public evaluator models.}
 \end{figure}
 }{}
 
+For each benchmark, evaluator, and target model, MSE/PPI is the estimator's
+Monte Carlo MSE divided by that of PPI. Implied label savings are
+\[
+\max\!\left\{0,\,
+1-\frac{\widehat{\Var}(\widehat\psi)}{\widehat{\Var}(\overline Y_L)}
+\right\},
+\]
+where the variances are computed over repeated splits and \(\overline Y_L\)
+is the labeled mean. We set negative savings to zero before averaging.
+Table entries are averaged first over target models within each benchmark,
+then over benchmarks within each evaluator, and then over evaluators.
+
 \IfFileExists{assets/table_llm_summary.tex}{
 \begin{table}[htb]
 \centering
@@ -1458,7 +1462,7 @@ Results are averaged across the public evaluator models.}
 \resizebox{\textwidth}{!}{\input{assets/table_llm_summary.tex}}
 \caption{LLM evaluation results at $n\in\{100,400\}$.
 Reported are MSE normalized by that of PPI, implied label
-savings relative to labeled-only estimation, and coverage.
+savings relative to labeled-only estimation, and coverage of nominal 90\% Wald intervals.
 Results for all estimators are reported in
 Appendix~\ref{tab:llm-eval-summary-full}.}
 \label{tab:llm-eval-summary}
@@ -1671,8 +1675,8 @@ whereas AIPW is the pooled mean
 Let \(A\in\{0,1\}\) denote randomized treatment and
 \(Y=AY(1)+(1-A)Y(0)\). Assume consistency, no interference, and
 \(A\perp(X,Y(1),Y(0))\), with positive assignment probabilities.
-For each arm \(a\), the other arm supplies unlabeled covariates when
-estimating \(\mu_a:=\E[Y(a)]\).
+When estimating \(\mu_a:=\E[Y(a)]\), outcomes from arm \(a\) are labeled,
+and covariates from the other arm form the unlabeled sample.
 Let \(\mathbb P_{n,a}\) denote the empirical mean in arm \(a\),
 \(\mathbb P_n\) the pooled mean, and \(\hat\pi_a=n_a/n\).
 If the calibrated arm-specific score satisfies
@@ -1856,10 +1860,10 @@ Suppose \cref{assump:eff-bv} holds. Let \(T:=\mhat(X)\) and \(S_n:=m_{n,\mathrm{
 \qquad
 \eta_n(s):=\E_{P_0}[Y\mid S_n=s].
 \]
-If \(t\mapsto \eta(t)\) has total variation at most \(V\), then, conditional on the labeled sample, the map \(s\mapsto \eta_n(s)\) has total variation at most \(V\). Moreover, \(|\eta_n(s)|\le C_0\) on the support of \(S_n\).
+If \(t\mapsto \eta(t)\) has total variation at most \(V\), then, conditional on the labeled sample, the map \(s\mapsto \eta_n(s)\) has total variation at most \(V\). If, in addition, \(|\eta(t)|\le C_0\) on the support of \(T\), then \(|\eta_n(s)|\le C_0\) on the support of \(S_n\).
 \end{lemma}
 \begin{proof}
-We adapt the proof of Lemma 6 in \cite{van2023causal}. Let \(S_n=f_n(T)\), where \(f_n\) is the fitted isotonic map. Conditional on the labeled sample, \(f_n\) is nondecreasing and piecewise constant. Hence, for each \(s\) in the support of \(S_n\), there exists an interval \(B_s\subset \mathbb R\) such that
+We adapt the proof of Lemma 6 in \cite{van2023causal}. Let \(S_n=f_n(T)\), where \(f_n\) is the fitted isotonic map. Conditional on the labeled sample, \(f_n\) is nondecreasing. Hence, for each \(s\) in the support of \(S_n\), there exists an interval \(B_s\subset \mathbb R\), possibly a singleton, such that
 \[
 \{S_n=s\}=\{T\in B_s\}.
 \]
@@ -1940,11 +1944,11 @@ The isotonic class is closed under constant shifts, so
 Its derivative there is \(-2\E[Y-m_0(X)]\), giving the stated identity.
 \end{proof}
 
-\textbf{Proof convention.} In the following proofs, fix \(\delta>0\). By \(\sup_x |m_{n,\mathrm{iso}}^\star(x)|=O_p(1)\), there exist a deterministic constant \(C=C_\delta\ge C_0\) and \(n_0<\infty\) such that the event
+\textbf{Proof convention.} In the following proofs, fix \(\zeta>0\). By \(\sup_x |m_{n,\mathrm{iso}}^\star(x)|=O_p(1)\), there exist a deterministic constant \(C=C_\zeta\ge C_0\) and \(n_0<\infty\) such that the event
 \[
 A_{n,C}:=\Bigl\{\sup_x |m_{n,\mathrm{iso}}^\star(x)|\le C\Bigr\}
 \]
-satisfies \(P_0(A_{n,C})\ge 1-\delta\) for all \(n\ge n_0\). We carry out the deterministic bounded-class arguments on \(A_{n,C}\), where all implicit constants may depend on \(C\) but not on \(n\). Since \(\delta\) is arbitrary, the resulting rates and distributional statements hold unconditionally.
+satisfies \(P_0(A_{n,C})\ge 1-\zeta\) for all \(n\ge n_0\). We carry out the deterministic bounded-class arguments on \(A_{n,C}\), where all implicit constants may depend on \(C\) but not on \(n\). Since \(\zeta\) is arbitrary, the resulting rates and distributional statements hold unconditionally.
 
 \begin{lemma}[Isotonic \(L^2\) rate]
 \label{lem:isorate}
@@ -1956,17 +1960,17 @@ Suppose \cref{assump:design,assump:isoreg} holds. Then
 
 \begin{proof}[Proof of \cref{lem:isorate}]
 
-Let \(T:=\mhat(X)\), \(g_0(T):=\E_{P_0}[Y\mid T]\), and
+Let \(T:=\mhat(X)\), \(\eta(T):=\E_{P_0}[Y\mid T]\), and
 \[
 \mathcal M_C:=\{f(T):f\in\mathcal F_{\mathrm{iso}},\ \|f(T)\|_\infty\le C\}.
 \]
-By \cref{assump:isoreg}, \(g_0(T)\) is bounded by \(C_0\le C\), and on \(A_{n,C}\) we have \(m_{n,\mathrm{iso}}^\star\in\mathcal M_C\). Since clipping any monotone candidate to \([-C,C]\) preserves monotonicity and can only decrease squared risk against \(g_0(T)\), the population isotonic projection \(m_0\) also belongs to \(\mathcal M_C\). For every \(m\in\mathcal M_C\),
+By \cref{assump:isoreg}, \(\eta(T)\) is bounded by \(C_0\le C\), and on \(A_{n,C}\) we have \(m_{n,\mathrm{iso}}^\star\in\mathcal M_C\). Since clipping any monotone candidate to \([-C,C]\) preserves monotonicity and can only decrease squared risk against \(\eta(T)\), the population isotonic projection \(m_0\) also belongs to \(\mathcal M_C\). For every \(m\in\mathcal M_C\),
 \[
 \E_{P_0}[(Y-m)^2]
 =
-\E_{P_0}[(Y-g_0)^2]+\E_{P_0}[(g_0-m)^2],
+\E_{P_0}[(Y-\eta)^2]+\E_{P_0}[(\eta-m)^2],
 \]
-which shows that \(m_0\) is the \(L^2(P_T)\)-projection of \(g_0\) onto the closed convex set \(\mathcal M_C\).
+which shows that \(m_0\) is the \(L^2(P_T)\)-projection of \(\eta\) onto the closed convex set \(\mathcal M_C\).
 
 Now define the centered class
 \[
@@ -1986,11 +1990,11 @@ Because \(g\) is measurable with respect to \(T\), the tower property gives
 \[
 \E_{P_0}[(Y-m_0)g]
 =
-\E_{P_0}[(g_0-m_0)g].
+\E_{P_0}[(\eta-m_0)g].
 \]
-Since \(m_0\) is the \(L^2(P_T)\)-projection of \(g_0\) onto the convex set \(\mathcal M_C\), the Hilbert-space projection inequality yields
+Since \(m_0\) is the \(L^2(P_T)\)-projection of \(\eta\) onto the convex set \(\mathcal M_C\), the Hilbert-space projection inequality yields
 \[
-\E_{P_0}[(g_0-m_0)(m-m_0)]\le 0
+\E_{P_0}[(\eta-m_0)(m-m_0)]\le 0
 \qquad\text{for every }m\in\mathcal M_C.
 \]
 Hence
@@ -2016,7 +2020,7 @@ J_{[]}(\delta,\mathcal F_\delta,L_2(\Px))\lesssim \delta^{1/2};
 \]
 see, e.g., \citet{vdvwellner1996}.
 
-Write \(\xi:=Y-m_0(X)\), so that \(\ell_g=g^2-2\xi g\). By Condition~\ref{cond::subgaus} and the bounds on \(g_0\), \(m_0\), and \(g\), there exists \(A_C<\infty\) such that
+Write \(\xi:=Y-m_0(X)\), so that \(\ell_g=g^2-2\xi g\). By Condition~\ref{cond::subgaus} and the bounds on \(\eta\), \(m_0\), and \(g\), there exists \(A_C<\infty\) such that
 \begin{equation}
 \label{eq:iso-multiplier-moments}
 \E_{P_0}[|\xi g|^k]
@@ -2050,18 +2054,18 @@ Hence
 \qquad
 \|m_{n,\mathrm{iso}}^\star-m_0\|_{2,\Px}^2=O_p(n^{-2/3}).
 \]
-Since \(P_0(A_{n,C}^c)\le \delta\) for all large \(n\), and \(\delta>0\) was arbitrary, the same rate holds unconditionally, proving \cref{lem:isorate}.
+Since \(P_0(A_{n,C}^c)\le \zeta\) for all large \(n\), and \(\zeta>0\) was arbitrary, the same rate holds unconditionally, proving \cref{lem:isorate}.
 \end{proof}
 
 \begin{theorem}[Calibration error of isotonic post-processing]
 \label{thm:iso-postcal}
 Suppose \cref{assump:design,assump:isoreg,assump:eff-bv} hold. Let
 \[
-\widehat{m}_0(X):=\E_{P_0}[Y\mid m_{n,\mathrm{iso}}^\star(X)].
+m_{0\mid n}(X):=\E_{P_0}[Y\mid m_{n,\mathrm{iso}}^\star(X)].
 \]
 Then
 \[
-\|\widehat{m}_0-m_{n,\mathrm{iso}}^\star\|_{2,\Px}^2=O_p(n^{-2/3}).
+\|m_{0\mid n}-m_{n,\mathrm{iso}}^\star\|_{2,\Px}^2=O_p(n^{-2/3}).
 \]
 \end{theorem}
 
@@ -2072,7 +2076,7 @@ T:=\mhat(X),\qquad S_n:=m_{n,\mathrm{iso}}^\star(X),\qquad \eta_n(s):=\E_{P_0}[Y
 \]
 and define
 \[
-\Delta_n(X):=\widehat{m}_0(X)-m_{n,\mathrm{iso}}^\star(X)=\eta_n(S_n)-S_n.
+\Delta_n(X):=m_{0\mid n}(X)-m_{n,\mathrm{iso}}^\star(X)=\eta_n(S_n)-S_n.
 \]
 
 Conditional on the labeled sample, \(h_n(s):=\eta_n(s)-s\) is a measurable function of \(s\). Applying \cref{prop:iso-repr} pathwise with \(h=h_n\) yields
@@ -2096,7 +2100,7 @@ Hence
 (\E_{P_0}-\Pl)\{\Delta_n(X)\{Y-S_n\}\}.
 \]
 
-Fix \(\delta>0\), and work on the event \(A_{n,C}\) from the proof convention. On this event, \(S_n\) is uniformly bounded by \(C\). By \cref{lem:bv-post}, the function \(\eta_n\) belongs to the bounded-variation class
+Fix \(\zeta>0\), and work on the event \(A_{n,C}\) from the proof convention. On this event, \(S_n\) is uniformly bounded by \(C\). By \cref{lem:bv-post}, the function \(\eta_n\) belongs to the bounded-variation class
 \[
 \mathcal F_{\mathrm{TV},C}
 :=
@@ -2112,7 +2116,7 @@ Since \(S_n=f_n(T)\) for a nondecreasing fitted isotonic map \(f_n\), and compos
 \[
 t\mapsto \eta_n\{f_n(t)\}
 \]
-also belongs to \(\mathcal F_{\mathrm{TV},C}\), after enlarging \(C\) if necessary. Thus \(\eta_n(S_n)=h_1(T)\) for some \(h_1=f_1\circ T\) with \(f_1\in\mathcal F_{\mathrm{TV},C}\), while \(S_n=h_2(T)\) for \(h_2=f_2\circ T\) with \(f_2=f_n\in\mathcal F_{\mathrm{iso},C}\).
+also belongs to \(\mathcal F_{\mathrm{TV},C}\), after enlarging \(C\) if necessary. Thus \(\eta_n(S_n)=h_1(X)\) for some \(h_1=f_1\circ\mhat\) with \(f_1\in\mathcal F_{\mathrm{TV},C}\), while \(S_n=h_2(X)\) for \(h_2=f_2\circ\mhat\) with \(f_2=f_n\in\mathcal F_{\mathrm{iso},C}\).
 
 Define the localized product class
 \[
@@ -2120,7 +2124,7 @@ Define the localized product class
 :=
 \Bigl\{
 (h_1-h_2)(Y-h_2):
-h_1=f_1\circ T,\ h_2=f_2\circ T,\
+h_1=f_1\circ\mhat,\ h_2=f_2\circ\mhat,\
 f_1\in\mathcal F_{\mathrm{TV},C},\
 f_2\in\mathcal F_{\mathrm{iso},C},\
 \|h_1-h_2\|_{2,\Px}\le \delta
@@ -2176,7 +2180,7 @@ P_0(\delta_n\ge 2^S\varepsilon_n,\ A_{n,C})
 \sum_{s=S}^\infty 2^{-3s/2}
 \xrightarrow[S\to\infty]{} 0.
 \]
-Because \(P_0(A_{n,C}^c)\le \delta\) for all large \(n\), and \(\delta>0\) is arbitrary, it follows that
+Because \(P_0(A_{n,C}^c)\le \zeta\) for all large \(n\), and \(\zeta>0\) is arbitrary, it follows that
 \[
 \|\Delta_n\|_{2,\Px}=O_p(n^{-1/3}),
 \qquad
@@ -2222,7 +2226,7 @@ In particular,
 \[
 (\Pl-\Px)\{m_{n,\mathrm{iso}}^\star-m_0\}=O_p(n^{-2/3}).
 \]
-Since \(P_0(A_{n,C}^c)\le \delta\) for all large \(n\), and \(\delta>0\) is arbitrary, the same bound holds unconditionally.
+Since \(P_0(A_{n,C}^c)\le \zeta\) for all large \(n\), and \(\zeta>0\) is arbitrary, the same bound holds unconditionally.
 
 For the unlabeled sample, conditional on the labeled data, \(m_{n,\mathrm{iso}}^\star-m_0\) is fixed and the unlabeled sample is independent, so
 \[
@@ -2239,7 +2243,7 @@ by \cref{lem:isorate}.
 \label{lem:post-eprate}
 Suppose \cref{assump:design,assump:isoreg,assump:eff-bv} hold. Let
 \[
-\Delta_n(X):=\widehat{m}_0(X)-m_{n,\mathrm{iso}}^\star(X).
+\Delta_n(X):=m_{0\mid n}(X)-m_{n,\mathrm{iso}}^\star(X).
 \]
 Then
 \[
@@ -2254,13 +2258,13 @@ By \cref{thm:iso-postcal},
 \[
 \|\Delta_n\|_{2,\Px}^2=O_p(n^{-2/3}).
 \]
-Let \(V<\infty\) be the variation bound in \cref{assump:eff-bv}. Fix \(\delta>0\), and work on the event \(A_{n,C}\). On this event, \(m_{n,\mathrm{iso}}^\star\) is uniformly bounded by \(C\). By \cref{lem:bv-post}, the function
+Let \(V<\infty\) be the variation bound in \cref{assump:eff-bv}. Fix \(\zeta>0\), and work on the event \(A_{n,C}\). On this event, \(m_{n,\mathrm{iso}}^\star\) is uniformly bounded by \(C\). By \cref{lem:bv-post}, the function
 \[
 s\mapsto \eta_n(s):=\E_{P_0}[Y\mid m_{n,\mathrm{iso}}^\star(X)=s]
 \]
 has total variation at most \(V\) and is bounded by \(C\) on the support of \(m_{n,\mathrm{iso}}^\star(X)\). Since \(m_{n,\mathrm{iso}}^\star(X)=f_n(T)\) with \(T=\mhat(X)\) and \(f_n\) nondecreasing, it follows that
 \[
-\widehat m_0(X)=\eta_n\{f_n(T)\}
+m_{0\mid n}(X)=\eta_n\{f_n(T)\}
 \]
 is a bounded-variation transform of \(T\), while \(m_{n,\mathrm{iso}}^\star(X)\) is a bounded monotone transform of \(T\).
 
@@ -2281,7 +2285,7 @@ For fixed \(R<\infty\), define
 :=
 \Bigl\{
 h_1-h_2:
-h_1=f_1\circ T,\ h_2=f_2\circ T,\
+h_1=f_1\circ\mhat,\ h_2=f_2\circ\mhat,\
 f_1\in\mathcal F_{\mathrm{TV},C},\
 f_2\in\mathcal F_{\mathrm{iso},C},\
 \|h_1-h_2\|_{2,\Px}\le Rn^{-1/3}
@@ -2300,7 +2304,7 @@ Applying Lemma 3.4.2 of \citet{vdvwellner1996} at radius \(r_n=Rn^{-1/3}\) gives
 =O_p(n^{-2/3}).
 \]
 Taking \(R\) large gives the same bound for \((\Pl-\Px)\Delta_n\) on \(A_{n,C}\).
-Since \(P_0(A_{n,C}^c)\le \delta\) for all large \(n\), and \(\delta>0\) was arbitrary, the same bound holds unconditionally.
+Since \(P_0(A_{n,C}^c)\le \zeta\) for all large \(n\), and \(\zeta>0\) was arbitrary, the same bound holds unconditionally.
 
 For the unlabeled sample, conditional on the labeled data, \(\Delta_n\) is fixed and the unlabeled sample is independent. Hence
 \[
@@ -2413,7 +2417,7 @@ Therefore
 \[
 \Pu(g_n^2)=O_p(n^{-2/3})+O_p\bigl(n^{-1/3}N^{-1/2}\bigr)=o_p(1).
 \]
-Since \(P_0(A_{n,C}^c)\le \delta\) for all large \(n\) and arbitrary \(\delta>0\), these bounds hold unconditionally. Also, \(\widehat{\psi}_{\mathrm{iso}}\to_p\psi_0\) follows from \cref{thm:al}.
+Since \(P_0(A_{n,C}^c)\le \zeta\) for all large \(n\) and arbitrary \(\zeta>0\), these bounds hold unconditionally. Also, \(\widehat{\psi}_{\mathrm{iso}}\to_p\psi_0\) follows from \cref{thm:al}.
 
 Finally,
 \[
@@ -2453,8 +2457,8 @@ Therefore \(\widehat\sigma^2\to_p \sigma_0^2\). The Wald interval claim then fol
 \label{app:eff}
 
 \begin{proof}[Proof of Theorem~\ref{prop:eif-red}]
-Set \(\Delta_n=\widehat m_0-m_{n,\mathrm{iso}}^\star\).
-Lemma~\ref{lem:aipw-comparison} with \(g=\widehat m_0\) gives
+Set \(\Delta_n=m_{0\mid n}-m_{n,\mathrm{iso}}^\star\).
+Lemma~\ref{lem:aipw-comparison} with \(g=m_{0\mid n}\) gives
 \[
 \widehat\psi_{\mathrm{eff}}-\widehat\psi_{\mathrm{iso}}
 =(1-\rhon)(\Pu-\Pl)\Delta_n.
@@ -2538,9 +2542,10 @@ When \(\rhozero>0\), the joint two-sample setup can be embedded into a pooled i.
 \[
 \psihat = \mathbb P_M(\mtilde) + \mathbb P_M\left[\frac{R}{\rhozero}\{Y-\mtilde\}\right]
 \]
-up to the same calibration identity as in the main text. The corresponding observed-data efficient influence function is
+up to the same calibration identity as in the main text. The efficient influence function in the reduced model observing only the score is
 \[
-m_0(X)-\psi_0+\frac{R}{\rhozero}\{Y-m_0(X)\},
+\E[Y\mid m(X)]-\psi_0
++\frac{R}{\rhozero}\{Y-\E[Y\mid m(X)]\},
 \]
 which is the single-sample analogue of the efficient influence pair obtained by applying \cref{prop:aipw-class} to the reduced model with scalar covariate \(\mhat(X)\). Thus the usual i.i.d.\ missing-data formulation is a convenient special case, but the main text keeps the two-dataset structure explicit.
 
@@ -2564,7 +2569,7 @@ efficiency versus PPI++.
 
 We implement two scalar-score versions of RePPI Algorithm~1
 \citep{ji2025predictions}, using three-way sample splitting and
-evaluation-fold-size weighting. RePPI-RF uses a 100-tree random forest.
+weights proportional to the evaluation-fold sizes. RePPI-RF uses a 100-tree random forest.
 RePPI-MLP-CV selects hidden-layer widths from \((8)\), \((32,32)\), and
 \((32,32,32)\), and penalties from \(\{10^{-2},10^{-4}\}\), by two-fold
 validation MSE within each outer training fold. Both estimate the scalar
@@ -2603,7 +2608,7 @@ cross-validated neural-network RePPI implementations.}
 \label{fig:small-n-reppi}
 \end{figure}
 
-This appendix records the benchmark construction used in \cref{sec:empirical}. We use the official \texttt{ppi\_py} real-data mean-estimation examples and preserve their labeled-sample-size grids. The \texttt{forest} experiment uses \(n \in \{50,100,\dots,500\}\). The \texttt{galaxies} and semisupervised \texttt{census\_income} benchmarks use \(n \in \{50,155,261,366,472,577,683,788,894,1000\}\). For each \(n\), the remaining observations form the unlabeled sample. We repeat each random split 500 times at each \(n\), evaluate all estimators on the same split, and use the full-sample mean as the benchmark target.
+This appendix describes the benchmark construction used in \cref{sec:empirical}. We use the official \texttt{ppi\_py} real-data mean-estimation examples and preserve their labeled-sample-size grids. The \texttt{forest} experiment uses \(n \in \{50,100,\dots,500\}\). The \texttt{galaxies} and semisupervised \texttt{census\_income} benchmarks use \(n \in \{50,155,261,366,472,577,683,788,894,1000\}\). For each \(n\), the remaining observations form the unlabeled sample. We generate 500 random splits for each \(n\), evaluate all estimators on the same split, and use the full-sample mean as the benchmark target.
 
 We compare the labeled-only mean, PPI, AIPW, PPI++, \textsc{AIPW-EM},
 \texttt{LinearCal}, \texttt{MonoSpline}, \texttt{IsoCal}, and \texttt{AutoCal}.
@@ -2612,8 +2617,9 @@ and Venn--Abers shrinkage. PPI and PPI++ use the official \texttt{ppi\_py}
 implementations. PPI++ restricts its coefficient to \([0,1]\), whereas
 \textsc{AIPW-EM} minimizes the empirical variance without that constraint.
 
-Calibration maps are fitted on the labeled pairs and averaged over the pooled
-covariates. \texttt{LinearCal} fits an affine map; \texttt{MonoSpline} fits a
+Calibration maps are fitted on the labeled pairs. We use the calibrated
+scores in the AIPW estimator, retaining the residual correction after clipping
+or binning. \texttt{LinearCal} fits an affine map; \texttt{MonoSpline} fits a
 smooth nondecreasing spline with a roughness penalty. Both clip predictions
 to the range of the labeled outcomes. \texttt{IsoCal} uses a minimum bin size
 of 10. Platt scaling fits logistic regression to a stabilized logit transform
@@ -2635,7 +2641,7 @@ and relative efficiency versus PPI.
 \begin{figure}[hbt]
 \centering
 \includegraphics[width=\textwidth]{assets/fig_paper_calibration_grid.pdf}
-\caption{Calibration-focused appendix comparison across the reproduced PPI benchmarks, restricted to PPI, AIPW, \texttt{LinearCal}, \texttt{MonoSpline}, and \texttt{IsoCal}. The panels report normalized MSE relative to PPI, relative efficiency versus PPI, and coverage across labeled-sample-size regimes. This figure isolates the fixed-calibration comparison that is omitted from the main-text benchmark figure for readability.}
+\caption{Calibration-focused appendix comparison across the reproduced PPI benchmarks, restricted to PPI, AIPW, \texttt{LinearCal}, \texttt{MonoSpline}, and \texttt{IsoCal}. The panels report normalized MSE relative to PPI, relative efficiency versus PPI, and coverage across labeled-sample-size regimes.}
 \label{fig:ppi-calibration-appendix}
 \end{figure}
 
@@ -2674,7 +2680,7 @@ The largest raw-score MSE inflation occurs for Skywork and Athene. With ArmoRM, 
 \centering
 \small
 \resizebox{\textwidth}{!}{\input{assets/table_llm_summary_appendix.tex}}
-\caption{Appendix PPE-only numerical summary at \(n\in\{100,400\}\), expanding the main-text table to include the efficiency-maximized and additional fixed-calibration comparators omitted there for readability.}
+\caption{PPE numerical summary at \(n\in\{100,400\}\), including the efficiency-maximized and additional fixed-calibration estimators.}
 \label{tab:llm-eval-summary-full}
 \end{table}
 }{}
@@ -2683,7 +2689,7 @@ The largest raw-score MSE inflation occurs for Skywork and Athene. With ArmoRM, 
 \begin{figure}[hbt]
 \centering
 \includegraphics[width=\textwidth]{assets/fig_llm_eval_by_evaluator.pdf}
-\caption{Appendix evaluator-specific PPE summary. Each panel repeats the PPE Human and PPE Correctness comparisons for one public evaluator. The large raw-proxy failures are concentrated in Skywork and Athene, while ArmoRM is much more benign.}
+\caption{Appendix evaluator-specific PPE summary. Each panel repeats the PPE Human and PPE Correctness comparisons for one public evaluator. The largest MSE increases relative to labeled-only estimation occur for Skywork and Athene.}
 \label{fig:llm-eval-by-evaluator}
 \end{figure}
 }{}
@@ -2698,7 +2704,7 @@ The PPE human-preference track also induces a downstream ranking problem across 
 \centering
 \small
 \resizebox{0.74\textwidth}{!}{\input{assets/table_llm_ppe_ranking.tex}}
-\caption{Appendix PPE-ranking summary at selected labeled sample sizes from the LLM benchmark. Spearman and top-1 are larger-is-better, while top-1 regret is smaller-is-better.}
+\caption{Appendix PPE-ranking summary at selected labeled sample sizes from the LLM benchmark. Better rankings have higher Spearman correlation and top-1 identification rates and lower top-1 regret.}
 \label{tab:llm-ppe-ranking}
 \end{table}
 }{}
