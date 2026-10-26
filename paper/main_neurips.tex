@@ -67,7 +67,7 @@
 \providecommand{\answerNo}[1][]{\textcolor{orange}{[No]#1}}
 \providecommand{\answerNA}[1][]{\textcolor{gray}{[N/A]#1}}
 
-\title{Calibeating Prediction-Powered Inference}
+\title{``Calibeating'' Prediction-Powered Inference}
 
 \author{}
 
@@ -162,9 +162,9 @@ calibration yields asymptotic linearity and valid Wald inference. Isotonic
 calibration achieves the smallest asymptotic variance among nondecreasing
 transformations of the original score. Further post-processing of the fitted
 isotonic score yields no additional first-order variance reduction. Following
-the terminology of \citet{foster2023calibeating}, we call
-these guarantees \emph{calibeating}: isotonic calibration improves the score as
-a predictor and as a regression adjustment for semisupervised mean estimation.
+the terminology of \citet{foster2023calibeating}, we call improvement through
+calibration \emph{calibeating}. Here, these improvements concern squared
+prediction error and the first-order variance of semisupervised mean estimation.
 
 \subsection{Related work}
 
@@ -549,8 +549,8 @@ We next give first-order theory for isotonic calibration. The results formalize
 ``calibeating'' in two senses. First, isotonic calibration improves prediction
 within the class of monotone post-processing rules for the original score and
 improves first-order efficiency for mean estimation. Second, once the isotonic
-score has been fit, no further post-processing of that score improves prediction
-or first-order efficiency.
+score has been fit, further post-processing of that score yields no nonvanishing
+reduction in squared prediction error or first-order reduction in variance.
 
 \subsection{Asymptotic normality, inference, and efficiency}
 
