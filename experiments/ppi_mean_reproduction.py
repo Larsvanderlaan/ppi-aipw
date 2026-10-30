@@ -909,6 +909,11 @@ def write_paper_summary_table(summary_df: pd.DataFrame, output_dir: Path) -> Non
         r"\midrule",
     ]
     for _, row in table.iterrows():
+        relative_efficiency = (
+            f"{row['rel_eff_vs_ppi']:.3f}"
+            if row["emp_variance"] > 1e-20 and np.isfinite(row["rel_eff_vs_ppi"])
+            else "--"
+        )
         latex_lines.append(
             f"{latex_escape(row['dataset'])} & "
             f"{int(row['n_labeled'])} & "
@@ -918,7 +923,7 @@ def write_paper_summary_table(summary_df: pd.DataFrame, output_dir: Path) -> Non
             f"{row['emp_variance']:.4f} & "
             f"{row['mse']:.4f} & "
             f"{row['coverage']:.3f} & "
-            f"{row['rel_eff_vs_ppi']:.3f} \\\\"
+            f"{relative_efficiency} \\\\"
         )
     latex_lines.extend([r"\bottomrule", r"\end{tabular}"])
     (output_dir / "table_paper_summary.tex").write_text("\n".join(latex_lines) + "\n", encoding="utf-8")

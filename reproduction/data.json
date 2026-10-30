@@ -1,0 +1,128 @@
+{
+  "files": [
+    {
+      "name": "forest.npz",
+      "kind": "npz",
+      "studies": [
+        "real_data"
+      ],
+      "sha256": "9708f3be14850a55d03f88dad235c87b4a3b6c6e8cb81173cc580de8f7386ade"
+    },
+    {
+      "name": "galaxies.npz",
+      "kind": "npz",
+      "studies": [
+        "real_data"
+      ],
+      "sha256": "7be1d40a049f524fc51e150281541359a47c5eca80343dfac5b1c457fd7eae99"
+    },
+    {
+      "name": "census_income.npz",
+      "kind": "npz",
+      "studies": [
+        "real_data"
+      ],
+      "sha256": "07db91fc27b7275763e9071768ed8125ec44640dcd49b9be6bae3e2335afcfb4"
+    },
+    {
+      "name": "ppe_correctness_rows.jsonl.gz",
+      "kind": "jsonl",
+      "studies": [
+        "llm",
+        "calibration"
+      ],
+      "rows": 12625,
+      "sha256": "ccd3fcb5d685b889073eb39ff4fc3f22278a66d2259011923eff2df88f509860"
+    },
+    {
+      "name": "ppe_correctness_scores_armorm_llama3_8b_v0_1.jsonl.gz",
+      "kind": "jsonl",
+      "studies": [
+        "llm",
+        "calibration"
+      ],
+      "rows": 12625,
+      "sha256": "18a82693f2946a6149646217272c38327de9be523404c31c2d9e7cde55d97dda"
+    },
+    {
+      "name": "ppe_correctness_scores_athene_rm_8b.jsonl.gz",
+      "kind": "jsonl",
+      "studies": [
+        "llm"
+      ],
+      "rows": 12625,
+      "sha256": "658d1193a895cf4ba7cbfa3109274ed99163b6b242f18b639855808d412ede4d"
+    },
+    {
+      "name": "ppe_correctness_scores_skywork_reward_llama3_1_8b.jsonl.gz",
+      "kind": "jsonl",
+      "studies": [
+        "llm"
+      ],
+      "rows": 12625,
+      "sha256": "93711eaff8b0b377f7896f624483353b3ee572bf46d443d9f3747019e77c5bda"
+    },
+    {
+      "name": "ppe_correctness_scores_starling_rm_7b_alpha.jsonl.gz",
+      "kind": "jsonl",
+      "studies": [
+        "llm"
+      ],
+      "rows": 12625,
+      "sha256": "4cfe6764ba72acf943e81487ab7e92232b892f1357bf263cc678a78fad384efd"
+    },
+    {
+      "name": "ppe_human_rows.jsonl.gz",
+      "kind": "jsonl",
+      "studies": [
+        "llm"
+      ],
+      "rows": 16038,
+      "sha256": "54b317a97d96691c8688668b6616814f51eddd77901caec708469fe9b4ecc370"
+    },
+    {
+      "name": "ppe_human_scores_armorm_llama3_8b_v0_1.jsonl.gz",
+      "kind": "jsonl",
+      "studies": [
+        "llm"
+      ],
+      "rows": 16038,
+      "sha256": "21d103e5229a1ba48279be15d49ed2b63eb51538ed51f9b5be08071a18e7b5ea"
+    },
+    {
+      "name": "ppe_human_scores_athene_rm_8b.jsonl.gz",
+      "kind": "jsonl",
+      "studies": [
+        "llm"
+      ],
+      "rows": 16038,
+      "sha256": "1d3e9ad39930ca5dd257b1b5dbe06585abef70dac0af70176f5899af649c4984"
+    },
+    {
+      "name": "ppe_human_scores_skywork_reward_llama3_1_8b.jsonl.gz",
+      "kind": "jsonl",
+      "studies": [
+        "llm"
+      ],
+      "rows": 16038,
+      "sha256": "a3204d01310254c74a7b19655f8743726313eecc5ff322b8c26a8b1889d51111"
+    },
+    {
+      "name": "ppe_human_scores_starling_rm_7b_alpha.jsonl.gz",
+      "kind": "jsonl",
+      "studies": [
+        "llm"
+      ],
+      "rows": 16038,
+      "sha256": "d1fb099f690eab1994d9b7369fb07374af4194f7939b396fae3412cce8eb7238"
+    }
+  ],
+  "sources": {
+    "tabular": "https://github.com/aangelopoulos/ppi_py",
+    "human_preferences": "https://huggingface.co/datasets/lmarena-ai/PPE-Human-Preference-V1",
+    "precomputed_scores": "https://huggingface.co/datasets/lmarena-ai/ppe-result-data",
+    "precomputed_scores_revision": "e12638f5e3751057068947cae94afa75a6511cbe",
+    "human_preferences_revision": "e75cdc5d397c86e43d69b78cb4cc39b3b1d996c1"
+  },
+  "hash_format": "NPZ file bytes; JSONL parsed with pandas and written in row/column order as CSV with %.17g floats and LF newlines."
+}

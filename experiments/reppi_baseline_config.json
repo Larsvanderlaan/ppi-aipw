@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "paper": {
+    "arxiv_id": "2501.09731v2",
+    "date": "2026-06-21",
+    "source_url": "https://arxiv.org/e-print/2501.09731v2",
+    "paper_tex_sha256": "9afc21bec7f9482bec2ddbf45e7fb1abff8d19fc67d08b47ba6bbe8fb22bf8aa",
+    "license": "CC BY 4.0",
+    "algorithm": "Algorithm 1: three-way cross-fitting with global n/N scaling and evaluation-fold-size aggregation"
+  },
+  "official_repository": {
+    "url": "https://github.com/Wenlong2000/RePPI.git",
+    "commit": "60924986fa23ee53af5500104e5821f16dd3a9e5",
+    "commit_date": "2025-01-15",
+    "reppi_py_sha256": "085b702bf8cd4dfa47fe50b0809fd9d7c1cf4865a9e4aac36c2b4a11fb3f8b9c",
+    "ppi_py_sha256": "85dad473a8026821d9c4cfc58fc615916c83a878d069f85e7bf73304cff85f35",
+    "license_file_present": false,
+    "packaging_metadata_present": false,
+    "scope": "Pinned external parity reference; not vendored and not used as the v2 cross-fitting oracle because it predates the v2 paper."
+  },
+  "shared_reppi": {
+    "outer_folds": 3,
+    "outer_split": "deterministic balanced permutation",
+    "rotations": [
+      [0, 1, 2],
+      [1, 2, 0],
+      [2, 0, 1]
+    ],
+    "aggregation": "evaluation-fold-size weighting",
+    "scaling": "N/(n+N)",
+    "coefficient": "evaluation-fold sample covariance divided by sample prediction variance",
+    "singular_rule": "labeled-mean contribution when prediction variance is numerically singular"
+  },
+  "random_forest": {
+    "name": "RePPI-RF",
+    "n_estimators": 100,
+    "features": ["score"],
+    "random_state": "deterministic per outer rotation",
+    "n_jobs": 1
+  },
+  "mlp_cv": {
+    "name": "RePPI-MLP-CV",
+    "features": ["constant target covariate", "score"],
+    "inner_folds": 2,
+    "inner_split": "shuffled K-fold within the score-training outer fold",
+    "selection_metric": "mean held-out outcome MSE",
+    "evaluation_fold_used_for_selection": false,
+    "candidate_order_tie_break": "first candidate in the listed Cartesian-product order",
+    "hidden_layer_sizes": [
+      [8],
+      [32, 32],
+      [32, 32, 32]
+    ],
+    "alpha": [0.01, 0.0001],
+    "activation": "relu",
+    "solver": "adam",
+    "learning_rate_init": 0.001,
+    "max_iter": 1000,
+    "tol": 0.0001,
+    "early_stopping": false,
+    "notes": [
+      "The two-hidden-layer candidate matches the depth described in the June-2026 paper.",
+      "The (32,32,32), alpha=0.0001 candidate contains the January-2025 public-code default.",
+      "The paper and repository do not publish a CV grid, so this frozen grid is a disclosed local extension."
+    ]
+  }
+}

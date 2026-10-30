@@ -1,0 +1,64 @@
+{
+  "assets": [
+    {
+      "study": "simulation",
+      "name": "sim_fig_main.pdf"
+    },
+    {
+      "study": "small_sample",
+      "name": "fig_small_n_rmse.pdf"
+    },
+    {
+      "study": "small_sample",
+      "name": "fig_small_n_diagnostics.pdf"
+    },
+    {
+      "study": "small_sample",
+      "name": "fig_small_n_reppi.pdf"
+    },
+    {
+      "study": "real_data",
+      "name": "fig_paper_main_grid.pdf"
+    },
+    {
+      "study": "real_data",
+      "name": "fig_paper_calibration_grid.pdf"
+    },
+    {
+      "study": "real_data",
+      "name": "fig_paper_metric_grid.pdf"
+    },
+    {
+      "study": "real_data",
+      "name": "table_paper_summary.tex"
+    },
+    {
+      "study": "llm",
+      "name": "fig_llm_eval_main.pdf"
+    },
+    {
+      "study": "llm",
+      "name": "fig_llm_eval_by_evaluator.pdf"
+    },
+    {
+      "study": "llm",
+      "name": "fig_llm_ppe_ranking.pdf"
+    },
+    {
+      "study": "llm",
+      "name": "table_llm_summary.tex"
+    },
+    {
+      "study": "llm",
+      "name": "table_llm_summary_appendix.tex"
+    },
+    {
+      "study": "llm",
+      "name": "table_llm_ppe_ranking.tex"
+    },
+    {
+      "study": "calibration",
+      "name": "fig_toy_calibration_ppi.pdf"
+    }
+  ]
+}

@@ -24,6 +24,7 @@ from experiments.llm_eval_models import (
     EVALUATOR_SPECS,
     PPE_CORRECTNESS_BENCHMARKS,
     PPE_HUMAN_BENCHMARK,
+    PPE_HUMAN_DATA_REVISION,
     REWARDBENCH_BENCHMARK,
     build_ppe_correctness_score_frame_from_records,
     build_ppe_correctness_unit_id,
@@ -230,7 +231,8 @@ def _load_hf_dataset(dataset_name: str, split: str):
             "Loading official benchmark data requires the optional `datasets` dependency. "
             "Install the LLM benchmark extras or pre-populate the row caches."
         ) from exc
-    return load_dataset(dataset_name, split=split)
+    revision = PPE_HUMAN_DATA_REVISION if dataset_name == "lmarena-ai/PPE-Human-Preference-V1" else None
+    return load_dataset(dataset_name, split=split, revision=revision)
 
 
 def stable_binary_assignment(unit_ids: pd.Series, *, salt: str) -> np.ndarray:

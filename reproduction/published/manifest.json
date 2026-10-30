@@ -1,0 +1,40 @@
+{
+  "source_commit": "9b23849970ade47aa4264ce190680ad86e416e46",
+  "files": [
+    {
+      "path": "simulation/summary.csv",
+      "source": "outputs/simulations/final_500_refresh/summary.csv",
+      "sha256": "e3915e60dbcb5501c8404f5b5a3b71d98a3ab1a3e61009a84de63a361db0493b"
+    },
+    {
+      "path": "small_sample/summary.csv",
+      "source": "outputs/simulations/rebuttal_sample_size/summary.csv",
+      "sha256": "a53d9b0800252db0f188caa8f5fab0becbc0212aba322d7597ef73ecba9ca637"
+    },
+    {
+      "path": "real_data/summary.csv",
+      "source": "outputs/real_data/final_500_refresh/summary.csv",
+      "sha256": "39253ec755a7ed4729eec31fbaf9c288fb3c4f955c1ae854e7384afb5e158ba7"
+    },
+    {
+      "path": "llm/llm_eval_summary_main.csv",
+      "source": "outputs/llm_eval/final/llm_eval_summary_main.csv",
+      "sha256": "6c2647d1034ca793342587a0f800759b94f830f7ce310e5bca7176365cf784db"
+    },
+    {
+      "path": "llm/llm_eval_summary_by_evaluator.csv",
+      "source": "outputs/llm_eval/final/llm_eval_summary_by_evaluator.csv",
+      "sha256": "b5b32121ad638209cce737acab54eb3f2a2c5cb17e18456a39205c90a75c77a6"
+    },
+    {
+      "path": "llm/llm_eval_ppe_ranking_summary.csv",
+      "source": "outputs/llm_eval/final/llm_eval_ppe_ranking_summary.csv",
+      "sha256": "d5a4f6e40149f81375e293a789c7bf62d5463450a1c5b3eaf12c4a934f478853"
+    },
+    {
+      "path": "calibration/toy_calibration_summary.json",
+      "source": "outputs/simulations/final/toy_calibration_summary.json",
+      "sha256": "f5790e9cf777197da9bda8049f8e699dc630ca678d39fee9036e7536c9f87498"
+    }
+  ]
+}

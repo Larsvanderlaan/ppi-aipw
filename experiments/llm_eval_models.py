@@ -24,6 +24,8 @@ REWARDBENCH_BENCHMARK = "rewardbench_v1"
 PPE_FAMILY_TRACKS = ("ppe_human", "ppe_correctness")
 PPE_RESULT_DATASET_REPO = "lmarena-ai/ppe-result-data"
 PPE_RESULT_ARCHIVE_NAME = "data.zip"
+PPE_RESULT_DATA_REVISION = "e12638f5e3751057068947cae94afa75a6511cbe"
+PPE_HUMAN_DATA_REVISION = "e75cdc5d397c86e43d69b78cb4cc39b3b1d996c1"
 
 TRACK_ROW_CACHE_FILENAMES = {
     "ppe_human": "ppe_human_rows.jsonl.gz",
@@ -277,6 +279,7 @@ def ensure_ppe_result_archive_path(cache_dir: Path) -> Path:
         repo_id=PPE_RESULT_DATASET_REPO,
         filename=PPE_RESULT_ARCHIVE_NAME,
         repo_type="dataset",
+        revision=PPE_RESULT_DATA_REVISION,
         local_dir=str(local_dir),
     )
     return Path(downloaded)

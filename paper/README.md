@@ -1,36 +1,31 @@
-# Paper Build Notes
+# Manuscripts and builds
 
-This directory contains the manuscript sources for the public paper release.
+- Extended arXiv source: `main.tex`; PDF: `main.pdf`.
+- NeurIPS source: `main_neurips.tex`; PDF: `main_neurips.pdf`.
+- Website PDF: `../docs/paper.pdf`, identical to `main.pdf`.
 
-## Canonical files
+The NeurIPS source currently uses anonymous review formatting and a local
+style file. It requires the official style, final mode, and author block
+before a camera-ready submission.
 
-- Canonical manuscript source: [`main.tex`](./main.tex)
-- Canonical local PDF: `main.pdf`
-- Published website PDF: [`../docs/paper.pdf`](../docs/paper.pdf)
-- Secondary submission artifact: [`main_neurips.tex`](./main_neurips.tex)
-
-`main_neurips.tex` is retained as a secondary submission/archive version. The public website and public reproduction flow should be treated as `main.tex`-first.
-
-## Build commands
-
-From the repo root:
+In the standalone archive, regenerate and stage the figures first:
 
 ```bash
-./scripts/reproduce_paper.sh --smoke
+.venv/bin/python reproduction/reproduce.py --figures-only
+mkdir -p paper/assets
+cp outputs/reproduction/figures/assets/* paper/assets/
 ```
 
-This refreshes the core non-LLM paper assets and rebuilds `paper/main.pdf`. `paper/latexmkrc` then syncs the result to `docs/paper.pdf`.
-
-If you also want to refresh the LLM-backed paper assets used in `main.tex`:
+To build either source without changing experimental results:
 
 ```bash
-./scripts/reproduce_paper.sh --smoke --include-llm-benchmark
+cd paper
+latexmk -norc -pdf -interaction=nonstopmode -halt-on-error main.tex
+latexmk -norc -pdf -interaction=nonstopmode -halt-on-error main_neurips.tex
 ```
 
-## Expected outputs
-
-- `paper/main.pdf`: canonical local manuscript PDF
-- `docs/paper.pdf`: website copy of the canonical PDF
-- `paper/assets/*.pdf` and `paper/assets/*.tex`: manuscript-ready assets referenced by `main.tex`
-
-The reproduction script uses the tracked paper assets already in `paper/assets/` unless you explicitly request the optional LLM refresh path.
+To reproduce the experiments and their 15 figures and tables, see
+[`../reproduction/README.md`](../reproduction/README.md). The reproduction
+commands write to `outputs/reproduction/`; they do not replace the published
+paper assets or PDFs. The saved final summaries are included for regenerating
+the figures without rerunning the experiments.

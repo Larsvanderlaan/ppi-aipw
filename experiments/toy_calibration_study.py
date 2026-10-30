@@ -17,7 +17,7 @@ import pandas as pd
 if __package__ in (None, ""):
     sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from experiments.grounded_toy_screening import (
+from experiments.calibration_example import (
     INTRO_PREFERRED_EVALUATOR,
     _z_value,
     calibrator_for_candidate,

@@ -337,47 +337,26 @@ def test_smoke_run_writes_expected_outputs(tmp_path: Path) -> None:
     np.testing.assert_allclose(ppi_rows["mse_ratio_vs_ppi"], 1.0)
 
 
-def test_reproduce_script_smoke_exports_paper_assets(tmp_path: Path) -> None:
+def test_reproduction_plan_does_not_change_paper_assets(tmp_path: Path) -> None:
+    import json
+    import hashlib
+
     repo_root = Path(__file__).resolve().parents[1]
-    cache_dir = tmp_path / "cache"
-    output_root = tmp_path / "outputs"
-    paper_assets = tmp_path / "paper_assets"
-    fake_bin = tmp_path / "bin"
-    write_fake_dataset_cache(cache_dir)
-    fake_bin.mkdir()
-
-    fake_latexmk = fake_bin / "latexmk"
-    fake_latexmk.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-    fake_latexmk.chmod(0o755)
-
+    assets = repo_root / "paper/assets"
+    before = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in assets.iterdir() if p.is_file()}
+    output = tmp_path / "run"
     env = os.environ.copy()
     env["PYTHON_BIN"] = sys.executable
-    env["PATH"] = f"{fake_bin}{os.pathsep}{env['PATH']}"
-
-    subprocess.run(
-        [
-            "bash",
-            str(repo_root / "scripts/reproduce_paper.sh"),
-            "--smoke",
-            "--output-root",
-            str(output_root),
-            "--paper-assets-dir",
-            str(paper_assets),
-            "--cache-dir",
-            str(cache_dir),
-            "--seed",
-            "0",
-        ],
-        check=True,
-        cwd=repo_root,
-        env=env,
+    completed = subprocess.run(
+        ["bash", str(repo_root / "scripts/reproduce_paper.sh"), "--plan", "--smoke",
+         "--study", "real_data", "--output-dir", str(output)],
+        check=True, cwd=tmp_path, env=env, capture_output=True, text=True,
     )
-
-    expected_assets = {
-        "sim_fig_main.pdf",
-        "sim_fig_bias_coverage.pdf",
-        "fig_paper_main_grid.pdf",
-        "fig_paper_metric_grid.pdf",
-        "table_paper_summary.tex",
+    plan = json.loads(completed.stdout)
+    assert plan["mode"] == "smoke"
+    assert set(plan["assets"]) == {
+        "fig_paper_main_grid.pdf", "fig_paper_calibration_grid.pdf",
+        "fig_paper_metric_grid.pdf", "table_paper_summary.tex",
     }
-    assert expected_assets.issubset({path.name for path in paper_assets.iterdir()})
+    assert not output.exists()
+    assert before == {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in assets.iterdir() if p.is_file()}

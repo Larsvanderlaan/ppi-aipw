@@ -6,7 +6,7 @@ import time
 from dataclasses import dataclass, replace
 from pathlib import Path
 import sys
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 import pandas as pd
@@ -722,11 +722,15 @@ def score_setting_from_record(record: Dict[str, object]) -> ScoreSetting:
     )
 
 
-def selected_score_settings(recommendations: Dict[str, object]) -> List[ScoreSetting]:
-    return [
-        score_setting_from_record(recommendations["well_calibrated"]),
-        score_setting_from_record(recommendations["poorly_calibrated"]),
+def selected_score_settings(
+    recommendations: Dict[str, object],
+    score_qualities: Optional[Sequence[str]] = None,
+) -> List[ScoreSetting]:
+    selected = list(score_qualities) if score_qualities is not None else [
+        "well_calibrated",
+        "poorly_calibrated",
     ]
+    return [score_setting_from_record(recommendations[name]) for name in selected]
 
 
 def generate_sample(
@@ -1245,11 +1249,39 @@ def build_main_table(summary: pd.DataFrame) -> pd.DataFrame:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--rebuttal-sample-size",
+        action="store_true",
+        help="Run the locked NeurIPS rebuttal sample-size design.",
+    )
     parser.add_argument("--profile", choices=tuple(PROFILES.keys()), default="quick")
     parser.add_argument("--replications", type=int, default=None)
     parser.add_argument("--output-dir", type=Path, default=Path("outputs/simulations"))
-    parser.add_argument("--seed", type=int, default=20260408)
+    parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--recommendations-file", type=Path, default=None)
+    parser.add_argument(
+        "--n-grid",
+        nargs="+",
+        type=int,
+        default=None,
+        help="Optional labeled-sample grid for a rebuttal pilot; confirmatory defaults stay locked.",
+    )
+    parser.add_argument(
+        "--jobs",
+        type=int,
+        default=1,
+        help="Deterministic worker count for the rebuttal experiment.",
+    )
+    parser.add_argument(
+        "--no-resume",
+        action="store_true",
+        help="Ignore matching completed rebuttal cell checkpoints.",
+    )
+    parser.add_argument(
+        "--no-figures",
+        action="store_true",
+        help="Skip rebuttal figure generation.",
+    )
     parser.add_argument(
         "--estimators",
         nargs="*",
@@ -1261,10 +1293,68 @@ def main() -> None:
         action="store_true",
         help="Run only the estimators used in the main-text simulation figure.",
     )
+    parser.add_argument(
+        "--score-qualities",
+        nargs="*",
+        choices=tuple(DEFAULT_SCORE_SETTINGS.keys()),
+        default=None,
+        help="Optional score-quality subset to run.",
+    )
     args = parser.parse_args()
 
     if args.main_text_only and args.estimators is not None:
         parser.error("Use either --main-text-only or --estimators, not both.")
+    if args.score_qualities == []:
+        parser.error("--score-qualities requires at least one value when provided.")
+
+    if args.rebuttal_sample_size:
+        if args.main_text_only:
+            parser.error("--main-text-only does not apply to the rebuttal sample-size design.")
+        from experiments.rebuttal_sample_size import (
+            REBUTTAL_METHODS,
+            REBUTTAL_N_GRID,
+            REBUTTAL_REPLICATIONS,
+            REBUTTAL_SCORE_QUALITIES,
+            REBUTTAL_SEED,
+            RebuttalExperimentConfig,
+            run_rebuttal_experiment,
+        )
+
+        methods = REBUTTAL_METHODS if args.estimators is None else tuple(args.estimators)
+        recommendations_file = (
+            Path("experiments/paper_simulation_recommendations.json")
+            if args.recommendations_file is None
+            else args.recommendations_file
+        )
+        config = RebuttalExperimentConfig(
+            output_dir=args.output_dir,
+            recommendations_file=recommendations_file,
+            replications=(
+                REBUTTAL_REPLICATIONS
+                if args.replications is None
+                else args.replications
+            ),
+            seed=REBUTTAL_SEED if args.seed is None else args.seed,
+            n_grid=REBUTTAL_N_GRID if args.n_grid is None else tuple(args.n_grid),
+            score_qualities=(
+                REBUTTAL_SCORE_QUALITIES
+                if args.score_qualities is None
+                else tuple(args.score_qualities)
+            ),
+            methods=methods,
+            jobs=args.jobs,
+            make_figures=not args.no_figures,
+            resume=not args.no_resume,
+        )
+        run_rebuttal_experiment(config)
+        return
+
+    if args.n_grid is not None:
+        parser.error("--n-grid is only available with --rebuttal-sample-size.")
+    if args.jobs != 1 or args.no_resume or args.no_figures:
+        parser.error("--jobs/--no-resume/--no-figures require --rebuttal-sample-size.")
+    if args.seed is None:
+        args.seed = 20260408
 
     profile = PROFILES[args.profile]
     if args.replications is not None:
@@ -1310,7 +1400,7 @@ def main() -> None:
     raw_rows: List[Dict[str, float]] = []
     diag_rows: List[Dict[str, float]] = []
     global_start = time.time()
-    score_settings = selected_score_settings(recommendations)
+    score_settings = selected_score_settings(recommendations, args.score_qualities)
 
     regime_id = 0
     for dgp in profile.dgp_grid:
