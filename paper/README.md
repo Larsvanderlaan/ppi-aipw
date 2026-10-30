@@ -4,9 +4,9 @@
 - NeurIPS source: `main_neurips.tex`; PDF: `main_neurips.pdf`.
 - Website PDF: `../docs/paper.pdf`, identical to `main.pdf`.
 
-The NeurIPS source currently uses anonymous review formatting and a local
-style file. It requires the official style, final mode, and author block
-before a camera-ready submission.
+The NeurIPS source uses the [official NeurIPS 2026 style](https://media.neurips.cc/Conferences/NeurIPS2026/Formatting_Instructions_For_NeurIPS_2026.zip)
+with `main,final` options and the author names and affiliations from the extended
+manuscript.
 
 In the standalone archive, regenerate and stage the figures first:
 

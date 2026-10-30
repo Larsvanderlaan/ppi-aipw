@@ -1,7 +1,7 @@
 \documentclass{article}
 
 \PassOptionsToPackage{numbers,compress}{natbib}
-\usepackage{neurips_2026}
+\usepackage[main,final]{neurips_2026}
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -69,7 +69,18 @@
 
 \title{``Calibeating'' Prediction-Powered Inference}
 
-\author{}
+\author{
+Lars van der Laan\\
+Department of Statistics\\
+University of Washington
+\And
+Mark van der Laan\thanks{Targeted ML Solutions, \href{https://www.targetedml.com/}{targetedml.com}}\\
+Department of Statistics and\\
+Division of Biostatistics\\
+Center for Targeted Machine Learning\\
+and Causal Inference\\
+University of California, Berkeley
+}
 
 \begin{document}
 \maketitle
@@ -960,7 +971,7 @@ then over benchmarks within each evaluator, and then over evaluators.
 }{}
 
 \section*{Appendix Contents}
-The appendix is ordered from background and practical guidance to extensions, proofs, empirical details, and the anonymous implementation sketch.
+The appendix is ordered from background and practical guidance to extensions, proofs, empirical details, and the implementation sketch.
 \begin{enumerate}[leftmargin=7mm,label=\Alph*.]
 \item \hyperref[app:simresults]{LLM evaluation results}
 \item \hyperref[app:related-work]{Extended related work}
@@ -976,7 +987,7 @@ The appendix is ordered from background and practical guidance to extensions, pr
 \item \hyperref[app:al]{Proof of asymptotic linearity}
 \item \hyperref[app:eff]{Proof of post-processing equivalence and reduced-model efficiency}
 \item \hyperref[app:empirical]{Additional empirical details}
-\item \hyperref[appendix:code]{Anonymous implementation sketch}
+\item \hyperref[appendix:code]{Implementation sketch}
 \end{enumerate}
 
 \section{Extended related work}
@@ -2321,10 +2332,10 @@ The main simulation uses 500 Monte Carlo repetitions per setting, and the small-
 
 The local runs used Python 3.9.6 with \texttt{numpy} 2.0.2, \texttt{pandas} 2.3.3, \texttt{scikit-learn} 1.6.1, \texttt{xgboost} 2.1.4, \texttt{lightgbm} 4.6.0, \texttt{matplotlib} 3.9.4, and \texttt{ppi-python} 0.2.3. Computations used an Apple M1 Pro machine with 10 logical CPUs and 16 GB RAM. The 1,000-repetition small-sample experiment used eight parallel workers and took 9,214 seconds of elapsed time.
 
-\section{Anonymous implementation sketch}
+\section{Implementation sketch}
 \label{appendix:code}
 
-Reference implementations are in \texttt{examples/paper\_calibration.py} in the
+Reference implementations are in \texttt{experiments/} in the
 supplementary code. The algorithms below use the notation of the paper.
 
 \subsection{Algorithmic summaries}
@@ -2476,9 +2487,8 @@ the supplemental material or as a URL?
 Answer: \answerYes{}.
 
 Justification: The experiments use public benchmark sources cited in the paper,
-and the submission includes anonymous implementation sketches and can be
-accompanied by an anonymous supplementary artifact. Repository and
-project-website links are omitted from the double-blind PDF; see
+and the submission includes implementation sketches and can be
+accompanied by a supplementary artifact. See
 \cref{appendix:code,app:compute}.
 
 \textbf{Guidelines:}
@@ -2624,7 +2634,7 @@ Answer: \answerYes{}.
 Justification: The paper cites the public benchmark sources and software
 ecosystems used in the experiments, does not redistribute new raw datasets in
 the PDF, and gives data sources and software versions in
-\cref{app:compute}. Any anonymous supplement should preserve upstream license
+\cref{app:compute}. Any supplement should preserve upstream license
 and terms-of-use files where required.
 
 \textbf{Guidelines:}
