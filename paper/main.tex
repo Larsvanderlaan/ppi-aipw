@@ -79,7 +79,7 @@ University of California, Berkeley
 \maketitle
 
 \begin{abstract}
-We study semisupervised mean estimation with a small labeled sample, a large unlabeled sample, and a black-box prediction model whose output may be miscalibrated. A standard approach in this setting is augmented inverse-probability weighting (AIPW) \citep{robins1994estimation}, which protects against prediction-model misspecification but may be inefficient when the prediction score is poorly aligned with the outcome scale. We introduce \emph{Calibrated Prediction-Powered Inference}, which post-hoc calibrates the prediction score on the labeled sample before using it for semisupervised estimation. This simple step requires no retraining and can \emph{calibeat} the original score, improving it both as a predictor of the outcome and as a regression adjustment for semisupervised inference. We study both linear and isotonic calibration. For isotonic calibration, we establish first-order optimality guarantees: isotonic post-processing can improve predictive accuracy and estimator efficiency relative to the original score and simpler post-processing rules, while no further post-processing of the fitted isotonic score yields additional first-order gains. For linear calibration, we show first-order equivalence to PPI++. We also clarify the relationship between existing estimators, showing that the original PPI estimator is a special case of AIPW and can be inefficient when the prediction model is accurate, while PPI++ is AIPW with empirical efficiency maximization \citep{rubin2008empirical}. In simulations and real-data experiments, our calibrated estimators often outperform PPI and are competitive with, or outperform, AIPW and PPI++. We provide an accompanying \texttt{Python} package, \href{https://larsvanderlaan.github.io/ppi-aipw/}{\texttt{ppi\_aipw}}.
+We study semisupervised mean estimation with a small labeled sample, a large unlabeled sample, and a black-box prediction model whose output may be miscalibrated. A standard approach in this setting is augmented inverse-probability weighting (AIPW) \citep{robins1994estimation}, which protects against prediction-model misspecification but may be inefficient when the prediction score is poorly aligned with the outcome scale. We introduce \emph{Calibrated Prediction-Powered Inference}, which post-hoc calibrates the prediction score on the labeled sample before using it for semisupervised estimation. This simple step requires no retraining and can \emph{calibeat} the original score, improving it both as a predictor of the outcome and as a regression adjustment for semisupervised inference. We study both linear and isotonic calibration. For isotonic calibration, we establish first-order optimality guarantees: isotonic post-processing can improve predictive accuracy and estimator efficiency relative to the original score and simpler post-processing rules, while replacing the fitted isotonic score by its conditional-mean oracle yields no additional first-order variance reduction. For linear calibration, we show first-order equivalence to PPI++. We also clarify the relationship between existing estimators, showing that the original PPI estimator is a special case of AIPW and can be inefficient when the prediction model is accurate, while PPI++ is AIPW with empirical efficiency maximization \citep{rubin2008empirical}. In simulations and real-data experiments, our calibrated estimators often outperform PPI and are competitive with, or outperform, AIPW and PPI++. We provide an accompanying \texttt{Python} package, \href{https://larsvanderlaan.github.io/ppi-aipw/}{\texttt{ppi\_aipw}}.
 \end{abstract}
 
 \section{Introduction}
@@ -129,8 +129,8 @@ valid Wald inference, and efficiency guarantees
 (Section~\ref{sec:theory}). In particular, isotonic-calibrated
 PPI achieves the smallest asymptotic variance among
 nondecreasing transformations of the original score. We further
-show that no additional post-processing of the fitted
-isotonic score yields an additional first-order variance reduction.
+show that replacing the fitted isotonic score by its
+conditional-mean oracle yields no additional first-order variance reduction.
 
 Our calibrated PPI framework can be viewed as a semisupervised
 specialization of the calibrated debiased machine learning
@@ -174,7 +174,7 @@ A large body of work combines the semiparametric framework above with machine-le
 Related work studies semisupervised or surrogate-assisted estimation in settings where the primary outcome is observed only on a limited subset, while auxiliary outcomes or surrogate measurements are available more broadly \citep{pepe1992inference,pepe1994auxiliary,chen2000miscellanea,chen2008improving,cheng2021robust,ji2025predictions,kallus2025role}. Two-sample semisupervised inference is a special case of two-stage sampling designs \citep{scott1982effect,rose2011targeted,hejazi2021efficient,qiu2026efficient} and, more generally, of data fusion, for which a substantial semiparametric efficiency literature has been developed \citep{li2023efficient,li2025data,graham2024towards,xu2025unified}. More recent papers have used the term \emph{prediction-powered inference} (PPI) for the semisupervised mean-estimation setting in which a black-box predictor is combined with a small labeled sample and a large unlabeled sample \citep{ppi2023,angelopoulos2023ppi,crossppi2024,xu2025unified,song2026demystifying,poulet2025prediction,wang2025efficient,lee2026mec}. These papers also brought such methods to a broader machine-learning audience and provided accessible software. Closely related questions have long been studied in randomized trials, where prognostic scores or other regression adjustments learned from larger historical, external-control, or auxiliary data sources are used to improve precision in smaller trials \citep{hansen2008prognostic,rosenblum2009using,moore2009covariate,moore2009increasing,moore2011robust,vanderweele2019selecting,benkeser2021improving,burger2021use,schuler2022increasing,li2023estimating,balzer2024adaptive,van2024covariate,hojbjerre2025powering,yang2026improving}. Methodologically, however, PPI estimators can often be viewed as instances or refinements of existing semiparametric procedures. For example, PPI++ is an AIPW estimator \citep{robins1994estimation,vanderlaanunified} obtained by empirical efficiency maximization \citep{rubin2008empirical} over a scaling parameter, while cross-PPI \citep{crossppi2024} is a cross-fitted AIPW estimator \citep{zheng2010asymptotic,DoubleML}. More fundamentally, in settings with known missingness probability, the ability to combine black-box prediction models with valid semiparametric inference is closely tied to the robustness properties of AIPW and is therefore not unique to semisupervised mean estimation \citep{bang2005doubly,seaman2018introduction,rotnitzky2021characterization}.
 
 \textbf{Calibrated DML and Recalibrated PPI.}
-In our mean-estimation setting, the closest precursor is the calibrated debiased machine-learning framework of \citet{van2024automatic}, which studies calibration of the outcome regression in AIPW estimators for doubly robust inference. Our setting can be viewed as a semisupervised specialization of that perspective, adapted to prediction-powered inference and aimed at improving efficiency in randomized designs. This connection also motivates our term \emph{calibrated PPI}. A related method is recalibrated prediction-powered inference (RePPI) \citep{ji2025predictions}, which applies to general estimating equations. Rather than correcting the predictive model itself, their approach modifies the imputed loss in the PPI estimating equation, thereby ``recalibrating” the estimator rather than the predictions. In the mean-estimation setting under squared loss, the target correction reduces to the conditional mean of the outcome given the initial prediction score, which is also the efficient regression adjustment in the reduced model based only on that score. Thus, this conditional mean may be viewed as an oracle calibrator. The main differences lie in the estimators, emphasis, and theory. \citet{ji2025predictions} use flexible machine learning to estimate this oracle target and thereby pursue semiparametric efficiency \citep{robins1994estimation}. They do not study specific calibration procedures, and their method remains in AIPW form. By contrast, we study simple, widely used post-hoc calibration maps applied directly to a fixed score, and ask what can be guaranteed even without consistent estimation of the oracle target. Our estimators retain a simple plug-in form, yielding lightweight methods that can be incorporated into an existing prediction pipeline without retraining. We also develop calibration-specific results: an exact AIPW interpretation of the plug-in estimator, first-order equivalence between linear calibration and PPI++, and a first-order calibeating guarantee for isotonic calibration.
+In our mean-estimation setting, the closest precursor is the calibrated debiased machine-learning framework of \citet{van2024automatic}, which studies calibration of the outcome regression in AIPW estimators for doubly robust inference. Our setting can be viewed as a semisupervised specialization of that perspective, adapted to prediction-powered inference and aimed at improving efficiency in randomized designs. This connection also motivates our term \emph{calibrated PPI}. A related method is recalibrated prediction-powered inference (RePPI) \citep{ji2025predictions}, which applies to general estimating equations. Rather than correcting the predictive model itself, their approach modifies the imputed loss in the PPI estimating equation, thereby ``recalibrating” the estimator rather than the predictions. In the mean-estimation setting under squared loss, the target correction reduces to the conditional mean of the outcome given the initial prediction score, which is also the efficient regression adjustment in the reduced model based only on that score. Thus, this conditional mean may be viewed as an oracle calibrator. The main differences lie in the estimators, emphasis, and theory. \citet{ji2025predictions} use flexible machine learning to estimate this oracle target and thereby pursue semiparametric efficiency \citep{robins1994estimation}. They compare linear, random-forest, and neural-network recalibration, while retaining an AIPW estimator. Our focus is on simple post-hoc calibration maps applied directly to a fixed score and on guarantees that do not require consistent estimation of the oracle target. Our estimators retain a simple plug-in form, yielding lightweight methods that can be incorporated into an existing prediction pipeline without retraining. We also develop calibration-specific results: an exact AIPW interpretation of the plug-in estimator, first-order equivalence between linear calibration and PPI++, and a first-order calibeating guarantee for isotonic calibration.
 
 \textbf{From missing data to causal inference.} From the perspective of estimation and efficiency theory, semisupervised mean estimation with missing-at-random outcomes is equivalent to randomized experiments, controlled trials, and survey-sampling designs once the missingness indicator is reinterpreted as a treatment or sampling indicator, so that the relevant potential outcomes are viewed as missing \citep{rubin1978bayesian,vanderlaanunified,licausal,mozer2026ppi}. This equivalence allows tools from covariate adjustment, causal inference, and model-assisted estimation to be transferred directly to the semisupervised setting; see, for example, \citet{mozer2026ppi} for results relating prediction-powered inference to model-assisted survey-sampling estimators. The two-sample formulation we study is also equivalent to a one-sample i.i.d.\ model \citep{li2023efficient}. In particular, our methods apply to inference on the counterfactual mean \(\mathbb{E}[Y(1)]\) in a randomized trial with binary treatment, where treated units form the labeled sample and control units contribute covariate information only; see Appendix~\ref{app:causal}.
 
@@ -945,10 +945,9 @@ the semiparametric efficiency bound based on either $m(X)$
 or the full covariate vector $X$
 \citep{bickel1993efficient,van2000asymptotic}.
 Finally, we show that the fitted isotonic score is
-asymptotically calibrated at the population level, so that
-further transformations of the calibrated score cannot yield
-nonvanishing improvements in mean squared prediction error
-or the asymptotic variance of the corresponding AIPW estimator.
+asymptotically calibrated at the population level.
+Replacing the fitted isotonic score by its conditional-mean
+oracle yields no additional first-order variance reduction.
 
 \subsection{Asymptotic normality, inference, and efficiency}
 
@@ -1132,9 +1131,9 @@ transformation is nonlinear. If the score is negatively
 associated with the outcome, its sign can be reversed before
 isotonic calibration. Full semiparametric efficiency is
 attained when the calibrated score recovers the conditional
-mean $\mu_0(X)$. Otherwise, restricting regression adjustment
-to the scalar score $\mhat(X)$ entails a loss of efficiency
-relative to using the full covariate vector.
+mean $\mu_0(X)$. Inefficiency can arise either because the scalar score loses
+information about the conditional mean or because the
+monotonicity constraint prevents its recovery from the score.
 
 When \(N/n\to\infty\), the limiting labeled fraction is zero, and the
 asymptotic variance reduces to
@@ -1146,7 +1145,7 @@ score, this equals \(\E[\Var\{Y\mid m(X)\}]\). The unlabeled contribution
 is negligible at the \(\sqrt n\) scale, and the labeled residuals determine
 first-order uncertainty.
 
-\subsection{Calibeating and no further first-order gain from post-processing}
+\subsection{First-order equivalence to oracle calibration}
 
 We next consider whether further post-processing of the
 isotonically calibrated score can improve prediction or
@@ -1182,7 +1181,7 @@ of $Y$ given the initial score to have bounded total variation.
 It permits nonmonotone functions and discontinuities, and does not require differentiability
 or Lipschitz continuity \citep{van2023causal}.
 
-\begin{theorem}[No further first-order improvement from post-processing]
+\begin{theorem}[First-order equivalence to oracle calibration]
 \label{prop:eif-red}
 Suppose \cref{assump:design,assump:isoreg,assump:eff-bv} hold. Let
 \[
@@ -1223,9 +1222,9 @@ original score. This is calibeating in terms of squared prediction error.
 
 The theorem also establishes first-order equivalence between
 $\widehat{\psi}_{\mathrm{iso}}$ and the oracle AIPW estimator
-based on $m_{0\mid n}$. Thus, further post-processing of
-the fitted isotonic score cannot reduce the leading
-asymptotic variance. Moreover, by \cref{thm:al,prop:aipw-class},
+based on $m_{0\mid n}$. Thus, replacing the fitted isotonic score by its
+conditional-mean oracle yields no additional first-order
+variance reduction. Moreover, by \cref{thm:al,prop:aipw-class},
 isotonic calibration achieves the smallest limiting variance
 among monotone post-processings of the original score and
 is therefore at least as efficient as AIPW and PPI.
@@ -1384,8 +1383,9 @@ before fitting isotonic regression.
 \includegraphics[width=\textwidth]{assets/fig_paper_main_grid.pdf}
 \caption{Results on the \texttt{ppi\_py} benchmarks.
 Panels show MSE normalized by that of PPI, relative efficiency
-compared with PPI, and coverage of nominal 95\% confidence
-intervals.}
+compared with PPI, and confidence-interval coverage.
+Nominal coverage is 95\% for \texttt{forest} and 90\% for
+\texttt{galaxies} and \texttt{census\_income}.}
 \label{fig:ppi-main}
 \end{figure}
 
@@ -1404,7 +1404,8 @@ Across the 30 dataset-size configurations,
 \textsc{AIPW-EM} achieves lower MSE than PPI++ in 29
 and performs nearly identically to \texttt{LinearCal}.
 All three methods have similar empirical coverage,
-approximately 92\%. Thus, much of the improvement over PPI++
+averaging approximately 92\% across configurations with
+nominal coverage of either 90\% or 95\%. Thus, much of the improvement over PPI++
 is attributable to removing the constraint on its scaling
 coefficient, rather than to nonlinear calibration.
 \texttt{AutoCal} also performs comparably to the best
@@ -1526,9 +1527,8 @@ Our results show that calibration can improve semisupervised
 efficiency without retraining the original model, and that
 isotonic calibration can \emph{calibeat} the original score
 and simpler post-processing rules at first order. Moreover,
-once a score has been isotonically calibrated, further
-post-processing of the fitted score yields no additional
-first-order gain. Empirically, when the original score is
+replacing the fitted isotonic score by its conditional-mean
+oracle yields no additional first-order variance reduction. Empirically, when the original score is
 already well calibrated, post-processing offers little
 improvement, whereas under substantial miscalibration,
 even simple linear or monotone calibration can improve
