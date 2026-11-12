@@ -2645,12 +2645,6 @@ and relative efficiency versus PPI.
 \label{fig:ppi-calibration-appendix}
 \end{figure}
 
-\begin{figure}[hbt]
-\centering
-\includegraphics[width=\textwidth]{assets/fig_paper_metric_grid.pdf}
-\caption{Full diagnostic grid for the reproduced PPI benchmarks, showing bias, empirical variance, normalized MSE relative to PPI, coverage, and relative efficiency versus PPI across labeled-sample-size regimes. In the normalized-MSE and relative-efficiency panels, the dashed horizontal line marks parity with PPI; in the coverage panels it marks the nominal target coverage \(1-\alpha\). \texttt{AutoCal}, \texttt{MonoSpline}, and \texttt{IsoCal} appear alongside PPI, AIPW, PPI++, \textsc{AIPW-EM}, and the fixed calibration rules, while Platt scaling and Venn--Abers appear only on the binary-outcome datasets where they are well defined.}
-\label{fig:ppi-benchmarks-full}
-\end{figure}
 
 \subsection{LLM score ordering and held-out calibration}
 \label{app:llm-ordering}
@@ -2663,10 +2657,11 @@ held-out observations, a reduction of \(56.9\%\).
 
 \begin{figure}[htb]
 \centering
-\includegraphics[width=\textwidth]{assets/fig_toy_calibration_ppi.pdf}
-\caption{ArmoRM scores and observed MATH correctness. The calibration map is
-fitted on 100 labeled observations; prediction error is evaluated on the
-remaining observations.}
+\includegraphics[width=\textwidth]{assets/fig_math_calibration.pdf}
+\caption{ArmoRM scores and observed MATH correctness. Left: empirical
+correctness in twelve score bins. Right: Platt calibration fitted on 100
+labeled observations; prediction error is evaluated on the remaining
+observations.}
 \label{fig:llm-ordering}
 \end{figure}
 
