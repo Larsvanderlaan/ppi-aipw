@@ -1,143 +1,114 @@
 const methodContent = {
   linear: {
-    badge: "Simple",
-    title: "Linear calibration before AIPW",
+    badge: "Affine fit",
+    title: "Linear calibration",
     summary:
-      "Fits a straight-line map from prediction score to outcome, then runs AIPW on the calibrated score.",
+      "Fits an intercept and slope to the labeled outcomes, then uses the calibrated predictions in AIPW.",
     good: [
-      "A linear calibration map is adequate.",
-      "Predictions seem useful but shifted or stretched.",
-      "The labeled sample is small and more flexible methods may overfit."
+      "The predictions need a shift or a change of scale.",
+      "The labeled sample is small."
     ],
     tradeoffs: [
-      "Simple and fast.",
-      "Uses few degrees of freedom.",
-      "Cannot capture nonlinear calibration error."
+      "Estimates only an intercept and slope.",
+      "Does not fit nonlinear calibration curves."
     ],
-    recommendation:
-      "Appropriate when a linear calibration map is adequate and a simple calibrated estimator is sufficient.",
     visualNote:
-      "A single affine map tilts and shifts the original score before the final AIPW aggregation."
+      "An affine transformation shifts and rescales the score. The plot is schematic."
   },
   prognostic_linear: {
-    badge: "Score + X",
+    badge: "Score + covariates",
     title: "Prognostic linear adjustment",
     summary:
-      "Uses the prediction score and optional covariates X in a linear adjustment before AIPW. The intercept and score are unpenalized; extra covariates use ridge tuning.",
+      "Regresses the outcome on the prediction score and optional covariates X before AIPW. The intercept and score are unpenalized; coefficients for X use ridge regularization.",
     good: [
-      "Extra covariates X may explain residual outcome variation after conditioning on the score.",
-      "Linear calibration with linear covariate adjustment is appropriate.",
-      "The labeled sample is large enough to support adjustment for X."
+      "Covariates X may explain outcome variation beyond the score.",
+      "The labeled sample supports estimating the additional coefficients."
     ],
     tradeoffs: [
-      "Clear, regression-style interpretation.",
-      "Can help when X carries information not captured by the score.",
-      "Requires enough labeled data to support the extra covariates."
+      "Can improve precision when X adds predictive information.",
+      "Requires estimating more coefficients than score-only calibration."
     ],
-    recommendation:
-      "Appropriate when the score is useful and extra covariates are worth adding in a linear adjustment.",
     visualNote:
-      "Shown as the score-only affine part of the fit. The actual method can also add linear covariate adjustment through X."
+      "The plot shows the affine transformation of the score. The fitted regression can also include covariates X."
   },
   aipw: {
-    badge: "Baseline",
-    title: "Raw-score AIPW",
+    badge: "Uncalibrated",
+    title: "AIPW with the original score",
     summary:
-      "Uses the original prediction score directly, with no calibration layer.",
+      "Uses the original predictions directly in AIPW, without fitting a calibration curve.",
     good: [
-      "The original score scale is trusted.",
-      "A direct uncalibrated baseline is useful.",
-      "Calibration effects need to be separated from AIPW itself."
+      "The predictions are already on the outcome scale.",
+      "You want a baseline for comparison with calibrated estimates."
     ],
     tradeoffs: [
-      "Simple and stable.",
-      "Appropriate when the original model is already well calibrated.",
-      "Can lose precision when the score is systematically mis-scaled."
+      "No calibration fit is needed.",
+      "Miscalibration can increase the variance of the estimate."
     ],
-    recommendation:
-      "Appropriate for uncalibrated AIPW on the original score, optionally with empirical efficiency rescaling.",
     visualNote:
-      "Raw-score AIPW leaves the score on the identity line. Efficiency maximization adds an optional global rescaling."
+      "The score is unchanged. Optional efficiency maximization rescales it by an estimated coefficient."
   },
   sigmoid: {
-    badge: "Bounded scores",
-    title: "Sigmoid calibration before AIPW",
+    badge: "Sigmoid fit",
+    title: "Sigmoid calibration",
     summary:
-      "Fits a sigmoid-shaped calibration map before AIPW. For nonbinary outcomes, the package rescales to the labeled outcome range and then rescales back.",
+      "Fits a sigmoid curve before AIPW. For nonbinary outcomes, the package rescales to the labeled outcome range for fitting, then transforms back.",
     good: [
-      "Predictions are probability-like or naturally bounded.",
-      "A smooth monotone calibration map is plausible.",
-      "Overconfidence or underconfidence appears to have an S-shaped pattern."
+      "A sigmoid curve describes the relationship between scores and outcomes.",
+      "The scores are probabilities or other bounded predictions."
     ],
     tradeoffs: [
-      "More structured than isotonic calibration.",
-      "Often stable with limited labeled data.",
-      "Can underfit if the true calibration curve is not close to sigmoid-shaped."
+      "Fits a smooth curve with few parameters.",
+      "Can underfit calibration curves with a different shape."
     ],
-    recommendation:
-      "Primarily appropriate for bounded or probability-like scores when a smooth sigmoid calibration map is plausible.",
     visualNote:
-      "A smooth S-shaped map can correct systematic nonlinear distortion by moderating the extremes and expanding the middle of the score range."
+      "A sigmoid transformation changes the middle and extremes of the score range by different amounts. The plot is schematic."
   },
   monotone_spline: {
     badge: "Default",
-    title: "Smooth monotone calibration map before AIPW",
+    title: "Monotone spline calibration",
     summary:
-      "Fits a smooth monotone spline calibration curve, then plugs the calibrated score into AIPW.",
+      "Fits a smooth nondecreasing curve to the labeled outcomes, then uses the calibrated predictions in AIPW. This is the default method.",
     good: [
-      "A smooth monotone calibration map is a reasonable default.",
-      "Monotone nonlinear miscalibration is expected.",
-      "A middle ground between linear and isotonic calibration is useful."
+      "The relationship between scores and outcomes is nonlinear and nondecreasing.",
+      "You prefer a smooth curve to a step function."
     ],
     tradeoffs: [
-      "More flexible than linear or sigmoid calibration.",
-      "Smoother than isotonic calibration.",
-      "Still more complex than a linear map."
+      "Allows more curvature than linear calibration.",
+      "Smoothing can miss abrupt changes in the calibration curve."
     ],
-    recommendation:
-      "Default smooth monotone calibrator for nonlinear adjustment.",
     visualNote:
-      "A smooth monotone curve bends where needed, but avoids the hard plateaus of a stepwise isotonic fit."
+      "A smooth nondecreasing curve adjusts the score while preserving its ordering. The plot is schematic."
   },
   isotonic: {
-    badge: "Flexible",
-    title: "Isotonic calibration before AIPW",
+    badge: "Step function",
+    title: "Isotonic calibration",
     summary:
-      "Fits a monotone isotonic calibration curve, then plugs the calibrated score into AIPW. The default backend is a one-round monotone XGBoost calibrator; `isocal_backend=\"sklearn\"` uses scikit-learn isotonic regression.",
+      'Fits a nondecreasing step function before AIPW. The default uses a one-round monotone XGBoost fit; isocal_backend="sklearn" uses scikit-learn isotonic regression.',
     good: [
-      "Monotone but nonlinear miscalibration is expected.",
-      "Ordering is trustworthy but the numeric scale is not.",
-      "The labeled sample is large enough to fit a stable flexible calibrator."
+      "The relationship between scores and outcomes is nonlinear and nondecreasing.",
+      "The labeled sample is large enough to estimate a step function reliably."
     ],
     tradeoffs: [
-      "Most flexible monotone option in the package.",
-      "Can capture nonlinear scale distortions that simpler maps miss.",
-      "Less stable than simpler methods when the labeled sample is very small."
+      "Does not impose a smooth or parametric curve.",
+      "Can be more variable in small labeled samples."
     ],
-    recommendation:
-      "Appropriate when a more flexible nonlinear calibrator is needed and the labeled sample is large enough to support it.",
     visualNote:
-      "The fitted map is monotone and piecewise constant, so the calibration curve moves in visible steps."
+      "The fitted score is constant within each step and nondecreasing across steps. The plot is schematic."
   },
   auto: {
-    badge: "Adaptive",
+    badge: "Cross-validation",
     title: "Automatic method selection",
     summary:
-      "Compares a candidate shortlist by cross-validated variance estimates, then refits the selected method on the full labeled sample. By default the shortlist is `(\"aipw\", \"linear\", \"monotone_spline\", \"isotonic\")`.",
+      "Compares methods by cross-validated variance estimates, then refits the selected method on all labeled observations. The default candidates are AIPW, linear, monotone spline, and isotonic calibration.",
     good: [
-      "A small interpretable shortlist is preferred over a fixed method.",
-      "Extra compute is acceptable to avoid hand-picking a method.",
-      "A data-adaptive selector is preferred over a single calibration family."
+      "You want to compare several calibration methods using the labeled data.",
+      "You can afford repeated fits for cross-validation."
     ],
     tradeoffs: [
-      "More compute than fitting one method directly.",
-      "Only chooses among the candidate methods you provide.",
-      "If `\"aipw\"` is in the shortlist, the selector also compares a rescaled AIPW candidate."
+      "Selects only among the methods in candidate_methods.",
+      "Including AIPW also adds an efficiency-rescaled AIPW candidate."
     ],
-    recommendation:
-      "Appropriate for data-adaptive selection across a small candidate set rather than committing to one method up front.",
-    visualNote:
-      "Shown as a candidate comparison: the selector scores the shortlisted methods and refits the winner."
+    visualNote: ""
   }
 };
 
@@ -313,26 +284,26 @@ const inferenceContent = {
   wald: {
     title: "Wald intervals",
     summary:
-      "Fast analytic intervals.",
-    best: "Standard analyses",
-    cost: "Low compute",
-    when: "Fast interval based on the Wald approximation."
+      "Uses an analytic standard error and a normal approximation.",
+    best: "Analytic standard error",
+    cost: "Low",
+    when: "No resampling"
   },
   jackknife: {
     title: "Jackknife intervals",
     summary:
-      "Delete-a-group intervals that refit calibration after dropping labeled and unlabeled folds.",
-    best: "Finite-sample checks",
-    cost: "Moderate compute",
-    when: "Useful finite-sample check when refitting is affordable."
+      "Uses the variability of estimates after deleting groups of labeled and unlabeled observations, with a normal approximation.",
+    best: "Delete-a-group standard error",
+    cost: "One refit per group",
+    when: "Calibration is refit after each deletion"
   },
   bootstrap: {
     title: "Bootstrap intervals",
     summary:
-      "Percentile intervals that resample rows and refit calibration inside each replicate.",
-    best: "Classical resampling",
-    cost: "Higher compute",
-    when: "Classical resampling check with percentile intervals."
+      "Resamples observations with replacement and uses percentiles of the resulting mean estimates.",
+    best: "Percentiles of bootstrap estimates",
+    cost: "One refit per replicate",
+    when: "Calibration is refit in each replicate"
   }
 };
 
@@ -343,7 +314,6 @@ function updateMethod(method) {
   document.querySelector("[data-method-badge]").textContent = content.badge;
   document.querySelector("[data-method-title]").textContent = content.title;
   document.querySelector("[data-method-summary]").textContent = content.summary;
-  document.querySelector("[data-method-recommendation]").textContent = content.recommendation;
   document.querySelector("[data-method-visual-note]").textContent = content.visualNote;
   const visualCard = document.querySelector(".method-visual-card");
   if (visualCard) {
@@ -457,8 +427,12 @@ document.querySelectorAll("[data-module='method-explorer'] .tab-button").forEach
   button.addEventListener("click", () => {
     document
       .querySelectorAll("[data-module='method-explorer'] .tab-button")
-      .forEach((tab) => tab.classList.remove("is-active"));
+      .forEach((tab) => {
+        tab.classList.remove("is-active");
+        tab.setAttribute("aria-pressed", "false");
+      });
     button.classList.add("is-active");
+    button.setAttribute("aria-pressed", "true");
     updateMethod(button.dataset.method);
   });
 });
@@ -467,8 +441,12 @@ document.querySelectorAll("[data-module='inference-toggle'] .tab-button").forEac
   button.addEventListener("click", () => {
     document
       .querySelectorAll("[data-module='inference-toggle'] .tab-button")
-      .forEach((tab) => tab.classList.remove("is-active"));
+      .forEach((tab) => {
+        tab.classList.remove("is-active");
+        tab.setAttribute("aria-pressed", "false");
+      });
     button.classList.add("is-active");
+    button.setAttribute("aria-pressed", "true");
     updateInference(button.dataset.inference);
   });
 });

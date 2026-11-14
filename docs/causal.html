@@ -19,16 +19,15 @@
   <body>
     <div class="page-shell">
       <header class="hero">
-        <nav class="topbar">
+        <nav class="topbar" aria-label="Main navigation">
           <div class="brand"><a href="./index.html">ppi_aipw</a></div>
           <div class="toplinks">
-            <a href="./index.html#quickstart">Mean API</a>
+            <a href="./index.html">Overview</a>
+            <a href="./index.html#quickstart">Quickstart</a>
             <a href="./examples.html">Examples</a>
-            <a href="./r.html">R Package</a>
+            <a href="./r.html">R package</a>
             <a href="./theory.html">Theory</a>
-            <a href="#quickstart">Causal Quickstart</a>
-            <a href="#inputs">Inputs</a>
-            <a href="#outputs">Outputs</a>
+            <a href="./causal.html" aria-current="page">Causal inference</a>
           </div>
           <a class="paper-link" href="./paper.pdf">
             <span class="paper-link-icon" aria-hidden="true"></span>
@@ -39,12 +38,12 @@
         <div class="hero-grid">
           <section class="hero-copy">
             <p class="eyebrow">Causal Inference</p>
-            <h1>Potential outcome means and control-vs-treatment ATEs with Wald inference.</h1>
+            <h1>Potential outcome means and treatment effects.</h1>
             <p class="lede">
-              <code>causal_inference(...)</code> reuses the package's
-              semisupervised mean engine. For each treatment arm, it uses the
-              corresponding column of <code>Yhat_potential</code>, treats units
-              in that arm as labeled, and units outside that arm as unlabeled.
+              For each treatment arm, <code>causal_inference(...)</code> estimates
+              the mean potential outcome using the corresponding column of
+              <code>Yhat_potential</code>. Observations in that arm are labeled;
+              those in other arms are unlabeled for that calculation.
             </p>
             <div class="hero-actions">
               <a class="button button-primary" href="#quickstart">See Example</a>
@@ -61,13 +60,13 @@
                   <strong><code>causal_inference(...)</code></strong>
                 </div>
                 <div>
-                  <span class="stack-name">Uncertainty</span>
+                  <span class="stack-name">Confidence interval</span>
                   <strong><code>inference="wald"</code></strong>
                 </div>
               </div>
               <p class="panel-note">
-                Returns arm means, arm-level intervals, and all
-                control-vs-treatment ATEs in one call.
+                Returns arm means and treatment effects relative to control,
+                with Wald confidence intervals.
               </p>
             </div>
           </aside>
@@ -78,13 +77,12 @@
         <section class="section" id="quickstart">
           <div class="section-heading">
             <p class="eyebrow">Quickstart</p>
-            <h2>One column per arm, one result object back</h2>
+            <h2>Estimate treatment effects</h2>
             <p>
               The combined
               <a href="https://colab.research.google.com/github/Larsvanderlaan/ppi-aipw/blob/main/examples/ppi_aipw_quickstart.ipynb">quickstart notebook opens in Colab</a>
-              installs <code>ppi-aipw</code> automatically and pairs this
-              causal example with the main semisupervised mean workflow as a
-              combined reference for both APIs.
+              installs <code>ppi-aipw</code> and includes examples of mean and
+              treatment-effect estimation.
             </p>
           </div>
 
@@ -118,7 +116,7 @@ print(result.summary())</code></pre>
         <section class="section" id="inputs">
           <div class="section-heading">
             <p class="eyebrow">Inputs</p>
-            <h2>What the API expects</h2>
+            <h2>Inputs</h2>
           </div>
 
           <div class="argument-grid">
@@ -144,7 +142,7 @@ print(result.summary())</code></pre>
             </article>
             <article class="argument-card">
               <h3><code>method</code></h3>
-              <p>Any mean-API calibration method, including <code>"aipw"</code>, <code>"linear"</code>, <code>"prognostic_linear"</code>, <code>"sigmoid"</code>, <code>"monotone_spline"</code>, <code>"isotonic"</code>, and <code>"auto"</code>.</p>
+              <p>Any calibration method supported by <code>mean_inference()</code>, including <code>"aipw"</code>, <code>"linear"</code>, <code>"prognostic_linear"</code>, <code>"sigmoid"</code>, <code>"monotone_spline"</code>, <code>"isotonic"</code>, and <code>"auto"</code>.</p>
             </article>
             <article class="argument-card">
               <h3><code>X</code></h3>
@@ -175,7 +173,7 @@ print(result.summary())</code></pre>
             </article>
             <article class="takeaway-card">
               <h3><code>ate</code></h3>
-              <p>All non-control-vs-control treatment effects by default.</p>
+              <p>Treatment effects for each arm relative to control.</p>
             </article>
             <article class="takeaway-card">
               <h3><code>arm_results</code></h3>
@@ -183,26 +181,24 @@ print(result.summary())</code></pre>
             </article>
             <article class="takeaway-card">
               <h3><code>summary()</code></h3>
-              <p>A human-readable Wald summary for all arm means and control-vs-treatment ATEs.</p>
+              <p>Estimates, standard errors, and Wald confidence intervals for arm means and treatment effects.</p>
             </article>
           </div>
 
           <div class="history-callout">
             <h3>Scope</h3>
             <p>
-              This API reuses the package's semisupervised mean machinery. It
-              does not fit a propensity model or other nuisance functions for
-              you.
+              Supply the predicted potential outcomes and any observation
+              weights. The function does not fit propensity models or other
+              nuisance functions.
             </p>
             <p>
-              Optional full-sample weights are supported, but this package does
-              not currently provide a causal-arm-specific weight-construction
-              helper.
+              Weights must be constructed before calling the function.
             </p>
             <p>
-              In this version, uncertainty is Wald-only. The API uses
-              arm-specific Wald contributions from the semisupervised mean
-              engine to build both arm-level and ATE-level standard errors.
+              Causal inference currently supports Wald intervals. Standard errors
+              for arm means and treatment effects use the contributions from
+              each arm-specific mean estimate.
             </p>
           </div>
         </section>

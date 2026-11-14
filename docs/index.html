@@ -6,7 +6,7 @@
     <title>Calibrated Prediction-Powered Inference | ppi_aipw</title>
     <meta
       name="description"
-      content="Semisupervised mean estimation with AIPW, calibration, and uncertainty quantification."
+      content="Estimate a population mean from labeled outcomes and unlabeled predictions, with calibration and confidence intervals in Python and R."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -19,17 +19,15 @@
   <body>
     <div class="page-shell">
       <header class="hero">
-        <nav class="topbar">
+        <nav class="topbar" aria-label="Main navigation">
           <div class="brand"><a href="./index.html">ppi_aipw</a></div>
           <div class="toplinks">
-            <a href="#install">Install</a>
-            <a href="#quickstart">Quickstart</a>
+            <a href="./index.html" aria-current="page">Overview</a>
+            <a href="./index.html#quickstart">Quickstart</a>
             <a href="./examples.html">Examples</a>
-            <a href="./r.html">R Package</a>
+            <a href="./r.html">R package</a>
             <a href="./theory.html">Theory</a>
-            <a href="#methods">Methods</a>
-            <a href="./causal.html">Causal Inference</a>
-            <a href="#references">References</a>
+            <a href="./causal.html">Causal inference</a>
           </div>
           <a class="paper-link" href="./paper.pdf">
             <span class="paper-link-icon" aria-hidden="true"></span>
@@ -52,14 +50,13 @@
               </div>
             </div>
             <p class="lede">
-              <code>ppi_aipw</code> implements methods for semisupervised mean
-              inference with few labeled outcomes and many unlabeled
-              predictions. It combines AIPW, calibration, and uncertainty
-              quantification in one API.
+              Estimate a population mean using a small labeled sample and
+              predictions on a larger unlabeled sample. <code>ppi_aipw</code>
+              calibrates the predictions on the labeled outcomes, then computes
+              an AIPW estimate with a standard error and confidence interval.
             </p>
             <p class="panel-note">
-              Calibration puts the prediction score on the outcome scale before
-              the semisupervised mean step.
+              Use predictions from an existing model; no retraining is needed.
             </p>
             <div class="hero-actions">
               <a class="button button-primary" href="#quickstart">Quickstart</a>
@@ -77,23 +74,23 @@
 
           <aside class="hero-panel">
             <div class="panel-card gradient-card">
-              <p class="panel-label">Default Choice</p>
+              <p class="panel-label">Defaults</p>
               <div class="default-stack">
                 <div>
                   <span class="stack-name">Estimator</span>
                   <strong><code>method="monotone_spline"</code></strong>
                 </div>
                 <div>
-                  <span class="stack-name">Uncertainty</span>
+                  <span class="stack-name">Confidence interval</span>
                   <strong><code>inference="wald"</code></strong>
                 </div>
               </div>
               <p class="panel-note">
-                Smooth, monotone, and less stepwise than isotonic calibration.
+                Smooth monotone calibration with a Wald confidence interval.
               </p>
             </div>
             <div class="panel-card code-card">
-              <p class="panel-label">Main Function</p>
+              <p class="panel-label">Estimate a mean</p>
               <pre><code>from ppi_aipw import mean_inference
 
 result = mean_inference(
@@ -116,7 +113,7 @@ print(result.summary())</code></pre>
           <div class="section-heading split">
             <div>
               <p class="eyebrow">Install</p>
-              <h2>Install from PyPI, GitHub, or locally</h2>
+              <h2>Install the package</h2>
             </div>
             <p class="section-side-note">
               Use PyPI for the release, GitHub for the current source, or an
@@ -146,9 +143,9 @@ print(result.summary())</code></pre>
             <p class="eyebrow">Quickstart</p>
             <h2>Core inputs and defaults</h2>
               <p>
-                <code>mean_inference(...)</code> is the main entry point. It
-                returns the point estimate, standard error, confidence interval,
-                fitted calibrator, and diagnostics.
+                Pass the outcomes and predictions to <code>mean_inference(...)</code>.
+                The result includes the estimate, standard error, confidence
+                interval, fitted calibrator, and diagnostics.
               </p>
               <p>
                 For a runnable example, the
@@ -169,14 +166,6 @@ print(result.summary())</code></pre>
             </div>
 
           <div class="argument-grid">
-            <article class="argument-card">
-              <h3>Result object</h3>
-              <p>
-                <code>mean_inference(...)</code> returns a result object with
-                <code>pointestimate</code>, <code>se</code>, <code>ci</code>,
-                <code>diagnostics</code>, and <code>result.summary()</code>.
-              </p>
-            </article>
             <article class="argument-card">
               <h3><code>Y</code></h3>
               <p>Observed outcomes for the labeled sample.</p>
@@ -227,28 +216,26 @@ print(result.summary())</code></pre>
               <h2>What calibration changes</h2>
             </div>
             <p class="section-side-note">
-              Calibration is about getting the prediction scale right, not just
-              the ranking.
+              A score can rank outcomes well while predicting values that are
+              too high or too low.
             </p>
           </div>
 
-          <div class="argument-grid">
+          <div class="argument-grid argument-grid-two">
             <article class="argument-card">
-              <h3>ML view</h3>
+              <h3>Prediction</h3>
               <p>
-                A calibrated score has the right numeric scale: examples scored
-                near <code>0.8</code> have outcomes near <code>0.8</code> on
-                average. That scale correction can make a useful predictor more
-                accurate without retraining the original model.
+                A calibrated score of <code>0.8</code> corresponds to an average
+                outcome of <code>0.8</code>. Calibration estimates this relationship
+                from the labeled sample and adjusts the original predictions.
               </p>
             </article>
             <article class="argument-card">
-              <h3>Inference view</h3>
+              <h3>Inference</h3>
               <p>
-                AIPW averages the score and then corrects it on labeled rows.
-                When calibration moves the score closer to the outcome
-                regression, the correction term is smaller on average, which
-                can improve precision.
+                AIPW averages predictions over both samples and adds the average
+                residual from the labeled sample. Calibrating the predictions
+                can reduce the variability of those residuals and improve precision.
               </p>
             </article>
           </div>
@@ -257,42 +244,41 @@ print(result.summary())</code></pre>
         <section class="section" id="methods">
           <div class="section-heading split">
             <div>
-              <p class="eyebrow">Method Explorer</p>
-              <h2>Supported estimation strategies</h2>
+              <p class="eyebrow">Methods</p>
+              <h2>Choose a calibration method</h2>
             </div>
             <p class="section-side-note">
-              Method summaries, typical use cases, and main tradeoffs.
+              Compare the fitted curves, assumptions, and options below.
             </p>
           </div>
 
           <div class="method-explorer" data-module="method-explorer">
-            <div class="method-tabs" role="tablist" aria-label="Estimation methods">
-              <button class="tab-button" data-method="linear">Linear</button>
-              <button class="tab-button" data-method="prognostic_linear">Prognostic Linear</button>
-              <button class="tab-button" data-method="aipw">AIPW</button>
-              <button class="tab-button" data-method="sigmoid">Sigmoid</button>
-              <button class="tab-button is-active" data-method="monotone_spline">Monotone Spline</button>
-              <button class="tab-button" data-method="isotonic">Isotonic</button>
-              <button class="tab-button" data-method="auto">Auto</button>
+            <div class="method-tabs" role="group" aria-label="Estimation methods">
+              <button class="tab-button" data-method="linear" aria-pressed="false">Linear</button>
+              <button class="tab-button" data-method="prognostic_linear" aria-pressed="false">Prognostic Linear</button>
+              <button class="tab-button" data-method="aipw" aria-pressed="false">AIPW</button>
+              <button class="tab-button" data-method="sigmoid" aria-pressed="false">Sigmoid</button>
+              <button class="tab-button is-active" data-method="monotone_spline" aria-pressed="true">Monotone Spline</button>
+              <button class="tab-button" data-method="isotonic" aria-pressed="false">Isotonic</button>
+              <button class="tab-button" data-method="auto" aria-pressed="false">Auto</button>
             </div>
 
             <div class="method-panel">
               <div class="panel-banner">
                 <span class="badge" data-method-badge>Default</span>
-                <h3 data-method-title>Smooth monotone calibration map before AIPW</h3>
+                <h3 data-method-title>Monotone spline calibration</h3>
               </div>
               <p class="method-summary" data-method-summary>
-                Fits a smooth monotone spline calibration curve, then plugs the
-                calibrated predictions into the AIPW estimator.
+                Fits a smooth nondecreasing curve to the labeled outcomes, then
+                uses the calibrated predictions in AIPW. This is the default method.
               </p>
 
               <div class="method-visual-card">
                 <div class="method-visual-copy">
                   <span class="curve-kicker">Calibration Map</span>
                   <p data-method-visual-note>
-                    Schematic view of how the raw prediction score
-                    <code>m(X)</code> is transformed before the semisupervised
-                    mean step.
+                    A smooth nondecreasing curve adjusts the score while
+                    preserving its ordering. The plot is schematic.
                   </p>
                 </div>
                 <div class="curve-stage">
@@ -319,16 +305,12 @@ print(result.summary())</code></pre>
 
               <div class="method-columns">
                 <div class="info-box">
-                  <h4>Use cases</h4>
+                  <h4>When to use it</h4>
                   <ul data-method-good></ul>
                 </div>
                 <div class="info-box">
                   <h4>Tradeoffs</h4>
                   <ul data-method-tradeoffs></ul>
-                </div>
-                <div class="info-box">
-                  <h4>Notes</h4>
-                  <p data-method-recommendation></p>
                 </div>
               </div>
             </div>
@@ -342,35 +324,34 @@ print(result.summary())</code></pre>
               <h2>Wald, jackknife, and bootstrap intervals</h2>
             </div>
             <p class="section-side-note">
-              Jackknife and bootstrap both refit the calibration step under
-              resampling; jackknife uses delete-a-group folds, while bootstrap
-              uses classical resampling with replacement.
+              Wald intervals use an analytic standard error. Jackknife and
+              bootstrap intervals refit the calibration step in each resample.
             </p>
           </div>
 
           <div class="inference-toggle" data-module="inference-toggle">
-            <div class="toggle-row" role="tablist" aria-label="Interval methods">
-              <button class="tab-button is-active" data-inference="wald">Wald</button>
-              <button class="tab-button" data-inference="jackknife">Jackknife</button>
-              <button class="tab-button" data-inference="bootstrap">Bootstrap</button>
+            <div class="toggle-row" role="group" aria-label="Interval methods">
+              <button class="tab-button is-active" data-inference="wald" aria-pressed="true">Wald</button>
+              <button class="tab-button" data-inference="jackknife" aria-pressed="false">Jackknife</button>
+              <button class="tab-button" data-inference="bootstrap" aria-pressed="false">Bootstrap</button>
             </div>
             <article class="toggle-card">
               <h3 data-inference-title>Wald intervals</h3>
               <p data-inference-summary>
-                Fast analytic intervals.
+                Uses an analytic standard error and a normal approximation.
               </p>
               <div class="mini-grid">
                 <div class="mini-box">
-                  <span>Primary use</span>
-                  <strong data-inference-best>Standard analyses</strong>
+                  <span>Calculation</span>
+                  <strong data-inference-best>Analytic standard error</strong>
                 </div>
                 <div class="mini-box">
                   <span>Cost</span>
-                  <strong data-inference-cost>Low compute</strong>
+                  <strong data-inference-cost>Low</strong>
                 </div>
                 <div class="mini-box">
-                  <span>When appropriate</span>
-                  <strong data-inference-when>Fast interval based on the Wald approximation.</strong>
+                  <span>Refitting</span>
+                  <strong data-inference-when>No resampling</strong>
                 </div>
               </div>
             </article>
@@ -380,7 +361,7 @@ print(result.summary())</code></pre>
         <section class="section" id="references">
           <div class="section-heading">
             <p class="eyebrow">References</p>
-            <h2>Selected References</h2>
+            <h2>Selected references</h2>
             <p>
               The calibration methods here can be viewed as special cases of
               <a href="https://arxiv.org/pdf/2411.02771">calibrated debiased machine learning</a>
@@ -396,19 +377,9 @@ print(result.summary())</code></pre>
           </div>
           <div class="reference-card">
             <div class="reference-links">
-              <a href="./paper.pdf">Open paper PDF</a>
-              <a href="https://github.com/Larsvanderlaan/ppi-aipw">Open GitHub repo</a>
+              <a href="./paper.pdf">Paper PDF</a>
+              <a href="https://github.com/Larsvanderlaan/ppi-aipw">GitHub source</a>
             </div>
-            <p>
-              Main paper themes reflected here:
-            </p>
-            <ul>
-              <li>PPI and PPI++ fit inside the AIPW and debiased machine learning framework.</li>
-              <li>In the one-score setting, efficiency maximization, PPI++, linear calibration, and prognostic-score adjustment are closely related.</li>
-              <li>Calibration can improve semisupervised inference when the score is useful but miscalibrated.</li>
-              <li>Monotone spline calibration is the default smooth monotone option; linear and isotonic calibration give simpler and more flexible alternatives.</li>
-              <li>Jackknife and bootstrap intervals complement Wald intervals when finite-sample variability matters.</li>
-            </ul>
             <p>
               Calibration references:
             </p>
@@ -436,8 +407,8 @@ print(result.summary())</code></pre>
               <li>Hansen (2008), <em>"The prognostic analogue of the propensity score"</em>, <em>Biometrika</em> 95(2): 481-488.</li>
               <li>Moore and van der Laan (2009), <em>"Covariate adjustment in randomized trials with binary outcomes: targeted maximum likelihood estimation"</em>, <em>Statistics in Medicine</em> 28(1): 39-64.</li>
               <li>Schuler, Walsh, Hall, Walsh, Fisher, Critical Path for Alzheimer’s Disease, Alzheimer’s Disease Neuroimaging Initiative, and Alzheimer’s Disease Cooperative Study (2022), <em>"Increasing the efficiency of randomized trial estimates via linear adjustment for a prognostic score"</em>, <em>The International Journal of Biostatistics</em> 18(2): 329-356.</li>
-              <li>H{\o}jbjerre-Frandsen, van der Laan, and Schuler (2025), <em>"Powering RCTs for marginal effects with GLMs using prognostic score adjustment"</em>, <em>arXiv preprint arXiv:2503.22284</em>.</li>
-              <li>H{\o}jbjerre-Frandsen and Schuler (2026), <em>"Within-Trial prognostic score adjustment is targeted maximum likelihood estimation"</em>, <em>Pharmaceutical Statistics</em> 25(2): e70080.</li>
+              <li>Højbjerre-Frandsen, van der Laan, and Schuler (2025), <em>"Powering RCTs for marginal effects with GLMs using prognostic score adjustment"</em>, <em>arXiv preprint arXiv:2503.22284</em>.</li>
+              <li>Højbjerre-Frandsen and Schuler (2026), <em>"Within-Trial prognostic score adjustment is targeted maximum likelihood estimation"</em>, <em>Pharmaceutical Statistics</em> 25(2): e70080.</li>
             </ul>
             <p>
               Semisupervised mean estimation:

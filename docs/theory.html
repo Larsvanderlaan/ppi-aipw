@@ -6,7 +6,7 @@
     <title>Theory | ppi_aipw</title>
     <meta
       name="description"
-      content="Simple practitioner guide to AIPW, calibration, PPI, PPI++, and efficiency in semisupervised mean inference."
+      content="AIPW, calibration, PPI, PPI++, and statistical efficiency in semisupervised mean estimation."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -31,16 +31,15 @@
   <body>
     <div class="page-shell">
       <header class="hero">
-        <nav class="topbar">
+        <nav class="topbar" aria-label="Main navigation">
           <div class="brand"><a href="./index.html">ppi_aipw</a></div>
           <div class="toplinks">
-            <a href="./index.html">Python</a>
+            <a href="./index.html">Overview</a>
+            <a href="./index.html#quickstart">Quickstart</a>
             <a href="./examples.html">Examples</a>
-            <a href="./r.html">R Package</a>
-            <a href="#estimator">Estimator</a>
-            <a href="#family">AIPW Class</a>
-            <a href="#calibration">Calibration</a>
-            <a href="#references">References</a>
+            <a href="./r.html">R package</a>
+            <a href="./theory.html" aria-current="page">Theory</a>
+            <a href="./causal.html">Causal inference</a>
           </div>
           <a class="paper-link" href="./paper.pdf">
             <span class="paper-link-icon" aria-hidden="true"></span>
@@ -51,13 +50,12 @@
         <div class="hero-grid">
           <section class="hero-copy">
             <p class="eyebrow">Theory</p>
-            <h1>Theory for Calibrated Prediction-Powered Inference.</h1>
+            <h1>AIPW, PPI, and calibration.</h1>
             <p class="lede">
-              Prediction scores can improve precision in semisupervised mean
-              inference when their scale is handled carefully. AIPW averages the
-              score over labeled and unlabeled covariates, then adds a residual
-              correction from the labeled outcomes. Calibration improves the
-              score before this step by putting it closer to the outcome scale.
+              AIPW averages predictions over labeled and unlabeled observations,
+              then adds the average residual from the labeled sample. Calibration
+              adjusts the predictions before this calculation and can improve
+              the precision of the mean estimate.
             </p>
             <p class="panel-note">
               Here <code>score</code> means the model output used as \(f(X)\).
@@ -73,7 +71,7 @@
 
           <aside class="hero-panel">
             <div class="panel-card gradient-card">
-              <p class="panel-label">Core Recipe</p>
+              <p class="panel-label">AIPW estimation</p>
               <div class="default-stack">
                 <div>
                   <span class="stack-name">Score</span>
@@ -92,9 +90,8 @@
             <div class="panel-card code-card">
               <p class="panel-label">Main Idea</p>
               <p class="panel-note">
-                AIPW is a broad template rather than one fixed formula. What
-                changes from method to method is the score \(f(X)\) that enters
-                it.
+                The estimators below use the same AIPW formula with different
+                choices of score \(f(X)\).
               </p>
             </div>
           </aside>
@@ -212,10 +209,10 @@
           <div class="section-heading split">
             <div>
               <p class="eyebrow">AIPW Class</p>
-              <h2>AIPW is a class, not one estimator</h2>
+              <h2>AIPW with different scores</h2>
             </div>
             <p class="section-side-note">
-              The wrapper stays the same. What changes is the score inside it.
+              Each method uses a different score in the AIPW formula.
             </p>
           </div>
 
@@ -225,16 +222,16 @@
               <p>
                 The score \(f(X)\) can be a raw score, a linear calibration
                 map, a monotone calibration map, or another
-                data-adaptive score. AIPW supplies the correction template
-                around it.
+                data-adaptive score. Each choice uses the residual correction
+                in the formula above.
               </p>
             </article>
             <article class="argument-card">
               <h3>Score choice affects efficiency</h3>
               <p>
-                Scores closer to the outcome regression
-                \(\mu_0(X)=E_0[Y \mid X]\) make the residuals \(Y-f(X)\)
-                smaller on average. The correction then adds less noise.
+                A score that better approximates the outcome regression
+                \(\mu_0(X)=E_0[Y \mid X]\) can reduce the variability of
+                \(Y-f(X)\) and improve the precision of the mean estimate.
               </p>
             </article>
           </div>
@@ -255,7 +252,7 @@
               <h2>Where PPI and PPI++ fit</h2>
             </div>
             <p class="section-side-note">
-              These are named choices inside the broader AIPW family.
+              PPI and PPI++ correspond to particular choices of score.
             </p>
           </div>
 
@@ -395,10 +392,10 @@
           <div class="section-heading split">
             <div>
               <p class="eyebrow">Calibration</p>
-              <h2>Why calibration improves inference</h2>
+              <h2>How calibration can improve precision</h2>
             </div>
             <p class="section-side-note">
-              Ranking helps, but the scale matters too because we average the score.
+              The numerical values of the predictions affect the variance of the estimator.
             </p>
           </div>
 
@@ -507,7 +504,7 @@ E_0[f(X)] = E_0[Y] = \theta_0.
           <div class="section-heading split">
             <div>
               <p class="eyebrow">Flexible Learning</p>
-              <h2>Flexible learning has a tradeoff</h2>
+              <h2>Calibration with a small labeled sample</h2>
             </div>
             <p class="section-side-note">
               More flexible scores can help, but the labeled sample limits how
@@ -517,7 +514,7 @@ E_0[f(X)] = E_0[Y] = \theta_0.
 
           <div class="argument-grid">
             <article class="argument-card">
-              <h3>Use flexibility when it helps</h3>
+              <h3>Approximating the outcome regression</h3>
               <p>
                 Flexible methods can estimate \(f(X)\) when the labeled sample
                 supports them. The gain comes from fitting the outcome
@@ -525,7 +522,7 @@ E_0[f(X)] = E_0[Y] = \theta_0.
               </p>
             </article>
             <article class="argument-card">
-              <h3>There is still a bias-variance tradeoff</h3>
+              <h3>Finite-sample variance</h3>
               <p>
                 In small labeled samples, highly flexible fitting can fit
                 the regression better but add variance. That tradeoff can
@@ -543,8 +540,8 @@ E_0[f(X)] = E_0[Y] = \theta_0.
           </div>
 
           <div class="theory-note">
-            When labels are scarce, start simple; add flexibility only when it
-            improves prediction enough to be worth the extra variance.
+            The benefit of a more flexible calibration method depends on the
+            size of the labeled sample and the shape of the calibration curve.
           </div>
         </section>
 
@@ -553,9 +550,7 @@ E_0[f(X)] = E_0[Y] = \theta_0.
             <p class="eyebrow">References</p>
             <h2>Selected references</h2>
             <p>
-              This page is a simplified overview. The formal theory and full
-              citations are in the paper, but the references below are the key
-              landmarks for the ideas summarized here.
+              See the paper for formal results and the full bibliography.
             </p>
           </div>
 
