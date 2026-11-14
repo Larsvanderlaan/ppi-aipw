@@ -394,6 +394,8 @@ def causal_inference(
     isocal_max_depth: int = 20,
     isocal_min_child_weight: float = 10.0,
     inference: str = "wald",
+    cross_fit: bool = False,
+    calibration_folds: int = 10,
 ) -> CausalInferenceResult:
     """Estimate arm-specific potential outcome means and control-vs-treatment ATEs.
 
@@ -445,6 +447,9 @@ def causal_inference(
         Controls for the isotonic calibration backend.
     inference
         Must be ``"wald"`` in this version.
+    Set ``cross_fit=True`` for honest calibration within each treatment arm,
+    using ``calibration_folds=10`` by default. The same held-out predictions
+    enter the point estimates and influence-function standard errors.
     """
 
     if inference.lower() != "wald":
@@ -494,6 +499,8 @@ def causal_inference(
             isocal_backend=isocal_backend,
             isocal_max_depth=isocal_max_depth,
             isocal_min_child_weight=isocal_min_child_weight,
+            cross_fit=cross_fit,
+            calibration_folds=calibration_folds,
         )
         result = _mean_inference_result_from_prepared(
             prepared,

@@ -159,7 +159,7 @@ print(result.summary())</code></pre>
                 the labeled sample size.
               </p>
               <p>
-                Use <code>result.summary()</code> for a compact Wald summary.
+                Use <code>result.summary()</code> for estimates, intervals, and p-values.
                 Use <code>calibration_diagnostics(result, Y, Yhat)</code> for
                 an optional out-of-fold calibration check.
               </p>
@@ -183,6 +183,14 @@ print(result.summary())</code></pre>
               <p>Choose <code>"aipw"</code>, <code>"linear"</code>, <code>"prognostic_linear"</code>, <code>"sigmoid"</code>, <code>"monotone_spline"</code>, <code>"isotonic"</code>, or <code>"auto"</code>.</p>
             </article>
             <article class="argument-card">
+              <h3><code>cross_fit</code></h3>
+              <p>Defaults to <code>False</code>. Set <code>True</code> to fit calibration, method selection, and efficiency scaling on training folds and evaluate on held-out observations from both samples.</p>
+            </article>
+            <article class="argument-card">
+              <h3><code>calibration_folds</code></h3>
+              <p>Number of honest calibration folds, default <code>10</code>. Use <code>len(Y)</code> for leave-one-out labeled calibration when the unlabeled sample is larger.</p>
+            </article>
+            <article class="argument-card">
               <h3><code>candidate_methods</code></h3>
               <p>Candidate methods considered when <code>method="auto"</code> minimizes a cross-validated variance estimate. If <code>"aipw"</code> is included, the selector also compares a rescaled AIPW candidate.</p>
             </article>
@@ -192,7 +200,7 @@ print(result.summary())</code></pre>
             </article>
             <article class="argument-card">
               <h3><code>inference</code></h3>
-              <p>Choose <code>"wald"</code> for a fast analytic interval, <code>"jackknife"</code> for a fold-resampling normal interval, or <code>"bootstrap"</code> for percentile bootstrap intervals.</p>
+              <p>Choose <code>"wald"</code> for a fast analytic interval, <code>"jackknife"</code> for a V-fold jackknife interval with Student t critical values, or <code>"bootstrap"</code> for percentile bootstrap intervals.</p>
             </article>
             <article class="argument-card">
               <h3><code>efficiency_maximization</code></h3>
@@ -325,7 +333,8 @@ print(result.summary())</code></pre>
             </div>
             <p class="section-side-note">
               Wald intervals use an analytic standard error. Jackknife and
-              bootstrap intervals refit the calibration step in each resample.
+              bootstrap intervals refit calibration. Jackknife uses
+              <code>jackknife_folds=10</code> and Student t critical values.
             </p>
           </div>
 
@@ -397,6 +406,7 @@ print(result.summary())</code></pre>
               <li>van der Laan and Robins (2003), <em>Unified Methods for Censored Longitudinal Data and Causality</em>.</li>
               <li>van der Laan and Rubin (2006), <em>"Targeted maximum likelihood learning"</em>.</li>
               <li>van der Laan and Rose (2011), <em>Targeted Learning: Causal Inference for Observational and Experimental Data</em>.</li>
+              <li>Li, Ertefaie, and van der Laan (2026), <a href="https://arxiv.org/abs/2607.22493">The V-fold jackknife for semiparametric inference</a>.</li>
               <li>van der Laan, Luedtke, and Carone (2024), <em>"Doubly robust inference via calibration"</em>.</li>
             </ul>
             <p>
@@ -424,6 +434,6 @@ print(result.summary())</code></pre>
       </main>
     </div>
 
-    <script src="./site.js?v=d4c0185102"></script>
+    <script src="./site.js?v=218f7aa949"></script>
   </body>
 </html>

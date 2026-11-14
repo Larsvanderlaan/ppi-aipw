@@ -150,6 +150,10 @@ print(result.summary())</code></pre>
               
             </article>
             <article class="argument-card">
+              <h3><code>cross_fit</code></h3>
+              <p>Defaults to <code>False</code>. Set <code>True</code> for honest calibration within each treatment arm, with <code>calibration_folds=10</code> by default. Wald standard errors use the same held-out predictions.</p>
+            </article>
+            <article class="argument-card">
               <h3><code>w</code></h3>
               <p>Optional full-sample observation weights. These can be inverse propensity weights or balancing weights. In randomized studies, they can be used to adjust for chance covariate imbalance and improve efficiency; in observational studies, they can be used to adjust for confounding and reduce bias. Uniform weights reproduce the unweighted behavior.</p>
             </article>

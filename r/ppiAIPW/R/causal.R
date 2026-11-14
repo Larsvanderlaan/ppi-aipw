@@ -214,7 +214,7 @@ causal_inference <- function(Y, A, Yhat_potential, treatment_levels = NULL, cont
                              num_folds = 100, auto_unlabeled_subsample_size = NULL,
                              selection_random_state = NULL, isocal_backend = "weighted_pava",
                              isocal_max_depth = 20, isocal_min_child_weight = 10,
-                             inference = "wald") {
+                             inference = "wald", cross_fit = FALSE, calibration_folds = 10) {
   if (tolower(inference) != "wald") {
     stop("causal_inference currently supports inference='wald' only.", call. = FALSE)
   }
@@ -252,7 +252,9 @@ causal_inference <- function(Y, A, Yhat_potential, treatment_levels = NULL, cont
       selection_random_state = selection_random_state,
       isocal_backend = isocal_backend,
       isocal_max_depth = isocal_max_depth,
-      isocal_min_child_weight = isocal_min_child_weight
+      isocal_min_child_weight = isocal_min_child_weight,
+      cross_fit = cross_fit,
+      calibration_folds = calibration_folds
     )
     pointestimate <- aipw_mean_pointestimate_from_predictions(
       Y = prepared$Y_2d,

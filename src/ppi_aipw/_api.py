@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 import numpy as np
-from scipy.stats import norm
+from scipy.stats import norm, t
 from sklearn.model_selection import KFold
 
 from ._calibration import CalibrationModel, calibrate_predictions, canonical_method, fit_calibrator
@@ -46,6 +46,7 @@ def _compute_wald_statistics(
     *,
     null: float | np.ndarray = 0.0,
     alternative: str = "two-sided",
+    degrees_of_freedom: int | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     estimate_arr = _flatten_parameter(pointestimate)
     se_arr = _flatten_parameter(standard_error)
@@ -61,12 +62,13 @@ def _compute_wald_statistics(
     t_stat[valid] = (estimate_arr[valid] - null_arr[valid]) / se_arr[valid]
 
     p_value = np.full(estimate_arr.size, np.nan, dtype=float)
+    reference = norm if degrees_of_freedom is None else t(df=degrees_of_freedom)
     if alternative == "two-sided":
-        p_value[valid] = 2.0 * norm.sf(np.abs(t_stat[valid]))
+        p_value[valid] = 2.0 * reference.sf(np.abs(t_stat[valid]))
     elif alternative == "larger":
-        p_value[valid] = norm.sf(t_stat[valid])
+        p_value[valid] = reference.sf(t_stat[valid])
     else:
-        p_value[valid] = norm.cdf(t_stat[valid])
+        p_value[valid] = reference.cdf(t_stat[valid])
 
     return null_arr, t_stat, p_value
 
@@ -84,6 +86,7 @@ def _attach_wald_diagnostics(
         standard_error,
         null=null,
         alternative=alternative,
+        degrees_of_freedom=diagnostics.get("jackknife_degrees_of_freedom"),
     )
     diagnostics["wald_null"] = _format_coordinate_output(null_arr)
     diagnostics["wald_alternative"] = alternative
@@ -205,6 +208,7 @@ class MeanInferenceResult:
             self.se,
             null=null,
             alternative=alternative,
+            degrees_of_freedom=self.diagnostics.get("jackknife_degrees_of_freedom"),
         )
 
         lines = [
@@ -212,6 +216,10 @@ class MeanInferenceResult:
             f"method: {self.method}",
             f"inference: {self.inference}",
         ]
+        if self.inference == "jackknife":
+            lines.append(
+                f"reference_distribution: Student t (df={self.diagnostics['jackknife_degrees_of_freedom']})"
+            )
         if self.selected_candidate != self.method:
             lines.append(f"selected_candidate: {self.selected_candidate}")
         if self.selected_efficiency_maximization:
@@ -552,6 +560,8 @@ def _bootstrap_pointestimates(
     isocal_min_child_weight: float,
     n_resamples: int,
     random_state: int | np.random.Generator | None,
+    cross_fit: bool = False,
+    calibration_folds: int = 10,
 ) -> np.ndarray:
     if n_resamples < 2:
         raise ValueError("n_resamples must be at least 2 when inference='bootstrap'.")
@@ -591,6 +601,8 @@ def _bootstrap_pointestimates(
             isocal_backend=isocal_backend,
             isocal_max_depth=isocal_max_depth,
             isocal_min_child_weight=isocal_min_child_weight,
+            cross_fit=cross_fit,
+            calibration_folds=calibration_folds,
         )
         estimate = _aipw_mean_pointestimate_from_predictions(
             prepared.Y_2d,
@@ -610,6 +622,10 @@ def _resolve_jackknife_effective_folds(
     n_labeled: int,
     n_unlabeled: int,
 ) -> int:
+    if isinstance(jackknife_folds, (bool, np.bool_)) or not isinstance(
+        jackknife_folds, (int, np.integer)
+    ):
+        raise ValueError("jackknife_folds must be an integer at least 2.")
     if jackknife_folds < 2:
         raise ValueError("jackknife_folds must be at least 2 when inference='jackknife'.")
 
@@ -650,6 +666,8 @@ def _jackknife_pointestimates(
     isocal_min_child_weight: float,
     jackknife_folds: int,
     random_state: int | np.random.Generator | None,
+    cross_fit: bool = False,
+    calibration_folds: int = 10,
 ) -> tuple[np.ndarray, int]:
     Y_arr = np.asarray(Y)
     Yhat_arr = np.asarray(Yhat)
@@ -694,6 +712,8 @@ def _jackknife_pointestimates(
             isocal_backend=isocal_backend,
             isocal_max_depth=isocal_max_depth,
             isocal_min_child_weight=isocal_min_child_weight,
+            cross_fit=cross_fit,
+            calibration_folds=calibration_folds,
         )
         estimate = _aipw_mean_pointestimate_from_predictions(
             prepared.Y_2d,
@@ -710,6 +730,11 @@ def _jackknife_pointestimates(
 def _jackknife_standard_error(
     jackknife_estimates: np.ndarray,
 ) -> np.ndarray:
+    """SD of V*theta - (V-1)*theta_minus_v, divided by sqrt(V).
+
+    Center the leave-fold-out estimates directly to avoid subtracting the
+    common full-sample term in every pseudo-value (Li et al., 2026, Algorithm 1).
+    """
     n_estimates = jackknife_estimates.shape[0]
     mean_estimate = np.mean(jackknife_estimates, axis=0)
     variance = ((n_estimates - 1.0) / n_estimates) * np.sum(
@@ -717,6 +742,26 @@ def _jackknife_standard_error(
         axis=0,
     )
     return np.sqrt(np.maximum(variance, 0.0))
+
+
+def _jackknife_interval(
+    pointestimate: np.ndarray,
+    standard_error: np.ndarray,
+    alpha: float,
+    alternative: str,
+    degrees_of_freedom: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    if not 0 < alpha < 1:
+        raise ValueError("alpha must lie in (0, 1).")
+    reference = t(df=degrees_of_freedom)
+    if alternative == "two-sided":
+        radius = reference.ppf(1.0 - alpha / 2.0) * standard_error
+        return pointestimate - radius, pointestimate + radius
+    if alternative == "larger":
+        return pointestimate - reference.ppf(1.0 - alpha) * standard_error, np.full_like(pointestimate, np.inf)
+    if alternative == "smaller":
+        return np.full_like(pointestimate, -np.inf), pointestimate + reference.ppf(1.0 - alpha) * standard_error
+    raise ValueError("alternative must be 'two-sided', 'larger', or 'smaller'.")
 
 
 def _aipw_mean_pointestimate_from_predictions(
@@ -1177,6 +1222,102 @@ def select_mean_method_cv(
     return selected_method, diagnostics
 
 
+def _prepare_cross_fitted_inputs(
+    Y: np.ndarray,
+    Yhat: np.ndarray,
+    Yhat_unlabeled: np.ndarray,
+    *,
+    calibration_folds: int,
+    **kwargs: Any,
+) -> _PreparedMeanInferenceInputs:
+    """Evaluate each training-only calibration on paired held-out samples.
+
+    The score difference in each fold uses the same fitted function and the
+    same fold weight for labeled and unlabeled averages. For unweighted iid
+    samples this makes its expectation zero, including with unequal fold sizes.
+    """
+    y, scores, scores_u = validate_mean_inputs(Y, Yhat, Yhat_unlabeled)
+    n, n_u = len(y), len(scores_u)
+    if isinstance(calibration_folds, (bool, np.bool_)) or not isinstance(calibration_folds, (int, np.integer)) or calibration_folds < 2:
+        raise ValueError("calibration_folds must be an integer at least 2.")
+    folds = min(int(calibration_folds), n, n_u)
+    if folds < 2 or n - int(np.ceil(n / folds)) < 2 or n_u - int(np.ceil(n_u / folds)) < 1:
+        raise ValueError("cross_fit requires enough observations for at least two training labels and one training unlabeled observation per fold.")
+    x, x_u = _validate_prognostic_covariates(
+        kwargs.get("X"), kwargs.get("X_unlabeled"), n_labeled=n, n_unlabeled=n_u,
+    )
+    w = None if kwargs.get("w") is None else np.asarray(kwargs["w"], dtype=float)
+    w_u = None if kwargs.get("w_unlabeled") is None else np.asarray(kwargs["w_unlabeled"], dtype=float)
+    weights = construct_weight_vector(n, w, vectorized=True)
+    weights_u = construct_weight_vector(n_u, w_u, vectorized=True)
+    adjusted_weights_u = np.empty_like(weights_u)
+    pred = np.empty_like(y)
+    pred_u = np.empty_like(scores_u)
+    seed = 0 if kwargs.get("selection_random_state") is None else _resolve_jackknife_seed(kwargs["selection_random_state"])
+    split_l = KFold(n_splits=folds, shuffle=True, random_state=seed)
+    split_u = KFold(n_splits=folds, shuffle=True, random_state=seed)
+    fit_options = {key: value for key, value in kwargs.items() if key not in {"w", "w_unlabeled", "X", "X_unlabeled"}}
+    fold_methods, fold_candidates, fold_lambdas = [], [], []
+    fold_scaled = []
+    for (train, val), (train_u, val_u) in zip(split_l.split(y), split_u.split(scores_u)):
+        fitted = _prepare_inference_inputs(
+            y[train], scores[train], scores_u[train_u],
+            w=None if w is None else w[train],
+            w_unlabeled=None if w_u is None else w_u[train_u],
+            X=None if x is None else x[train],
+            X_unlabeled=None if x_u is None else x_u[train_u],
+            **fit_options,
+        )
+        model = fitted.calibrator
+        if isinstance(model, PrognosticLinearModel):
+            pred[val] = reshape_to_2d(model.predict(scores[val], X=None if x is None else x[val]))
+            pred_u[val_u] = reshape_to_2d(model.predict(scores_u[val_u], X=None if x_u is None else x_u[val_u]))
+        else:
+            pred[val] = reshape_to_2d(model.predict(scores[val]))
+            pred_u[val_u] = reshape_to_2d(model.predict(scores_u[val_u]))
+        if fitted.efficiency_lambda is not None:
+            scale = np.asarray(fitted.efficiency_lambda).reshape(1, -1)
+            pred[val] *= scale
+            pred_u[val_u] *= scale
+        label_mass = float(np.sum(weights[val])) / n
+        unlabeled_mass = float(np.sum(weights_u[val_u]))
+        if label_mass <= 0 or unlabeled_mass <= 0:
+            raise ValueError("cross_fit requires positive total weight in every labeled and unlabeled fold.")
+        adjusted_weights_u[val_u] = weights_u[val_u] * (n_u * label_mass / unlabeled_mass)
+        fold_methods.append(fitted.method)
+        fold_candidates.append(fitted.selected_candidate)
+        fold_lambdas.append(fitted.efficiency_lambda)
+        fold_scaled.append(fitted.final_efficiency_maximization)
+
+    # This refit is returned for prediction/reuse only; it does not enter the
+    # point estimate or the influence-function variance calculation.
+    full = _prepare_inference_inputs(y, scores, scores_u, **kwargs)
+    method = "auto" if kwargs["method"].lower() == "auto" else full.method
+    diagnostics = {
+        "cross_fit": True, "calibration_folds": folds,
+        "calibration_fold_methods": fold_methods,
+        "calibration_fold_candidates": fold_candidates,
+        "calibration_fold_efficiency_lambda": fold_lambdas,
+        "full_sample_calibrator_method": full.method,
+        "pointestimate_uses_full_sample_refit": False,
+        "selected_method": method, "selected_candidate": method,
+        "selected_efficiency_maximization": any(fold_scaled),
+        "final_efficiency_maximization": any(fold_scaled),
+        "lambda_from_cross_fitted_estimates": any(fold_scaled),
+    }
+    full.calibrator.metadata.update(diagnostics)
+    return replace(
+        full, pred_labeled_point=pred, pred_unlabeled_point=pred_u,
+        pred_labeled_variance=pred, pred_unlabeled_variance=pred_u,
+        weights_unlabeled_point=adjusted_weights_u,
+        weights_unlabeled_variance=adjusted_weights_u,
+        method=method, selected_candidate=method,
+        selected_efficiency_maximization=any(fold_scaled),
+        final_efficiency_maximization=any(fold_scaled),
+        efficiency_lambda=None, diagnostics=diagnostics,
+    )
+
+
 def _prepare_inference_inputs(
     Y: np.ndarray,
     Yhat: np.ndarray,
@@ -1195,7 +1336,24 @@ def _prepare_inference_inputs(
     isocal_backend: str = "xgboost",
     isocal_max_depth: int = 20,
     isocal_min_child_weight: float = 10.0,
+    cross_fit: bool = False,
+    calibration_folds: int = 10,
 ) -> _PreparedMeanInferenceInputs:
+    if not isinstance(cross_fit, (bool, np.bool_)):
+        raise ValueError("cross_fit must be True or False.")
+    if cross_fit:
+        return _prepare_cross_fitted_inputs(
+            Y, Yhat, Yhat_unlabeled,
+            calibration_folds=calibration_folds,
+            method=method, w=w, w_unlabeled=w_unlabeled,
+            X=X, X_unlabeled=X_unlabeled,
+            efficiency_maximization=efficiency_maximization,
+            candidate_methods=candidate_methods, num_folds=num_folds,
+            auto_unlabeled_subsample_size=auto_unlabeled_subsample_size,
+            selection_random_state=selection_random_state,
+            isocal_backend=isocal_backend, isocal_max_depth=isocal_max_depth,
+            isocal_min_child_weight=isocal_min_child_weight,
+        )
     if method.lower() == "auto":
         selected_method, selection_metadata, pred_labeled_cf_base, pred_unlabeled_cf_base = (
             _select_mean_method_cv_internal(
@@ -1385,6 +1543,8 @@ def _prepare_mean_estimation_inputs(
     isocal_backend: str = "xgboost",
     isocal_max_depth: int = 20,
     isocal_min_child_weight: float = 10.0,
+    cross_fit: bool = False,
+    calibration_folds: int = 10,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, Any]:
     prepared = _prepare_inference_inputs(
         Y,
@@ -1403,6 +1563,8 @@ def _prepare_mean_estimation_inputs(
         isocal_backend=isocal_backend,
         isocal_max_depth=isocal_max_depth,
         isocal_min_child_weight=isocal_min_child_weight,
+        cross_fit=cross_fit,
+        calibration_folds=calibration_folds,
     )
     return (
         prepared.Y_2d,
@@ -1431,6 +1593,8 @@ def _prepare_auto_variance_inputs(
     isocal_backend: str,
     isocal_max_depth: int,
     isocal_min_child_weight: float,
+    cross_fit: bool = False,
+    calibration_folds: int = 10,
 ) -> tuple[
     np.ndarray,
     np.ndarray,
@@ -1459,6 +1623,8 @@ def _prepare_auto_variance_inputs(
         isocal_backend=isocal_backend,
         isocal_max_depth=isocal_max_depth,
         isocal_min_child_weight=isocal_min_child_weight,
+        cross_fit=cross_fit,
+        calibration_folds=calibration_folds,
     )
     return (
         prepared.Y_2d,
@@ -1512,6 +1678,7 @@ def _mean_inference_result_from_prepared(
     standard_error = _wald_standard_error(prepared)
     ci = z_interval(pointestimate, standard_error, alpha, alternative)
     diagnostics = dict(prepared.diagnostics)
+    diagnostics.setdefault("cross_fit", False)
     diagnostics["inference"] = "wald"
     return MeanInferenceResult(
         pointestimate=restore_shape(pointestimate, reference),
@@ -1572,10 +1739,12 @@ def _fit_mean_inference(
     isocal_min_child_weight: float = 10.0,
     inference: str = "wald",
     n_resamples: int = 1000,
-    jackknife_folds: int = 20,
+    jackknife_folds: int = 10,
     random_state: int | np.random.Generator | None = None,
     compute_se: bool = True,
     compute_ci: bool = True,
+    cross_fit: bool = False,
+    calibration_folds: int = 10,
 ) -> _MeanInferenceState:
     inference = inference.lower()
     if inference not in {"wald", "jackknife", "bootstrap"}:
@@ -1602,6 +1771,8 @@ def _fit_mean_inference(
         isocal_backend=isocal_backend,
         isocal_max_depth=isocal_max_depth,
         isocal_min_child_weight=isocal_min_child_weight,
+        cross_fit=cross_fit,
+        calibration_folds=calibration_folds,
     )
     pointestimate = _aipw_mean_pointestimate_from_predictions(
         prepared.Y_2d,
@@ -1611,6 +1782,7 @@ def _fit_mean_inference(
         w_unlabeled=prepared.weights_unlabeled_point,
     )
     diagnostics = dict(prepared.diagnostics)
+    diagnostics.setdefault("cross_fit", False)
     diagnostics["inference"] = inference
 
     standard_error: np.ndarray | None = None
@@ -1622,7 +1794,7 @@ def _fit_mean_inference(
             ci = z_interval(pointestimate, standard_error, alpha, alternative)
     elif inference == "bootstrap":
         if method.lower() == "auto":
-            diagnostics["bootstrap_selected_once"] = True
+            diagnostics["bootstrap_selected_once"] = not cross_fit
             diagnostics["bootstrap_method"] = prepared.method
             diagnostics["bootstrap_efficiency_maximization"] = prepared.final_efficiency_maximization
         if compute_se:
@@ -1630,12 +1802,14 @@ def _fit_mean_inference(
                 Y,
                 Yhat,
                 Yhat_unlabeled,
-                method=prepared.method,
+                method=method if cross_fit else prepared.method,
                 w=w,
                 w_unlabeled=w_unlabeled,
                 X=X,
                 X_unlabeled=X_unlabeled,
-                efficiency_maximization=prepared.final_efficiency_maximization,
+                efficiency_maximization=(
+                    resolved_efficiency_maximization if cross_fit else prepared.final_efficiency_maximization
+                ),
                 candidate_methods=candidate_methods,
                 num_folds=resolved_num_folds,
                 auto_unlabeled_subsample_size=auto_unlabeled_subsample_size,
@@ -1645,13 +1819,16 @@ def _fit_mean_inference(
                 isocal_min_child_weight=isocal_min_child_weight,
                 n_resamples=n_resamples,
                 random_state=random_state,
+                cross_fit=cross_fit,
+                calibration_folds=calibration_folds,
             )
             standard_error = np.std(bootstrap_estimates, axis=0, ddof=1)
             if compute_ci:
                 ci = _bootstrap_interval(bootstrap_estimates, alpha=alpha, alternative=alternative)
     else:
         if method.lower() == "auto":
-            diagnostics["jackknife_selected_once"] = True
+            diagnostics["jackknife_selected_once"] = False
+            diagnostics["jackknife_reselects_method"] = True
             diagnostics["jackknife_method"] = prepared.method
             diagnostics["jackknife_efficiency_maximization"] = prepared.final_efficiency_maximization
         if compute_se:
@@ -1659,12 +1836,12 @@ def _fit_mean_inference(
                 Y,
                 Yhat,
                 Yhat_unlabeled,
-                method=prepared.method,
+                method=method,
                 w=w,
                 w_unlabeled=w_unlabeled,
                 X=X,
                 X_unlabeled=X_unlabeled,
-                efficiency_maximization=prepared.final_efficiency_maximization,
+                efficiency_maximization=resolved_efficiency_maximization,
                 candidate_methods=candidate_methods,
                 num_folds=resolved_num_folds,
                 auto_unlabeled_subsample_size=auto_unlabeled_subsample_size,
@@ -1674,11 +1851,17 @@ def _fit_mean_inference(
                 isocal_min_child_weight=isocal_min_child_weight,
                 jackknife_folds=jackknife_folds,
                 random_state=random_state,
+                cross_fit=cross_fit,
+                calibration_folds=calibration_folds,
             )
             diagnostics["jackknife_folds"] = effective_folds
+            diagnostics["jackknife_degrees_of_freedom"] = effective_folds - 1
+            diagnostics["jackknife_reference_distribution"] = "t"
             standard_error = _jackknife_standard_error(jackknife_estimates)
             if compute_ci:
-                ci = z_interval(pointestimate, standard_error, alpha, alternative)
+                ci = _jackknife_interval(
+                    pointestimate, standard_error, alpha, alternative, effective_folds - 1
+                )
 
     return _MeanInferenceState(
         pointestimate=pointestimate,
@@ -1717,8 +1900,10 @@ def aipw_mean_inference(
     isocal_min_child_weight: float = 10.0,
     inference: str = "wald",
     n_resamples: int = 1000,
-    jackknife_folds: int = 20,
+    jackknife_folds: int = 10,
     random_state: int | np.random.Generator | None = None,
+    cross_fit: bool = False,
+    calibration_folds: int = 10,
 ) -> MeanInferenceResult:
     """Computes mean estimation and uncertainty in one shared pass.
 
@@ -1726,10 +1911,17 @@ def aipw_mean_inference(
     standard error, confidence interval, fitted calibrator, and any automatic
     method-selection diagnostics together. Optional ``X`` and
     ``X_unlabeled`` are used by ``method="prognostic_linear"``. Use
-    ``inference="jackknife"`` with ``jackknife_folds=20`` when you want the
-    package's recommended resampling-style normal interval, or
+    ``inference="jackknife"`` with ``jackknife_folds=10`` when you want the
+    V-fold jackknife interval with Student t critical values, or
     ``inference="bootstrap"`` when you specifically want percentile bootstrap
     intervals.
+        ``cross_fit=False`` fits calibration on all labeled observations. Set
+    ``cross_fit=True`` for honest calibration with ``calibration_folds=10``
+    paired labeled/unlabeled folds. Automatic selection and efficiency scaling
+    are learned within each training split. Use ``calibration_folds=len(Y)``
+    for leave-one-out labeled calibration when the unlabeled sample is larger.
+    The returned calibrator is a full-sample refit for prediction and reuse;
+    it is not used in the cross-fitted point estimate or standard error.
     """
     state = _fit_mean_inference(
         Y,
@@ -1756,6 +1948,8 @@ def aipw_mean_inference(
         random_state=random_state,
         compute_se=True,
         compute_ci=True,
+        cross_fit=cross_fit,
+        calibration_folds=calibration_folds,
     )
     if state.se is None or state.ci is None:
         raise RuntimeError("Internal error: mean inference did not compute uncertainty outputs.")
@@ -1803,6 +1997,8 @@ def aipw_mean_pointestimate(
     isocal_max_depth: int = 20,
     isocal_min_child_weight: float = 10.0,
     return_calibrator: bool = False,
+    cross_fit: bool = False,
+    calibration_folds: int = 10,
 ) -> float | np.ndarray | tuple[float | np.ndarray, CalibrationModel]:
     """Computes an AIPW-style point estimate for the population mean.
 
@@ -1926,6 +2122,13 @@ def aipw_mean_pointestimate(
                 method="auto",
                 candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
             )
+        ``cross_fit=False`` fits calibration on all labeled observations. Set
+    ``cross_fit=True`` for honest calibration with ``calibration_folds=10``
+    paired labeled/unlabeled folds. Automatic selection and efficiency scaling
+    are learned within each training split. Use ``calibration_folds=len(Y)``
+    for leave-one-out labeled calibration when the unlabeled sample is larger.
+    The returned calibrator is a full-sample refit for prediction and reuse;
+    it is not used in the cross-fitted point estimate or standard error.
     """
     state = _fit_mean_inference(
         Y,
@@ -1947,6 +2150,8 @@ def aipw_mean_pointestimate(
         inference="wald",
         compute_se=False,
         compute_ci=False,
+        cross_fit=cross_fit,
+        calibration_folds=calibration_folds,
     )
     estimate_out = restore_shape(state.pointestimate, np.asarray(Y))
     if return_calibrator:
@@ -1974,8 +2179,10 @@ def aipw_mean_se(
     isocal_min_child_weight: float = 10.0,
     inference: str = "wald",
     n_resamples: int = 1000,
-    jackknife_folds: int = 20,
+    jackknife_folds: int = 10,
     random_state: int | np.random.Generator | None = None,
+    cross_fit: bool = False,
+    calibration_folds: int = 10,
 ) -> float | np.ndarray:
     """Computes a standard error for :func:`aipw_mean_pointestimate`.
 
@@ -1986,13 +2193,21 @@ def aipw_mean_se(
     ``inference="jackknife"`` for a V-fold delete-a-group jackknife standard
     error, or ``inference="bootstrap"`` to estimate the standard error from
     bootstrap resamples. When ``method="auto"`` and ``inference="wald"``, the
-    point estimate uses the selected method refit on the full labeled sample,
+    default point estimate uses the selected method refit on the full labeled sample,
     while any final lambda scaling is learned from the selected method's
     cross-fitted labeled predictions and unlabeled-subsample predictions and
     then reused for the Wald variance. When ``method="auto"`` and
-    ``inference`` is ``"jackknife"`` or ``"bootstrap"``, the method is
-    selected once on the original sample and the resampling refits only that
-    chosen method.
+    ``inference="jackknife"``, method selection is repeated in each
+    leave-fold-out refit. With ``cross_fit=False``, bootstrap selects the method
+    once on the original sample; with ``cross_fit=True``, selection remains
+    inside the calibration training folds in each resample.
+        ``cross_fit=False`` fits calibration on all labeled observations. Set
+    ``cross_fit=True`` for honest calibration with ``calibration_folds=10``
+    paired labeled/unlabeled folds. Automatic selection and efficiency scaling
+    are learned within each training split. Use ``calibration_folds=len(Y)``
+    for leave-one-out labeled calibration when the unlabeled sample is larger.
+    The returned calibrator is a full-sample refit for prediction and reuse;
+    it is not used in the cross-fitted point estimate or standard error.
     """
 
     state = _fit_mean_inference(
@@ -2018,6 +2233,8 @@ def aipw_mean_se(
         random_state=random_state,
         compute_se=True,
         compute_ci=False,
+        cross_fit=cross_fit,
+        calibration_folds=calibration_folds,
     )
     if state.se is None:
         raise RuntimeError("Internal error: mean SE computation did not produce a standard error.")
@@ -2046,8 +2263,10 @@ def aipw_mean_ci(
     isocal_min_child_weight: float = 10.0,
     inference: str = "wald",
     n_resamples: int = 1000,
-    jackknife_folds: int = 20,
+    jackknife_folds: int = 10,
     random_state: int | np.random.Generator | None = None,
+    cross_fit: bool = False,
+    calibration_folds: int = 10,
 ) -> tuple[float | np.ndarray, float | np.ndarray]:
     """Computes a confidence interval for the mean.
 
@@ -2109,7 +2328,7 @@ def aipw_mean_ci(
             ``isocal_backend="xgboost"``.
         inference:
             ``"wald"`` for the analytic normal-approximation interval,
-            ``"jackknife"`` for a normal-approximation interval using a
+            ``"jackknife"`` for a Student t interval using a
             V-fold jackknife standard error, or
             ``"bootstrap"`` for a percentile bootstrap interval that resamples
             labeled and unlabeled rows and refits the calibration step in each
@@ -2117,7 +2336,8 @@ def aipw_mean_ci(
         n_resamples:
             Number of bootstrap resamples when ``inference="bootstrap"``.
         jackknife_folds:
-            Number of folds used by ``inference="jackknife"``. This controls
+            Number of folds used by ``inference="jackknife"`` (default 10).
+            This controls
             the inference-layer delete-a-group refits and is separate from
             ``num_folds``, which is used only for ``method="auto"`` selection.
         random_state:
@@ -2129,19 +2349,26 @@ def aipw_mean_ci(
 
     Notes:
         ``inference="wald"`` returns the analytic normal-approximation interval.
-        When ``method="auto"``, the point estimate is computed from the selected
+        With ``cross_fit=False`` and ``method="auto"``, the point estimate uses the selected
         method refit on the full labeled sample, while any final lambda scaling
         is learned from the selected method's cross-fitted labeled predictions
         and unlabeled-subsample predictions and reused for the standard
         error.
-        ``inference="jackknife"`` returns a normal-approximation interval
-        centered at the full-sample point estimate with a V-fold jackknife
-        standard error. When ``method="auto"``, jackknife selects the method
-        once on the original sample and then refits only that chosen method in
-        each leave-fold-out refit.
+        ``inference="jackknife"`` follows Li, Ertefaie, and van der Laan
+        (2026), arXiv:2607.22493, Algorithm 1. The interval is centered at the
+        estimate computed before fold deletion, using Student t critical values
+        on V-1 degrees of freedom. The default is V=10, capped at the smaller
+        sample size. Automatic method selection is repeated in every refit.
         ``inference="bootstrap"`` returns a percentile bootstrap interval.
         When ``method="auto"``, bootstrap selects the method once on the
         original sample and then bootstraps only that chosen method.
+        ``cross_fit=False`` fits calibration on all labeled observations. Set
+    ``cross_fit=True`` for honest calibration with ``calibration_folds=10``
+    paired labeled/unlabeled folds. Automatic selection and efficiency scaling
+    are learned within each training split. Use ``calibration_folds=len(Y)``
+    for leave-one-out labeled calibration when the unlabeled sample is larger.
+    The returned calibrator is a full-sample refit for prediction and reuse;
+    it is not used in the cross-fitted point estimate or standard error.
     """
 
     state = _fit_mean_inference(
@@ -2169,6 +2396,8 @@ def aipw_mean_ci(
         random_state=random_state,
         compute_se=True,
         compute_ci=True,
+        cross_fit=cross_fit,
+        calibration_folds=calibration_folds,
     )
     if state.ci is None:
         raise RuntimeError("Internal error: mean CI computation did not produce an interval.")

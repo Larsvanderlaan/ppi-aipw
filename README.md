@@ -83,3 +83,29 @@ print(result.ci)
 ```
 
 The fuller package guide lives in [docs/ppi_aipw_vignette.md](docs/ppi_aipw_vignette.md), with the static site entrypoint at [docs/index.html](docs/index.html).
+
+
+Optional honest calibration and V-fold jackknife inference:
+
+```python
+result = mean_inference(
+    Y, Yhat, Yhat_unlabeled,
+    cross_fit=True,             # default: False
+    calibration_folds=10,
+    inference="jackknife",     # default: "wald"
+    jackknife_folds=10,
+    selection_random_state=0,
+    random_state=0,
+)
+```
+
+Honest calibration trains on separate folds from the labeled and unlabeled
+observations used to evaluate each fitted curve. Method selection and efficiency
+scaling stay inside the training splits. The same held-out predictions enter
+IF-based inference when `inference="wald"`.
+
+Jackknife intervals follow [Li, Ertefaie, and van der Laan (2026), Algorithm 1](https://arxiv.org/abs/2607.22493):
+refit after deleting each of `V=10` paired folds, estimate the standard error
+from the pseudo-values, and use Student t critical values with `V-1` degrees
+of freedom. Automatic method selection is repeated within each deletion.
+The R functions use the same options with `cross_fit = TRUE`.

@@ -150,6 +150,12 @@ upper = result$ci[[2]]
 summary(result)</code></pre>
           </div>
 
+          <p class="panel-note">
+            Calibration uses all labeled observations by default.
+            Set <code>cross_fit = TRUE, calibration_folds = 10</code> for honest
+            calibration. Use <code>inference = "jackknife", jackknife_folds = 10</code>
+            for V-fold jackknife intervals with Student t critical values.
+          </p>
           <div class="argument-grid">
             <article class="argument-card">
               <h3><code>mean_pointestimate()</code></h3>

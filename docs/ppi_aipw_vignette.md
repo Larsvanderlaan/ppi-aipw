@@ -281,8 +281,7 @@ What it does:
   selected method's cross-fitted labeled predictions and unlabeled-subset
   predictions, then reuses that cross-fitted lambda for the point
   estimate and Wald variance
-- for jackknife inference, selects the method once on the original sample and
-  then refits only that chosen method in each leave-fold-out refit
+- for jackknife inference, repeats method selection in every leave-fold-out refit
 - for bootstrap inference, selects the method once on the original sample and
   then bootstraps only that chosen method
 
@@ -290,7 +289,7 @@ This means `mean_inference(..., method="auto")` returns:
 
 - the full-sample point estimate for the selected method
 - a Wald SE that reuses the same cross-fitted layer used to learn `lambda`
-- jackknife SEs and intervals that select once, then refit only the chosen method
+- jackknife SEs and Student t intervals that repeat method selection in each refit
 - bootstrap SEs and intervals that select once, then refit only the chosen method
 - `result.diagnostics` with the selected candidate, unlabeled subset size, and related metadata
 
@@ -445,7 +444,7 @@ Short version:
 - bounded or probability-like scores: try `method="sigmoid"`
 - smooth monotone nonlinear calibration: try `method="monotone_spline"`
 - more flexible monotone calibration: try `method="isotonic"`
-- extra uncertainty robustness check: try `inference="jackknife", jackknife_folds=20`
+- extra uncertainty robustness check: try `inference="jackknife", jackknife_folds=10`
 
 ## Confidence Intervals
 
@@ -472,16 +471,16 @@ Interpretation:
 Available interval types:
 
 - `inference="wald"`: faster and usually a good default when you want something simple
-- `inference="jackknife"`: the recommended resampling-style option; it drops one fold of labeled and unlabeled rows at a time, refits calibration, and uses the resulting jackknife standard error in a normal interval
+- `inference="jackknife"`: the recommended resampling-style option; it drops one fold of labeled and unlabeled rows at a time, refits calibration, and uses the resulting jackknife standard error with Student t critical values
 - `inference="bootstrap"`: more computationally expensive, but still available when you specifically want percentile bootstrap intervals
 
-Jackknife behavior in this package:
+The jackknife follows [Li, Ertefaie, and van der Laan (2026), Algorithm 1](https://arxiv.org/abs/2607.22493):
 
-- `jackknife_folds` controls the number of leave-fold-out refits and defaults to `20`
+- `jackknife_folds` controls the number of leave-fold-out refits and defaults to `10`
 - the labeled rows are partitioned into folds and one fold is removed in each refit
 - the unlabeled rows are partitioned separately into the same number of folds and one fold is removed in each refit
 - the calibration step is refit inside each jackknife refit
-- the final interval is centered at the full-sample point estimate and uses the jackknife SE in a normal approximation
+- the interval is centered at the estimate computed before fold deletion and uses Student t critical values with `V - 1` degrees of freedom
 
 Example jackknife interval:
 
@@ -492,7 +491,7 @@ lower, upper = aipw_mean_ci(
     Yhat_unlabeled,
     method="isotonic",
     inference="jackknife",
-    jackknife_folds=20,
+    jackknife_folds=10,
     random_state=0,
 )
 ```
@@ -696,3 +695,55 @@ If you want the shortest possible recommendation:
 - try `method="monotone_spline"` for smooth monotone nonlinear calibration
 - try `method="isotonic"` for monotone nonlinear calibration
 - try `method="sigmoid"` for bounded or probability-like scores
+
+
+## Honest out-of-fold calibration
+
+The default, `cross_fit=False`, fits calibration on the full labeled sample.
+With `cross_fit=True`, `calibration_folds=10` partitions both samples into
+paired folds. Each fitted calibrator, automatic method choice, and efficiency
+coefficient uses only its training observations. Its predictions are evaluated
+on the held-out labeled and unlabeled observations.
+
+```python
+result = mean_inference(
+    Y, Yhat, Yhat_unlabeled,
+    cross_fit=True,
+    calibration_folds=10,
+    inference="jackknife",
+    jackknife_folds=10,
+    selection_random_state=0,
+    random_state=0,
+)
+```
+
+`calibration_folds` controls calibration training; `jackknife_folds` controls
+variance estimation. For leave-one-out labeled calibration, set
+`calibration_folds=len(Y)` when the unlabeled sample has at least as many rows.
+Both fold counts are capped at the smaller sample size. `selection_random_state`
+controls the calibration partition as well as automatic selection; its default
+calibration partition is deterministic. `random_state` controls the outer
+jackknife or bootstrap partition. The jackknife repeats the whole chosen
+estimation procedure, including honest calibration and automatic selection.
+
+For unweighted iid samples from the same population and an independently
+trained input predictor, the cross-fitted point estimate is exactly unbiased.
+Writing `c = N / (n + N)` and `g_v` for a calibrator fitted outside fold `v`,
+it equals the labeled outcome mean plus
+`c * sum_v (n_v/n) * (mean_Uv(g_v) - mean_Lv(g_v))`.
+Conditional on the training data, both prediction averages have the same
+expectation. Their difference therefore has mean zero. Matching the fold
+weights on the two averages preserves this cancellation when fold sizes differ.
+This statement does not extend automatically to estimated or self-normalized
+observation weights. Confidence-interval validity remains asymptotic.
+
+The IF-based option (`inference="wald"`) uses the same held-out predictions as
+the point estimate. Jackknife intervals use `t_(V-1)` critical values and remain
+centered at that point estimate. Neither variance method changes the point
+estimator or makes a full-sample calibration fit exactly unbiased.
+
+`result.calibrator` is refitted on the full sample for prediction and reuse.
+It does not enter the cross-fitted estimate or its standard error. Fold-specific
+methods and efficiency coefficients are recorded in `result.diagnostics`.
+The same options are available in R as `cross_fit = TRUE` and
+`calibration_folds = 10`, and in `causal_inference()` for arm-specific Wald inference.

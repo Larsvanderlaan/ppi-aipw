@@ -39,8 +39,8 @@ mean_inference(
   num_folds = NULL, auto_unlabeled_subsample_size = NULL,
   selection_random_state = NULL, isocal_backend = "weighted_pava",
   isocal_max_depth = 20, isocal_min_child_weight = 10,
-  inference = "wald", n_resamples = 1000, jackknife_folds = 20,
-  random_state = NULL
+  inference = "wald", n_resamples = 1000, jackknife_folds = 10,
+  random_state = NULL, cross_fit = FALSE, calibration_folds = 10
 )
 
 mean_pointestimate(
@@ -51,7 +51,7 @@ mean_pointestimate(
   num_folds = NULL, auto_unlabeled_subsample_size = NULL,
   selection_random_state = NULL, isocal_backend = "weighted_pava",
   isocal_max_depth = 20, isocal_min_child_weight = 10,
-  return_calibrator = FALSE
+  return_calibrator = FALSE, cross_fit = FALSE, calibration_folds = 10
 )
 
 mean_se(
@@ -62,8 +62,8 @@ mean_se(
   num_folds = NULL, auto_unlabeled_subsample_size = NULL,
   selection_random_state = NULL, isocal_backend = "weighted_pava",
   isocal_max_depth = 20, isocal_min_child_weight = 10,
-  inference = "wald", n_resamples = 1000, jackknife_folds = 20,
-  random_state = NULL
+  inference = "wald", n_resamples = 1000, jackknife_folds = 10,
+  random_state = NULL, cross_fit = FALSE, calibration_folds = 10
 )
 
 mean_ci(
@@ -74,8 +74,8 @@ mean_ci(
   num_folds = NULL, auto_unlabeled_subsample_size = NULL,
   selection_random_state = NULL, isocal_backend = "weighted_pava",
   isocal_max_depth = 20, isocal_min_child_weight = 10,
-  inference = "wald", n_resamples = 1000, jackknife_folds = 20,
-  random_state = NULL
+  inference = "wald", n_resamples = 1000, jackknife_folds = 10,
+  random_state = NULL, cross_fit = FALSE, calibration_folds = 10
 )
 
 linear_calibration_mean_pointestimate(...)
@@ -105,8 +105,10 @@ isotonic_mean_ci(...)
   \item{isocal_backend, isocal_max_depth, isocal_min_child_weight}{Controls for the isotonic backend metadata.}
   \item{inference}{One of \code{"wald"}, \code{"jackknife"}, or \code{"bootstrap"}.}
   \item{n_resamples}{Number of bootstrap resamples when \code{inference = "bootstrap"}.}
-  \item{jackknife_folds}{Number of delete-a-group folds when \code{inference = "jackknife"}.}
+  \item{jackknife_folds}{Number of delete-a-group folds (default 10), capped at the smaller sample size. Intervals use Student t critical values on V-1 degrees of freedom and repeat automatic selection within each refit.}
   \item{random_state}{Seed used by bootstrap and jackknife paths.}
+  \item{cross_fit}{Default FALSE. If TRUE, learn calibration, automatic selection, and efficiency scaling on training folds and evaluate on paired held-out labeled and unlabeled folds. Wald inference uses these held-out predictions too.}
+  \item{calibration_folds}{Number of honest calibration folds (default 10), capped at the smaller sample size. Set to the labeled sample size for leave-one-out labeled calibration when enough unlabeled observations are available. The partition uses selection_random_state, or seed 0 if omitted.}
   \item{return_calibrator}{If \code{TRUE}, return both the point estimate and fitted model.}
   \item{...}{Arguments forwarded to the generic mean API with the method pinned by the wrapper.}
 }
@@ -121,4 +123,13 @@ isotonic_mean_ci(...)
   the package cross-validates the candidate methods on the labeled sample and
   refits the selected method on the full data before returning the final
   estimate.
+}
+
+\details{
+The V-fold jackknife follows Li, Ertefaie, and van der Laan (2026),
+arXiv:2607.22493, Algorithm 1. Its standard error is the sample standard
+ deviation of V pseudo-values divided by the square root of V; intervals
+are centered at the estimate before fold deletion and use V-1 degrees of freedom.
+With honest calibration, the returned calibrator is a full-sample refit for
+reuse and is not used in the point estimate or its influence-function variance.
 }

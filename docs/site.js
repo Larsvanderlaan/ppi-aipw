@@ -292,9 +292,9 @@ const inferenceContent = {
   jackknife: {
     title: "Jackknife intervals",
     summary:
-      "Uses the variability of estimates after deleting groups of labeled and unlabeled observations, with a normal approximation.",
-    best: "Delete-a-group standard error",
-    cost: "One refit per group",
+      "Deletes one paired fold at a time and refits the estimator, including automatic selection. Intervals use Student t critical values with V-1 degrees of freedom; the default is V=10.",
+    best: "Pseudo-value standard error; Student t interval",
+    cost: "10 refits by default",
     when: "Calibration is refit after each deletion"
   },
   bootstrap: {

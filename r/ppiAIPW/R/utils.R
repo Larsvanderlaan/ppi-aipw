@@ -228,6 +228,22 @@ z_interval <- function(pointestimate, standard_error, alpha, alternative = "two-
   list(lower = lower, upper = upper)
 }
 
+# The same location-scale interval as z_interval, with a finite-fold t reference.
+t_interval <- function(pointestimate, standard_error, alpha, alternative = "two-sided",
+                       degrees_of_freedom) {
+  alternative <- normalize_alternative(alternative)
+  if (!(is.numeric(alpha) && length(alpha) == 1L && is.finite(alpha) && alpha > 0 && alpha < 1)) {
+    stop("alpha must lie in (0, 1).", call. = FALSE)
+  }
+  critical <- stats::qt(1 - alpha / if (alternative == "two-sided") 2 else 1,
+                        df = degrees_of_freedom)
+  lower <- as.numeric(pointestimate) - critical * as.numeric(standard_error)
+  upper <- as.numeric(pointestimate) + critical * as.numeric(standard_error)
+  if (alternative == "larger") upper[] <- Inf
+  if (alternative == "smaller") lower[] <- -Inf
+  list(lower = lower, upper = upper)
+}
+
 flatten_parameter <- function(x) {
   as.numeric(x)
 }
@@ -248,7 +264,8 @@ format_coordinate_output <- function(x) {
   if (length(x) == 1L) x[[1]] else x
 }
 
-compute_wald_statistics <- function(pointestimate, standard_error, null = 0, alternative = "two-sided") {
+compute_wald_statistics <- function(pointestimate, standard_error, null = 0, alternative = "two-sided",
+                                    degrees_of_freedom = NULL) {
   alternative <- normalize_alternative(alternative)
   estimate_arr <- flatten_parameter(pointestimate)
   se_arr <- flatten_parameter(standard_error)
@@ -260,12 +277,19 @@ compute_wald_statistics <- function(pointestimate, standard_error, null = 0, alt
   t_stat <- rep(NaN, length(estimate_arr))
   t_stat[valid] <- (estimate_arr[valid] - null_arr[valid]) / se_arr[valid]
   p_value <- rep(NaN, length(estimate_arr))
+  reference_cdf <- function(q, lower.tail = TRUE) {
+    if (is.null(degrees_of_freedom)) {
+      stats::pnorm(q, lower.tail = lower.tail)
+    } else {
+      stats::pt(q, df = degrees_of_freedom, lower.tail = lower.tail)
+    }
+  }
   if (alternative == "two-sided") {
-    p_value[valid] <- 2 * stats::pnorm(abs(t_stat[valid]), lower.tail = FALSE)
+    p_value[valid] <- 2 * reference_cdf(abs(t_stat[valid]), lower.tail = FALSE)
   } else if (alternative == "larger") {
-    p_value[valid] <- stats::pnorm(t_stat[valid], lower.tail = FALSE)
+    p_value[valid] <- reference_cdf(t_stat[valid], lower.tail = FALSE)
   } else {
-    p_value[valid] <- stats::pnorm(t_stat[valid], lower.tail = TRUE)
+    p_value[valid] <- reference_cdf(t_stat[valid], lower.tail = TRUE)
   }
   list(null = null_arr, t_stat = t_stat, p_value = p_value)
 }

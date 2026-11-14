@@ -58,7 +58,7 @@ Arguments:
         is capped at the number of labeled observations.
     inference:
         Use ``"wald"`` for fast analytic intervals, ``"jackknife"`` for the
-        recommended V-fold resampling-based normal interval, or
+        V-fold jackknife interval with Student t critical values, or
         ``"bootstrap"`` for percentile bootstrap intervals via
         :func:`aipw_mean_ci`.
 
@@ -87,8 +87,19 @@ Rule of thumb:
     full unlabeled sample, and any final lambda scaling is learned from
     cross-fitted predictions plus that unlabeled subset and reused for Wald
     inference. For resampling-style inference, ``inference="jackknife"`` uses
-    a V-fold delete-a-group jackknife with ``jackknife_folds=20`` by default,
-    while ``inference="bootstrap"`` remains available as a slower alternative.
+    a V-fold delete-a-group jackknife with ``jackknife_folds=10`` by default,
+    using Student t critical values on V-1 degrees of freedom. Automatic
+    selection is repeated in every leave-fold-out refit. Bootstrap percentile
+    intervals remain available.
+
+Honest calibration:
+    Calibration uses the full labeled sample by default (``cross_fit=False``).
+    Set ``cross_fit=True`` to train and evaluate on separate folds from both
+    samples, with ``calibration_folds=10`` by default. Model selection and
+    efficiency scaling use only the training observations. The same held-out
+    predictions are used for the point estimate and IF-based variance.
+    ``calibration_folds=len(Y)`` gives leave-one-out labeled calibration when
+    enough unlabeled observations are available.
 
 Causal API:
     Use ``causal_inference(...)`` when you have treatment-specific predictions

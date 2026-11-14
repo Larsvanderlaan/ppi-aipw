@@ -629,69 +629,28 @@ def test_auto_bootstrap_reuses_selected_method_instead_of_rerunning_cv() -> None
     np.testing.assert_allclose(auto_se, explicit_se)
 
 
-def test_auto_jackknife_reuses_selected_method_instead_of_rerunning_cv() -> None:
+def test_auto_jackknife_matches_manual_leave_fold_out_refits() -> None:
+    from sklearn.model_selection import KFold
+    from scipy.stats import t
     rng = np.random.default_rng(124)
-    yhat = np.linspace(-1.0, 1.0, 50)
-    y = 0.9 + 2.0 * yhat + rng.normal(scale=0.06, size=yhat.shape[0])
-    yhat_unlabeled = np.linspace(-1.1, 1.1, 100)
-
-    selected_method, diagnostics = select_mean_method_cv(
-        y,
-        yhat,
-        yhat_unlabeled,
-        candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
-        num_folds=5,
-        selection_random_state=0,
-    )
-
-    auto_ci = aipw_mean_ci(
-        y,
-        yhat,
-        yhat_unlabeled,
-        method="auto",
-        candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
-        num_folds=5,
-        selection_random_state=0,
-        inference="jackknife",
-        jackknife_folds=5,
-        random_state=7,
-    )
-    explicit_ci = aipw_mean_ci(
-        y,
-        yhat,
-        yhat_unlabeled,
-        method=selected_method,
-        efficiency_maximization=diagnostics["selected_efficiency_maximization"],
-        inference="jackknife",
-        jackknife_folds=5,
-        random_state=7,
-    )
-    auto_se = aipw_mean_se(
-        y,
-        yhat,
-        yhat_unlabeled,
-        method="auto",
-        candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
-        num_folds=5,
-        selection_random_state=0,
-        inference="jackknife",
-        jackknife_folds=5,
-        random_state=7,
-    )
-    explicit_se = aipw_mean_se(
-        y,
-        yhat,
-        yhat_unlabeled,
-        method=selected_method,
-        efficiency_maximization=diagnostics["selected_efficiency_maximization"],
-        inference="jackknife",
-        jackknife_folds=5,
-        random_state=7,
-    )
-
-    np.testing.assert_allclose(auto_ci[0], explicit_ci[0])
-    np.testing.assert_allclose(auto_ci[1], explicit_ci[1])
-    np.testing.assert_allclose(auto_se, explicit_se)
+    scores = np.linspace(-1.0, 1.0, 30)
+    y = 0.9 + 2.0 * scores + rng.normal(scale=0.06, size=30)
+    scores_u = np.linspace(-1.1, 1.1, 60)
+    options = dict(method="auto", candidate_methods=("aipw", "linear"),
+                   num_folds=3, selection_random_state=0)
+    result = aipw_mean_inference(y, scores, scores_u, inference="jackknife",
+                                 jackknife_folds=5, random_state=7, **options)
+    refits = []
+    for (train, _), (train_u, _) in zip(
+        KFold(5, shuffle=True, random_state=7).split(y),
+        KFold(5, shuffle=True, random_state=7).split(scores_u),
+    ):
+        refits.append(aipw_mean_pointestimate(y[train], scores[train], scores_u[train_u], **options))
+    pseudo = 5 * result.pointestimate - 4 * np.asarray(refits)
+    expected_se = np.std(pseudo, ddof=1) / np.sqrt(5)
+    np.testing.assert_allclose(result.se, expected_se)
+    np.testing.assert_allclose(result.ci, [result.pointestimate - t.ppf(.95, 4) * expected_se,
+                                         result.pointestimate + t.ppf(.95, 4) * expected_se])
 
 
 def test_auto_wald_uses_full_sample_pointestimate_and_cross_fitted_lambda_for_wald_se() -> None:
@@ -1063,72 +1022,21 @@ def test_mean_inference_auto_bootstrap_matches_selected_method_semantics() -> No
     assert result.diagnostics["bootstrap_selected_once"] is True
 
 
-def test_mean_inference_auto_jackknife_matches_selected_method_semantics() -> None:
+def test_mean_inference_auto_jackknife_reports_repeated_selection() -> None:
     rng = np.random.default_rng(134)
-    yhat = np.linspace(-1.0, 1.0, 50)
-    y = 0.9 + 2.0 * yhat + rng.normal(scale=0.06, size=50)
-    yhat_unlabeled = np.linspace(-1.1, 1.1, 100)
-
-    result = aipw_mean_inference(
-        y,
-        yhat,
-        yhat_unlabeled,
-        method="auto",
-        candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
-        num_folds=5,
-        selection_random_state=0,
-        inference="jackknife",
-        jackknife_folds=5,
-        random_state=7,
-    )
-    selected_method, diagnostics = select_mean_method_cv(
-        y,
-        yhat,
-        yhat_unlabeled,
-        candidate_methods=("aipw", "linear", "monotone_spline", "isotonic"),
-        num_folds=5,
-        selection_random_state=0,
-    )
-
-    explicit_pointestimate = aipw_mean_pointestimate(
-        y,
-        yhat,
-        yhat_unlabeled,
-        method=selected_method,
-        efficiency_maximization=diagnostics["selected_efficiency_maximization"],
-    )
-    explicit_se = aipw_mean_se(
-        y,
-        yhat,
-        yhat_unlabeled,
-        method=selected_method,
-        efficiency_maximization=diagnostics["selected_efficiency_maximization"],
-        inference="jackknife",
-        jackknife_folds=5,
-        random_state=7,
-    )
-    explicit_ci = aipw_mean_ci(
-        y,
-        yhat,
-        yhat_unlabeled,
-        method=selected_method,
-        efficiency_maximization=diagnostics["selected_efficiency_maximization"],
-        inference="jackknife",
-        jackknife_folds=5,
-        random_state=7,
-    )
-
-    np.testing.assert_allclose(result.pointestimate, explicit_pointestimate)
-    np.testing.assert_allclose(result.se, explicit_se)
-    np.testing.assert_allclose(result.ci[0], explicit_ci[0])
-    np.testing.assert_allclose(result.ci[1], explicit_ci[1])
-    assert result.method == selected_method
-    assert result.selected_candidate == diagnostics["selected_candidate"]
-    assert result.selected_efficiency_maximization == diagnostics["selected_efficiency_maximization"]
-    assert result.diagnostics["jackknife_selected_once"] is True
-    assert result.diagnostics["jackknife_method"] == selected_method
-    assert result.diagnostics["jackknife_efficiency_maximization"] == diagnostics["selected_efficiency_maximization"]
+    scores = np.linspace(-1.0, 1.0, 30)
+    y = 0.9 + 2.0 * scores + rng.normal(scale=0.06, size=30)
+    scores_u = np.linspace(-1.1, 1.1, 60)
+    options = dict(method="auto", candidate_methods=("aipw", "linear"),
+                   num_folds=3, selection_random_state=0)
+    result = aipw_mean_inference(y, scores, scores_u, inference="jackknife",
+                                 jackknife_folds=5, random_state=7, **options)
+    np.testing.assert_allclose(result.pointestimate,
+                               aipw_mean_pointestimate(y, scores, scores_u, **options))
+    assert result.diagnostics["jackknife_selected_once"] is False
+    assert result.diagnostics["jackknife_reselects_method"] is True
     assert result.diagnostics["jackknife_folds"] == 5
+    assert result.diagnostics["jackknife_degrees_of_freedom"] == 4
 
 
 def test_mean_inference_reports_efficiency_lambda_when_applicable() -> None:

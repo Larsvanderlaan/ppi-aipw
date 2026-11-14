@@ -532,9 +532,9 @@ E_0[f(X)] = E_0[Y] = \theta_0.
             <article class="argument-card">
               <h3>Cross-fitting helps with validity</h3>
               <p>
-                With highly flexible labeled-sample fitting, cross-fitting
-                helps avoid using the same labels to learn and evaluate the
-                score.
+                Set <code>cross_fit=True</code> to learn calibration on training
+                folds and evaluate the fitted scores on held-out labeled and
+                unlabeled observations. The default is <code>False</code>.
               </p>
             </article>
           </div>

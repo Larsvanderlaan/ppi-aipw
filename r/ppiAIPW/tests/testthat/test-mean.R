@@ -142,7 +142,7 @@ test_that("auto wald matches separate calls and selection diagnostics", {
   expect_true("auto_unlabeled_subsample_size" %in% names(result$diagnostics))
 })
 
-test_that("auto bootstrap and jackknife reuse the selected method", {
+test_that("bootstrap reuses the selected method and jackknife repeats selection", {
   set.seed(34)
   yhat <- seq(-1, 1, length.out = 50)
   y <- 0.9 + 2 * yhat + rnorm(50, sd = 0.06)
@@ -188,7 +188,8 @@ test_that("auto bootstrap and jackknife reuse the selected method", {
     jackknife_folds = 5,
     random_state = 7
   )
-  expect_true(isTRUE(jack$diagnostics$jackknife_selected_once))
+  expect_false(jack$diagnostics$jackknife_selected_once)
+  expect_true(jack$diagnostics$jackknife_reselects_method)
   expect_identical(jack$method, selected$method)
   expect_identical(jack$diagnostics$jackknife_method, selected$method)
   expect_identical(jack$diagnostics$jackknife_efficiency_maximization, selected$diagnostics$selected_efficiency_maximization)

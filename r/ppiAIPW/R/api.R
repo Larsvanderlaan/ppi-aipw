@@ -398,6 +398,99 @@ format_coordinate_parameter <- function(x) {
   if (length(x) == 1L) x[[1]] else as.numeric(x)
 }
 
+# Use identical fold weights for each held-out labeled/unlabeled score difference.
+prepare_cross_fitted_inputs <- function(Y, Yhat, Yhat_unlabeled, calibration_folds, ...) {
+  args <- list(...)
+  validated <- validate_mean_inputs(Y, Yhat, Yhat_unlabeled)
+  y <- validated$Y_2d
+  scores <- validated$Yhat_2d
+  scores_u <- validated$Yhat_unlabeled_2d
+  n <- nrow(y)
+  n_u <- nrow(scores_u)
+  if (!is.numeric(calibration_folds) || length(calibration_folds) != 1L ||
+      !is.finite(calibration_folds) || calibration_folds != floor(calibration_folds) || calibration_folds < 2) {
+    stop("calibration_folds must be an integer at least 2.", call. = FALSE)
+  }
+  folds <- min(as.integer(calibration_folds), n, n_u)
+  if (folds < 2 || n - ceiling(n / folds) < 2 || n_u - ceiling(n_u / folds) < 1) {
+    stop("cross_fit requires enough observations for at least two training labels and one training unlabeled observation per fold.", call. = FALSE)
+  }
+  x <- validate_prognostic_covariates(args$X, args$X_unlabeled, n, n_u)
+  weights <- construct_weight_vector(n, args$w, vectorized = TRUE)
+  weights_u <- construct_weight_vector(n_u, args$w_unlabeled, vectorized = TRUE)
+  adjusted_weights_u <- numeric(n_u)
+  pred <- matrix(NA_real_, n, ncol(y))
+  pred_u <- matrix(NA_real_, n_u, ncol(y))
+  seed <- if (is.null(args$selection_random_state)) 0L else args$selection_random_state
+  split_l <- kfold_splits(n, folds, seed)
+  split_u <- kfold_splits(n_u, folds, seed)
+  fit_options <- args[setdiff(names(args), c("w", "w_unlabeled", "X", "X_unlabeled"))]
+  fold_methods <- fold_candidates <- character(folds)
+  fold_lambdas <- vector("list", folds)
+  fold_scaled <- logical(folds)
+  for (k in seq_len(folds)) {
+    train <- split_l[[k]]$train
+    val <- split_l[[k]]$val
+    train_u <- split_u[[k]]$train
+    val_u <- split_u[[k]]$val
+    fitted <- do.call(prepare_inference_inputs, c(list(
+      Y = y[train, , drop = FALSE], Yhat = scores[train, , drop = FALSE],
+      Yhat_unlabeled = scores_u[train_u, , drop = FALSE],
+      w = if (is.null(args$w)) NULL else args$w[train],
+      w_unlabeled = if (is.null(args$w_unlabeled)) NULL else args$w_unlabeled[train_u],
+      X = if (is.null(x$X_2d)) NULL else x$X_2d[train, , drop = FALSE],
+      X_unlabeled = if (is.null(x$X_unlabeled_2d)) NULL else x$X_unlabeled_2d[train_u, , drop = FALSE]
+    ), fit_options))
+    model <- fitted$calibrator
+    if (inherits(model, "ppi_prognostic_linear_model")) {
+      pred[val, ] <- predict(model, scores[val, , drop = FALSE],
+                            X = if (is.null(x$X_2d)) NULL else x$X_2d[val, , drop = FALSE])
+      pred_u[val_u, ] <- predict(model, scores_u[val_u, , drop = FALSE],
+                                X = if (is.null(x$X_unlabeled_2d)) NULL else x$X_unlabeled_2d[val_u, , drop = FALSE])
+    } else {
+      pred[val, ] <- predict(model, scores[val, , drop = FALSE])
+      pred_u[val_u, ] <- predict(model, scores_u[val_u, , drop = FALSE])
+    }
+    if (!is.null(fitted$efficiency_lambda)) {
+      pred[val, ] <- sweep(pred[val, , drop = FALSE], 2L, fitted$efficiency_lambda, "*")
+      pred_u[val_u, ] <- sweep(pred_u[val_u, , drop = FALSE], 2L, fitted$efficiency_lambda, "*")
+    }
+    label_mass <- sum(weights[val]) / n
+    unlabeled_mass <- sum(weights_u[val_u])
+    if (label_mass <= 0 || unlabeled_mass <= 0) {
+      stop("cross_fit requires positive total weight in every labeled and unlabeled fold.", call. = FALSE)
+    }
+    adjusted_weights_u[val_u] <- weights_u[val_u] * n_u * label_mass / unlabeled_mass
+    fold_methods[[k]] <- fitted$method
+    fold_candidates[[k]] <- fitted$selected_candidate
+    fold_lambdas[k] <- list(fitted$efficiency_lambda)
+    fold_scaled[[k]] <- fitted$final_efficiency_maximization
+  }
+  # The full-sample calibrator is returned for reuse, not used for inference.
+  full <- do.call(prepare_inference_inputs, c(list(Y = y, Yhat = scores, Yhat_unlabeled = scores_u), args))
+  method <- if (tolower(args$method) == "auto") "auto" else full$method
+  diagnostics <- list(
+    cross_fit = TRUE, calibration_folds = folds,
+    calibration_fold_methods = fold_methods, calibration_fold_candidates = fold_candidates,
+    calibration_fold_efficiency_lambda = fold_lambdas,
+    full_sample_calibrator_method = full$method,
+    pointestimate_uses_full_sample_refit = FALSE,
+    selected_method = method, selected_candidate = method,
+    selected_efficiency_maximization = any(fold_scaled),
+    final_efficiency_maximization = any(fold_scaled),
+    lambda_from_cross_fitted_estimates = any(fold_scaled)
+  )
+  full$pred_labeled_point <- full$pred_labeled_variance <- pred
+  full$pred_unlabeled_point <- full$pred_unlabeled_variance <- pred_u
+  full$weights_unlabeled_point <- full$weights_unlabeled_variance <- adjusted_weights_u
+  full$method <- full$selected_candidate <- method
+  full$selected_efficiency_maximization <- full$final_efficiency_maximization <- any(fold_scaled)
+  full$efficiency_lambda <- NULL
+  full$diagnostics <- diagnostics
+  full$calibrator$metadata <- utils::modifyList(full$calibrator$metadata, diagnostics)
+  full
+}
+
 prepare_inference_inputs <- function(Y, Yhat, Yhat_unlabeled, method, w, w_unlabeled,
                                      X = NULL, X_unlabeled = NULL,
                                      efficiency_maximization = FALSE,
@@ -407,7 +500,20 @@ prepare_inference_inputs <- function(Y, Yhat, Yhat_unlabeled, method, w, w_unlab
                                      selection_random_state = NULL,
                                      isocal_backend = "weighted_pava",
                                      isocal_max_depth = 20,
-                                     isocal_min_child_weight = 10) {
+                                     isocal_min_child_weight = 10, cross_fit = FALSE, calibration_folds = 10) {
+  if (!is.logical(cross_fit) || length(cross_fit) != 1L || is.na(cross_fit)) {
+    stop("cross_fit must be TRUE or FALSE.", call. = FALSE)
+  }
+  if (cross_fit) {
+    return(prepare_cross_fitted_inputs(
+      Y, Yhat, Yhat_unlabeled, calibration_folds = calibration_folds,
+      method = method, w = w, w_unlabeled = w_unlabeled, X = X, X_unlabeled = X_unlabeled,
+      efficiency_maximization = efficiency_maximization, candidate_methods = candidate_methods,
+      num_folds = num_folds, auto_unlabeled_subsample_size = auto_unlabeled_subsample_size,
+      selection_random_state = selection_random_state, isocal_backend = isocal_backend,
+      isocal_max_depth = isocal_max_depth, isocal_min_child_weight = isocal_min_child_weight
+    ))
+  }
   if (tolower(method) == "auto") {
     selected <- select_mean_method_cv_internal(
       Y = Y,
@@ -612,6 +718,10 @@ bootstrap_interval <- function(bootstrap_estimates, alpha, alternative) {
 }
 
 resolve_jackknife_effective_folds <- function(jackknife_folds, n_labeled, n_unlabeled) {
+  if (!is.numeric(jackknife_folds) || length(jackknife_folds) != 1L ||
+      !is.finite(jackknife_folds) || jackknife_folds != floor(jackknife_folds)) {
+    stop("jackknife_folds must be an integer at least 2.", call. = FALSE)
+  }
   if (jackknife_folds < 2L) {
     stop("jackknife_folds must be at least 2 when inference='jackknife'.", call. = FALSE)
   }
@@ -633,7 +743,7 @@ bootstrap_pointestimates <- function(Y, Yhat, Yhat_unlabeled, method, w, w_unlab
                                      auto_unlabeled_subsample_size,
                                      selection_random_state, isocal_backend,
                                      isocal_max_depth, isocal_min_child_weight,
-                                     n_resamples, random_state) {
+                                     n_resamples, random_state, cross_fit = FALSE, calibration_folds = 10) {
   if (n_resamples < 2L) {
     stop("n_resamples must be at least 2 when inference='bootstrap'.", call. = FALSE)
   }
@@ -668,7 +778,9 @@ bootstrap_pointestimates <- function(Y, Yhat, Yhat_unlabeled, method, w, w_unlab
       selection_random_state = selection_random_state,
       isocal_backend = isocal_backend,
       isocal_max_depth = isocal_max_depth,
-      isocal_min_child_weight = isocal_min_child_weight
+      isocal_min_child_weight = isocal_min_child_weight,
+      cross_fit = cross_fit,
+      calibration_folds = calibration_folds
     )
     estimates[b, ] <- aipw_mean_pointestimate_from_predictions(
       Y = prepared$Y_2d,
@@ -687,7 +799,7 @@ jackknife_pointestimates <- function(Y, Yhat, Yhat_unlabeled, method, w, w_unlab
                                      auto_unlabeled_subsample_size, selection_random_state,
                                      isocal_backend, isocal_max_depth,
                                      isocal_min_child_weight, jackknife_folds,
-                                     random_state) {
+                                     random_state, cross_fit = FALSE, calibration_folds = 10) {
   n_labeled <- NROW(Y)
   n_unlabeled <- NROW(Yhat_unlabeled)
   effective_folds <- resolve_jackknife_effective_folds(jackknife_folds, n_labeled, n_unlabeled)
@@ -712,7 +824,9 @@ jackknife_pointestimates <- function(Y, Yhat, Yhat_unlabeled, method, w, w_unlab
       selection_random_state = selection_random_state,
       isocal_backend = isocal_backend,
       isocal_max_depth = isocal_max_depth,
-      isocal_min_child_weight = isocal_min_child_weight
+      isocal_min_child_weight = isocal_min_child_weight,
+      cross_fit = cross_fit,
+      calibration_folds = calibration_folds
     )
     estimates[k, ] <- aipw_mean_pointestimate_from_predictions(
       Y = prepared$Y_2d,
@@ -725,6 +839,8 @@ jackknife_pointestimates <- function(Y, Yhat, Yhat_unlabeled, method, w, w_unlab
   list(estimates = estimates, effective_folds = effective_folds)
 }
 
+# Equivalent to sd(V * theta - (V - 1) * theta_minus_v) / sqrt(V).
+# Li, Ertefaie, and van der Laan (2026), Algorithm 1.
 jackknife_standard_error <- function(jackknife_estimates) {
   n_estimates <- nrow(jackknife_estimates)
   mean_estimate <- colMeans(jackknife_estimates)
@@ -775,7 +891,8 @@ summary.ppi_mean_result <- function(object, null = 0, alternative = "two-sided",
     pointestimate = object$pointestimate,
     standard_error = object$se,
     null = null,
-    alternative = alternative
+    alternative = alternative,
+    degrees_of_freedom = object$diagnostics$jackknife_degrees_of_freedom
   )
   object$diagnostics$wald_null <- format_coordinate_output(stats_obj$null)
   object$diagnostics$wald_alternative <- normalize_alternative(alternative)
@@ -790,6 +907,10 @@ summary.ppi_mean_result <- function(object, null = 0, alternative = "two-sided",
     sprintf("method: %s", object$method),
     sprintf("inference: %s", object$inference)
   )
+  if (identical(object$inference, "jackknife")) {
+    lines <- c(lines, sprintf("reference_distribution: Student t (df=%d)",
+                             object$diagnostics$jackknife_degrees_of_freedom))
+  }
   if (!identical(object$selected_candidate, object$method)) {
     lines <- c(lines, sprintf("selected_candidate: %s", object$selected_candidate))
   }
@@ -842,8 +963,8 @@ fit_mean_inference <- function(Y, Yhat, Yhat_unlabeled, alpha = 0.1, alternative
                                num_folds = NULL, auto_unlabeled_subsample_size = NULL,
                                selection_random_state = NULL, isocal_backend = "weighted_pava",
                                isocal_max_depth = 20, isocal_min_child_weight = 10,
-                               inference = "wald", n_resamples = 1000, jackknife_folds = 20,
-                               random_state = NULL, compute_se = TRUE, compute_ci = TRUE) {
+                               inference = "wald", n_resamples = 1000, jackknife_folds = 10,
+                               random_state = NULL, compute_se = TRUE, compute_ci = TRUE, cross_fit = FALSE, calibration_folds = 10) {
   inference <- tolower(inference)
   if (!inference %in% c("wald", "jackknife", "bootstrap")) {
     stop("inference must be 'wald', 'jackknife', or 'bootstrap'.", call. = FALSE)
@@ -867,7 +988,9 @@ fit_mean_inference <- function(Y, Yhat, Yhat_unlabeled, alpha = 0.1, alternative
     selection_random_state = selection_random_state,
     isocal_backend = isocal_backend,
     isocal_max_depth = isocal_max_depth,
-    isocal_min_child_weight = isocal_min_child_weight
+    isocal_min_child_weight = isocal_min_child_weight,
+    cross_fit = cross_fit,
+    calibration_folds = calibration_folds
   )
   pointestimate <- aipw_mean_pointestimate_from_predictions(
     Y = prepared$Y_2d,
@@ -877,6 +1000,7 @@ fit_mean_inference <- function(Y, Yhat, Yhat_unlabeled, alpha = 0.1, alternative
     w_unlabeled = prepared$weights_unlabeled_point
   )
   diagnostics <- prepared$diagnostics
+  if (is.null(diagnostics$cross_fit)) diagnostics$cross_fit <- FALSE
   diagnostics$inference <- inference
   standard_error <- NULL
   ci <- NULL
@@ -890,7 +1014,7 @@ fit_mean_inference <- function(Y, Yhat, Yhat_unlabeled, alpha = 0.1, alternative
     }
   } else if (inference == "bootstrap") {
     if (tolower(method) == "auto") {
-      diagnostics$bootstrap_selected_once <- TRUE
+      diagnostics$bootstrap_selected_once <- !cross_fit
       diagnostics$bootstrap_method <- prepared$method
       diagnostics$bootstrap_efficiency_maximization <- prepared$final_efficiency_maximization
     }
@@ -898,12 +1022,12 @@ fit_mean_inference <- function(Y, Yhat, Yhat_unlabeled, alpha = 0.1, alternative
       Y = prepared$Y_2d,
       Yhat = reshape_to_2d(Yhat, "Yhat"),
       Yhat_unlabeled = reshape_to_2d(Yhat_unlabeled, "Yhat_unlabeled"),
-      method = prepared$method,
+      method = if (cross_fit) method else prepared$method,
       w = w,
       w_unlabeled = w_unlabeled,
       X = if (is.null(X)) NULL else reshape_to_2d(X, "X"),
       X_unlabeled = if (is.null(X_unlabeled)) NULL else reshape_to_2d(X_unlabeled, "X_unlabeled"),
-      efficiency_maximization = prepared$final_efficiency_maximization,
+      efficiency_maximization = if (cross_fit) resolve_efficiency_maximization(efficiency_maximization) else prepared$final_efficiency_maximization,
       candidate_methods = candidate_methods,
       num_folds = resolve_num_folds(num_folds),
       auto_unlabeled_subsample_size = auto_unlabeled_subsample_size,
@@ -912,7 +1036,9 @@ fit_mean_inference <- function(Y, Yhat, Yhat_unlabeled, alpha = 0.1, alternative
       isocal_max_depth = isocal_max_depth,
       isocal_min_child_weight = isocal_min_child_weight,
       n_resamples = n_resamples,
-      random_state = random_state
+      random_state = random_state,
+      cross_fit = cross_fit,
+      calibration_folds = calibration_folds
     )
     if (isTRUE(compute_se)) {
       standard_error <- apply(bootstrap_estimates, 2L, stats::sd)
@@ -923,7 +1049,8 @@ fit_mean_inference <- function(Y, Yhat, Yhat_unlabeled, alpha = 0.1, alternative
     }
   } else {
     if (tolower(method) == "auto") {
-      diagnostics$jackknife_selected_once <- TRUE
+      diagnostics$jackknife_selected_once <- FALSE
+      diagnostics$jackknife_reselects_method <- TRUE
       diagnostics$jackknife_method <- prepared$method
       diagnostics$jackknife_efficiency_maximization <- prepared$final_efficiency_maximization
     }
@@ -931,12 +1058,12 @@ fit_mean_inference <- function(Y, Yhat, Yhat_unlabeled, alpha = 0.1, alternative
       Y = prepared$Y_2d,
       Yhat = reshape_to_2d(Yhat, "Yhat"),
       Yhat_unlabeled = reshape_to_2d(Yhat_unlabeled, "Yhat_unlabeled"),
-      method = prepared$method,
+      method = method,
       w = w,
       w_unlabeled = w_unlabeled,
       X = if (is.null(X)) NULL else reshape_to_2d(X, "X"),
       X_unlabeled = if (is.null(X_unlabeled)) NULL else reshape_to_2d(X_unlabeled, "X_unlabeled"),
-      efficiency_maximization = prepared$final_efficiency_maximization,
+      efficiency_maximization = resolve_efficiency_maximization(efficiency_maximization),
       candidate_methods = candidate_methods,
       num_folds = resolve_num_folds(num_folds),
       auto_unlabeled_subsample_size = auto_unlabeled_subsample_size,
@@ -945,14 +1072,19 @@ fit_mean_inference <- function(Y, Yhat, Yhat_unlabeled, alpha = 0.1, alternative
       isocal_max_depth = isocal_max_depth,
       isocal_min_child_weight = isocal_min_child_weight,
       jackknife_folds = jackknife_folds,
-      random_state = random_state
+      random_state = random_state,
+      cross_fit = cross_fit,
+      calibration_folds = calibration_folds
     )
     diagnostics$jackknife_folds <- jk$effective_folds
+    diagnostics$jackknife_degrees_of_freedom <- jk$effective_folds - 1L
+    diagnostics$jackknife_reference_distribution <- "t"
     if (isTRUE(compute_se)) {
       standard_error <- jackknife_standard_error(jk$estimates)
     }
     if (isTRUE(compute_ci)) {
-      interval <- z_interval(pointestimate, standard_error, alpha, alternative)
+      interval <- t_interval(pointestimate, standard_error, alpha, alternative,
+                             degrees_of_freedom = jk$effective_folds - 1L)
       ci <- list(interval$lower, interval$upper)
     }
   }
@@ -984,8 +1116,8 @@ mean_inference <- function(Y, Yhat, Yhat_unlabeled, alpha = 0.1, alternative = "
                            num_folds = NULL, auto_unlabeled_subsample_size = NULL,
                            selection_random_state = NULL, isocal_backend = "weighted_pava",
                            isocal_max_depth = 20, isocal_min_child_weight = 10,
-                           inference = "wald", n_resamples = 1000, jackknife_folds = 20,
-                           random_state = NULL) {
+                           inference = "wald", n_resamples = 1000, jackknife_folds = 10,
+                           random_state = NULL, cross_fit = FALSE, calibration_folds = 10) {
   state <- fit_mean_inference(
     Y = Y,
     Yhat = Yhat,
@@ -1010,7 +1142,9 @@ mean_inference <- function(Y, Yhat, Yhat_unlabeled, alpha = 0.1, alternative = "
     jackknife_folds = jackknife_folds,
     random_state = random_state,
     compute_se = TRUE,
-    compute_ci = TRUE
+    compute_ci = TRUE,
+    cross_fit = cross_fit,
+    calibration_folds = calibration_folds
   )
   new_mean_result(
     pointestimate = restore_shape(state$pointestimate, Y),
@@ -1033,7 +1167,7 @@ mean_pointestimate <- function(Y, Yhat, Yhat_unlabeled, method = "monotone_splin
                                num_folds = NULL, auto_unlabeled_subsample_size = NULL,
                                selection_random_state = NULL, isocal_backend = "weighted_pava",
                                isocal_max_depth = 20, isocal_min_child_weight = 10,
-                               return_calibrator = FALSE) {
+                               return_calibrator = FALSE, cross_fit = FALSE, calibration_folds = 10) {
   prepared <- prepare_inference_inputs(
     Y = Y,
     Yhat = Yhat,
@@ -1050,7 +1184,9 @@ mean_pointestimate <- function(Y, Yhat, Yhat_unlabeled, method = "monotone_splin
     selection_random_state = selection_random_state,
     isocal_backend = isocal_backend,
     isocal_max_depth = isocal_max_depth,
-    isocal_min_child_weight = isocal_min_child_weight
+    isocal_min_child_weight = isocal_min_child_weight,
+    cross_fit = cross_fit,
+    calibration_folds = calibration_folds
   )
   estimate <- aipw_mean_pointestimate_from_predictions(
     Y = prepared$Y_2d,
@@ -1073,8 +1209,8 @@ mean_se <- function(Y, Yhat, Yhat_unlabeled, method = "monotone_spline",
                     num_folds = NULL, auto_unlabeled_subsample_size = NULL,
                     selection_random_state = NULL, isocal_backend = "weighted_pava",
                     isocal_max_depth = 20, isocal_min_child_weight = 10,
-                    inference = "wald", n_resamples = 1000, jackknife_folds = 20,
-                    random_state = NULL) {
+                    inference = "wald", n_resamples = 1000, jackknife_folds = 10,
+                    random_state = NULL, cross_fit = FALSE, calibration_folds = 10) {
   state <- fit_mean_inference(
     Y = Y,
     Yhat = Yhat,
@@ -1097,7 +1233,9 @@ mean_se <- function(Y, Yhat, Yhat_unlabeled, method = "monotone_spline",
     jackknife_folds = jackknife_folds,
     random_state = random_state,
     compute_se = TRUE,
-    compute_ci = FALSE
+    compute_ci = FALSE,
+    cross_fit = cross_fit,
+    calibration_folds = calibration_folds
   )
   restore_shape(state$se, Y)
 }
@@ -1109,8 +1247,8 @@ mean_ci <- function(Y, Yhat, Yhat_unlabeled, alpha = 0.1, alternative = "two-sid
                     num_folds = NULL, auto_unlabeled_subsample_size = NULL,
                     selection_random_state = NULL, isocal_backend = "weighted_pava",
                     isocal_max_depth = 20, isocal_min_child_weight = 10,
-                    inference = "wald", n_resamples = 1000, jackknife_folds = 20,
-                    random_state = NULL) {
+                    inference = "wald", n_resamples = 1000, jackknife_folds = 10,
+                    random_state = NULL, cross_fit = FALSE, calibration_folds = 10) {
   state <- fit_mean_inference(
     Y = Y,
     Yhat = Yhat,
@@ -1135,7 +1273,9 @@ mean_ci <- function(Y, Yhat, Yhat_unlabeled, alpha = 0.1, alternative = "two-sid
     jackknife_folds = jackknife_folds,
     random_state = random_state,
     compute_se = TRUE,
-    compute_ci = TRUE
+    compute_ci = TRUE,
+    cross_fit = cross_fit,
+    calibration_folds = calibration_folds
   )
   list(restore_shape(state$ci[[1]], Y), restore_shape(state$ci[[2]], Y))
 }

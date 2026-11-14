@@ -14,7 +14,7 @@ causal_inference(
   num_folds = 100, auto_unlabeled_subsample_size = NULL,
   selection_random_state = NULL, isocal_backend = "weighted_pava",
   isocal_max_depth = 20, isocal_min_child_weight = 10,
-  inference = "wald"
+  inference = "wald", cross_fit = FALSE, calibration_folds = 10
 )
 }
 \arguments{
@@ -31,6 +31,8 @@ causal_inference(
   \item{candidate_methods, num_folds, auto_unlabeled_subsample_size, selection_random_state}{Automatic-selection controls passed arm by arm.}
   \item{isocal_backend, isocal_max_depth, isocal_min_child_weight}{Isotonic backend controls.}
   \item{inference}{Currently only \code{"wald"} is supported.}
+  \item{cross_fit}{Default FALSE. If TRUE, fit calibration, selection, and scaling only on training observations within each arm.}
+  \item{calibration_folds}{Number of honest calibration folds (default 10), capped at the smaller arm-specific sample size.}
 }
 \value{
   A \code{ppi_causal_result} containing arm-specific means, standard errors,
